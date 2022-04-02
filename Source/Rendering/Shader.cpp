@@ -3,7 +3,7 @@
 
 namespace en
 {
-    Shader::Shader(std::string shaderPath, ShaderType shaderType)
+    Shader::Shader(std::string shaderPath, const ShaderType& shaderType)
     {
         auto shaderCode = Shader::ReadShaderFile(shaderPath);
 
@@ -14,34 +14,34 @@ namespace en
 
         UseContext();
 
-        if (vkCreateShaderModule(ctx.m_LogicalDevice, &createInfo, nullptr, &this->m_ShaderModule) != VK_SUCCESS)
+        if (vkCreateShaderModule(ctx.m_LogicalDevice, &createInfo, nullptr, &m_ShaderModule) != VK_SUCCESS)
             throw std::runtime_error("Shader.cpp::Shader::Shader() - Failed to create shader module!");
 
         VkShaderStageFlagBits shaderStage;
         switch (shaderType)
         {
-        case VertexShader:
+        case ShaderType::VertexShader:
             shaderStage = VK_SHADER_STAGE_VERTEX_BIT;
             break;
-        case GeometryShader:
+        case ShaderType::GeometryShader:
             shaderStage = VK_SHADER_STAGE_GEOMETRY_BIT;
             break;
-        case FragmentShader:
+        case ShaderType::FragmentShader:
             shaderStage = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
         }
 
-        this->m_ShaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        this->m_ShaderInfo.stage = shaderStage;
-        this->m_ShaderInfo.module = this->m_ShaderModule;
-        this->m_ShaderInfo.pName = "main";
+        m_ShaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        m_ShaderInfo.stage = shaderStage;
+        m_ShaderInfo.module = m_ShaderModule;
+        m_ShaderInfo.pName = "main";
     }
 
     Shader::~Shader()
     {
         UseContext();
 
-        vkDestroyShaderModule(ctx.m_LogicalDevice, this->m_ShaderModule, nullptr);
+        vkDestroyShaderModule(ctx.m_LogicalDevice, m_ShaderModule, nullptr);
     }
 
     std::vector<char> Shader::ReadShaderFile(std::string shaderPath)

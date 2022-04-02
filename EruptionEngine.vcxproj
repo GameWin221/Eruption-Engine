@@ -183,7 +183,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Utility\AssetImporter.cpp" />
+    <ClCompile Include="Source\Utility\AssetManager.cpp" />
     <ClCompile Include="External\STB\stb_image.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -212,6 +212,7 @@
     <ClCompile Include="Source\Rendering\VertexBuffer.cpp" />
     <ClCompile Include="Source\Rendering\Window.cpp" />
     <ClCompile Include="Source\Utility\Helpers.cpp" />
+    <ClCompile Include="Source\Utility\InputManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\ImGui\imconfig.h" />
@@ -221,7 +222,7 @@
     <ClInclude Include="External\ImGui\imstb_rectpack.h" />
     <ClInclude Include="External\ImGui\imstb_textedit.h" />
     <ClInclude Include="External\ImGui\imstb_truetype.h" />
-    <ClInclude Include="Include\Utility\AssetImporter.hpp" />
+    <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="External\STB\stb_image.h" />
     <ClInclude Include="External\TOBJ\tiny_obj_loader.h" />
     <ClInclude Include="Include\Eruption.hpp" />
@@ -238,6 +239,7 @@
     <ClInclude Include="Include\Rendering\Window.hpp" />
     <ClInclude Include="Include\Utility\Helpers.hpp" />
     <ClInclude Include="Include\Rendering\Mesh.hpp" />
+    <ClInclude Include="Include\Utility\InputManager.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

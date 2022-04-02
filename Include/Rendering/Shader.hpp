@@ -7,7 +7,7 @@
 
 namespace en
 {
-	enum ShaderType
+	enum struct ShaderType
 	{
 		VertexShader,
 		GeometryShader,
@@ -17,7 +17,7 @@ namespace en
 	class Shader
 	{
 	public:
-		Shader(std::string shaderPath, ShaderType shaderType);
+		Shader(std::string shaderPath, const ShaderType& shaderType);
 		~Shader();
 
 		VkShaderModule m_ShaderModule;

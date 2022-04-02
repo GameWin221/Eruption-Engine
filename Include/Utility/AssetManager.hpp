@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef EN_ASSETIMPORTER_HPP
-#define EN_ASSETIMPORTER_HPP
+#ifndef EN_ASSETMANAGER_HPP
+#define EN_ASSETMANAGER_HPP
 
 #include "Rendering/Texture.hpp"
 #include "Rendering/Mesh.hpp"
@@ -9,7 +9,7 @@
 
 namespace en
 {
-	class AssetImporter
+	class AssetManager
 	{
 	public:
 		void LoadModel	(std::string nameID, std::string path, std::string defaultTexture);

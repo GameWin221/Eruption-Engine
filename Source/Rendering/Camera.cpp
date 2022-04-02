@@ -55,6 +55,14 @@ namespace en
 
 	void Camera::UpdateVectors()
 	{
+		// Clamping Yaw
+		if     (m_Yaw >  180.0f) m_Yaw = -180.0f+(m_Yaw-180.0f);
+		else if(m_Yaw < -180.0f) m_Yaw =  180.0f+(m_Yaw+180.0f);
+
+		// Clamping Pitch
+		if		(m_Pitch >  89.999f) m_Pitch =  89.999f;
+		else if (m_Pitch < -89.999f) m_Pitch = -89.999f;
+
 		m_Front = glm::normalize(
 			glm::vec3(
 				cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch)),

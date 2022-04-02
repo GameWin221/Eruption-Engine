@@ -6,7 +6,8 @@
 #include <Rendering/Window.hpp>
 #include <Rendering/Context.hpp>
 #include <Rendering/Renderer.hpp>
-#include <Utility/AssetImporter.hpp>
+#include <Utility/AssetManager.hpp>
+#include <Utility/InputManager.hpp>
 
 class Eruption
 {
@@ -20,13 +21,13 @@ private:
 
 	en::Window*		   m_Window;
 	en::Context*	   m_Context;
-	en::AssetImporter* m_AssetImporter;
+	en::AssetManager*  m_AssetManager;
+	en::InputManager*  m_Input;
 	en::Renderer*	   m_Renderer;
 	en::Camera*		   m_Camera;
 
-	std::chrono::high_resolution_clock::time_point m_LastFrame = std::chrono::high_resolution_clock::now();
-
-	std::vector<en::Mesh*> m_Meshes;
+	double m_DeltaTime;
+	float  m_fDeltaTime;
 };
 
 #endif

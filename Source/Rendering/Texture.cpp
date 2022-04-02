@@ -13,7 +13,7 @@ namespace en
 		bool shouldFreeImage = true;
 
 		m_FilePath = texturePath;
-
+		
 		VkBuffer       stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 
