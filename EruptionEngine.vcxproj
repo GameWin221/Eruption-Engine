@@ -120,7 +120,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>C:\Projekty\Programowanie\Libraries\VulkanSDK\1.3.204.1\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Include;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External\Vulkan\include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Include;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -130,7 +130,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)External\GLFW\lib;C:\Projekty\Programowanie\Libraries\VulkanSDK\1.3.204.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)External\GLFW\lib;$(SolutionDir)External\Vulkan\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -143,7 +143,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>C:\Projekty\Programowanie\Libraries\VulkanSDK\1.3.204.1\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Include;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External\Vulkan\include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Include;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -155,7 +155,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)External\GLFW\lib;C:\Projekty\Programowanie\Libraries\VulkanSDK\1.3.204.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)External\GLFW\lib;$(SolutionDir)External\Vulkan\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -215,16 +215,7 @@
     <ClCompile Include="Source\Utility\InputManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="External\ImGui\imconfig.h" />
-    <ClInclude Include="External\ImGui\imgui.h" />
-    <ClInclude Include="External\ImGui\imgui_impl_vulkan.h" />
-    <ClInclude Include="External\ImGui\imgui_internal.h" />
-    <ClInclude Include="External\ImGui\imstb_rectpack.h" />
-    <ClInclude Include="External\ImGui\imstb_textedit.h" />
-    <ClInclude Include="External\ImGui\imstb_truetype.h" />
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
-    <ClInclude Include="External\STB\stb_image.h" />
-    <ClInclude Include="External\TOBJ\tiny_obj_loader.h" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
     <ClInclude Include="Include\Rendering\Camera.hpp" />
