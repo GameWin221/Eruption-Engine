@@ -21,7 +21,11 @@ void Eruption::Init()
 	m_AssetManager->LoadTexture("ChaletTexture", "Models/chalet.jpg");
 	m_AssetManager->LoadModel  ("ChaletModel"  , "Models/chalet.obj", "ChaletTexture");
 	
-	m_AssetManager->GetModel("ChaletModel")->m_UniformBuffer->m_UBO.model = glm::rotate(glm::mat4(1), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+	m_AssetManager->GetModel("ChaletModel"  )->m_UniformBuffer->m_UBO.model = glm::rotate(glm::mat4(1), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+
+	en::UniformBufferObject& ubo = m_AssetManager->GetModel("BackpackModel")->m_UniformBuffer->m_UBO;
+	ubo.model = glm::translate(ubo.model, glm::vec3(2, 0.5f, 0));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.2f));
 
 	en::RendererInfo rendererInfo{};
 	rendererInfo.clearColor  = { 0.01f, 0.01f, 0.01f, 1.0f };
@@ -105,6 +109,7 @@ void Eruption::Update()
 void Eruption::Render()
 {
 	m_Renderer->EnqueueModel(m_AssetManager->GetModel("ChaletModel"));
+	m_Renderer->EnqueueModel(m_AssetManager->GetModel("BackpackModel"));
 
 	m_Renderer->Render();
 }
