@@ -48,13 +48,11 @@ namespace en
 		void Render();
 
 		void SetMainCamera(Camera* camera);
+		Camera* GetMainCamera() { return m_MainCamera; };
 
 		static const int m_MaxMeshes = 64;
 
 		Renderer& GetRenderer();
-
-		Renderer(const Renderer&) = delete;
-		Renderer& operator=(const Renderer&) = delete;
 
 	private:
 		VkRenderPass	 m_RenderPass;

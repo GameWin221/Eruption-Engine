@@ -4,7 +4,7 @@
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.1.0";
+	windowInfo.title	  = "Eruption Engine v0.1.4";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(2000, 1200);
@@ -47,9 +47,7 @@ void Eruption::Init()
 
 	m_Camera = new en::Camera(cameraInfo);
 
-	m_Renderer->SetMainCamera(m_Camera);
-	std::cout << "postload\n";
-
+	m_Renderer->SetMainCamera(m_Camera);;
 }
 void Eruption::Update()
 {
@@ -76,28 +74,28 @@ void Eruption::Update()
 	
 	m_Input->UpdateInput();
 
-	if (m_Input->IsKeyPressed(en::Key::Escape))
+	if (m_Input->IsKeyDown(en::Key::Escape))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	if (m_Input->GetCursorMode() == en::CursorMode::Free && m_Input->IsMouseButtonPressed(en::Button::Left))
+	if (m_Input->GetCursorMode() == en::CursorMode::Free && m_Input->IsMouseButtonDown(en::Button::Left))
 		m_Input->SetCursorMode(en::CursorMode::Locked);
 
-	if (m_Input->IsKeyPressed(en::Key::W))
+	if (m_Input->IsKeyDown(en::Key::W))
 		m_Camera->m_Position += m_Camera->GetFront() * m_fDeltaTime;
 
-	else if (m_Input->IsKeyPressed(en::Key::S))
+	else if (m_Input->IsKeyDown(en::Key::S))
 		m_Camera->m_Position -= m_Camera->GetFront() * m_fDeltaTime;
 
-	if (m_Input->IsKeyPressed(en::Key::A))
+	if (m_Input->IsKeyDown(en::Key::A))
 		m_Camera->m_Position -= m_Camera->GetRight() * m_fDeltaTime;
 
-	else if (m_Input->IsKeyPressed(en::Key::D))
+	else if (m_Input->IsKeyDown(en::Key::D))
 		m_Camera->m_Position += m_Camera->GetRight() * m_fDeltaTime;
 
-	if (m_Input->IsKeyPressed(en::Key::Space))
+	if (m_Input->IsKeyDown(en::Key::Space))
 		m_Camera->m_Position += m_Camera->GetUp() * m_fDeltaTime;
 
-	else if (m_Input->IsKeyPressed(en::Key::Ctrl))
+	else if (m_Input->IsKeyDown(en::Key::Ctrl))
 		m_Camera->m_Position -= m_Camera->GetUp() * m_fDeltaTime;
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)

@@ -67,6 +67,13 @@ namespace en
 		Free   = GLFW_CURSOR_NORMAL
 	};
 
+	enum struct InputState
+	{
+		Pressed,
+		Held,
+		Released
+	};
+
 	class InputManager
 	{
 	public:
@@ -74,20 +81,18 @@ namespace en
 		
 		void UpdateInput();
 
-		bool IsKeyPressed(const Key& key);
-		bool IsMouseButtonPressed(const Button& button);
+		bool IsKeyDown        (const Key&    key   );
+		bool IsMouseButtonDown(const Button& button);
 
 		void SetCursorMode(const CursorMode& cursorMode);
 
-		glm::vec2 GetMousePosition();
+
+		const glm::vec2 GetMousePosition() const;
 		
 		float m_MouseSensitivity = 1.0f;
 
-		const glm::vec2&  GetMouseVelocity() const { return m_MouseVel * m_MouseSensitivity;   };
-		const CursorMode& GetCursorMode()    const { return m_CursorMode;                      };
-
-		InputManager(const InputManager&) = delete;
-		InputManager& operator=(const InputManager&) = delete;
+		const glm::vec2& GetMouseVelocity() const { return m_MouseVel * m_MouseSensitivity; };
+		const CursorMode& GetCursorMode()   const { return m_CursorMode; };
 
 	private:
 		CursorMode m_CursorMode;
@@ -95,8 +100,10 @@ namespace en
 		glm::vec2 m_LastMousePos;
 		glm::vec2 m_MouseVel;
 
+		//std::unordered_map<Key   , bool> m_LastKeyStates;
+		//std::unordered_map<Button, bool> m_LastButtonStates;
+
 		GLFWwindow* m_Window;
 	};
 }
-
 #endif

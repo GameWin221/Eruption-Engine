@@ -9,6 +9,8 @@ namespace en
 
 		m_LastMousePos = GetMousePosition();
 
+		m_MouseSensitivity = 1.0f;
+
 		m_MouseVel = glm::vec2(0);
 
 		m_CursorMode = CursorMode::Free;
@@ -21,11 +23,11 @@ namespace en
 		m_LastMousePos = GetMousePosition();
 	}
 
-	bool InputManager::IsKeyPressed(const Key& key)
+	bool InputManager::IsKeyDown(const Key& key)
 	{
 		return glfwGetKey(m_Window, static_cast<int>(key));
 	}
-	bool InputManager::IsMouseButtonPressed(const Button& button)
+	bool InputManager::IsMouseButtonDown(const Button& button)
 	{
 		return glfwGetMouseButton(m_Window, static_cast<int>(button));
 	}
@@ -36,7 +38,7 @@ namespace en
 		m_CursorMode = cursorMode;
 	}
 
-	glm::vec2 InputManager::GetMousePosition()
+	const glm::vec2 InputManager::GetMousePosition() const
 	{
 		double mX = 0.0, mY = 0.0;
 
