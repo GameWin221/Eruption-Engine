@@ -35,7 +35,7 @@ namespace en
 			}
 		};
 
-		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice& device, VkSurfaceKHR& surface);
+		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice& device);
 	}
 }
 

@@ -129,7 +129,7 @@ namespace en
 	}
 	void Context::VKCreateLogicalDevice()
 	{
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_PhysicalDevice, m_WindowSurface);
+		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_PhysicalDevice);
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -172,7 +172,7 @@ namespace en
 
 	void Context::VKCreateCommandPool()
 	{
-		Helpers::QueueFamilyIndices queueFamilyIndices = Helpers::FindQueueFamilies(m_PhysicalDevice, m_WindowSurface);
+		Helpers::QueueFamilyIndices queueFamilyIndices = Helpers::FindQueueFamilies(m_PhysicalDevice);
 
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -278,7 +278,7 @@ namespace en
 
 	bool Context::IsDeviceSuitable(VkPhysicalDevice& device)
 	{
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(device, m_WindowSurface);
+		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(device);
 
 		bool extensionsSupported = CheckDeviceExtensionSupport(device);
 

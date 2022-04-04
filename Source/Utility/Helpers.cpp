@@ -235,8 +235,10 @@ namespace en
             throw std::runtime_error("Failed to find suitable memory type!");
         }
 
-        QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice& device, VkSurfaceKHR& surface)
+        QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice& device)
         {
+            UseContext();
+
             QueueFamilyIndices indices;
 
             uint32_t queueFamilyCount = 0;
@@ -252,7 +254,7 @@ namespace en
                     indices.graphicsFamily = i;
 
                 VkBool32 presentSupport = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, ctx.m_WindowSurface, &presentSupport);
 
                 if (presentSupport)
                     indices.presentFamily = i;

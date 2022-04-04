@@ -19,9 +19,9 @@
 
 namespace en
 {
-	struct RendererInfo 
+	struct RendererInfo
 	{
-		VkClearColorValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+		VkClearColorValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 		VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 	};
@@ -38,11 +38,11 @@ namespace en
 		~Renderer();
 
 		void PrepareModel(Model* model);
-		void RemoveModel (Model* model);
+		void RemoveModel(Model* model);
 		void EnqueueModel(Model* model);
 
 		void PrepareMesh(Mesh* mesh, Model* parent);
-		void RemoveMesh (Mesh* mesh);
+		void RemoveMesh(Mesh* mesh);
 		void EnqueueMesh(Mesh* mesh);
 
 		void Render();
@@ -81,8 +81,8 @@ namespace en
 
 		// References to existing objects
 		Context* m_Ctx;
-		Window*  m_Window;
-		Camera*  m_MainCamera;
+		Window* m_Window;
+		Camera* m_MainCamera;
 
 		std::vector<en::Mesh*> m_MeshQueue;
 		std::unordered_map<en::Mesh*, MeshData> m_MeshData;

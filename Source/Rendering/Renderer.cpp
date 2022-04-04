@@ -4,7 +4,7 @@
 namespace en
 {
 	Renderer* g_CurrentRenderer = nullptr;
-	Camera*   g_DefaultCamera   = nullptr;
+	Camera* g_DefaultCamera = nullptr;
 
 	Renderer::Renderer(RendererInfo& rendererInfo)
 	{
@@ -39,16 +39,16 @@ namespace en
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		vkDestroyImageView(m_Ctx->m_LogicalDevice, m_DepthImageView  , nullptr);
-		vkDestroyImage    (m_Ctx->m_LogicalDevice, m_DepthImage      , nullptr);
-		vkFreeMemory      (m_Ctx->m_LogicalDevice, m_DepthImageMemory, nullptr);
+		vkDestroyImageView(m_Ctx->m_LogicalDevice, m_DepthImageView, nullptr);
+		vkDestroyImage(m_Ctx->m_LogicalDevice, m_DepthImage, nullptr);
+		vkFreeMemory(m_Ctx->m_LogicalDevice, m_DepthImageMemory, nullptr);
 
 		vkDestroyDescriptorSetLayout(m_Ctx->m_LogicalDevice, m_DescriptorSetLayout, nullptr);
-		vkDestroyDescriptorPool     (m_Ctx->m_LogicalDevice, m_DescriptorPool     , nullptr);
+		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_DescriptorPool, nullptr);
 
 		vkDestroySemaphore(m_Ctx->m_LogicalDevice, m_ImageAvailableSemaphore, nullptr);
 		vkDestroySemaphore(m_Ctx->m_LogicalDevice, m_RenderFinishedSemaphore, nullptr);
-		vkDestroyFence    (m_Ctx->m_LogicalDevice, m_InFlightFence          , nullptr);
+		vkDestroyFence(m_Ctx->m_LogicalDevice, m_InFlightFence, nullptr);
 
 		for (auto& swapChainImageView : m_SwapChainImageViews)
 			vkDestroyImageView(m_Ctx->m_LogicalDevice, swapChainImageView, nullptr);
@@ -58,14 +58,14 @@ namespace en
 		for (auto& framebuffer : m_Framebuffers)
 			vkDestroyFramebuffer(m_Ctx->m_LogicalDevice, framebuffer, nullptr);
 
-		vkDestroyPipeline      (m_Ctx->m_LogicalDevice, m_GraphicsPipeline, nullptr);
-		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_PipelineLayout  , nullptr);
-		vkDestroyRenderPass    (m_Ctx->m_LogicalDevice, m_RenderPass      , nullptr);
+		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_GraphicsPipeline, nullptr);
+		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_PipelineLayout, nullptr);
+		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_RenderPass, nullptr);
 	}
 
 	void Renderer::PrepareModel(Model* model)
 	{
-		for(auto& mesh : model->m_Meshes)
+		for (auto& mesh : model->m_Meshes)
 			PrepareMesh(&mesh, model);
 	}
 	void Renderer::RemoveModel(Model* model)
@@ -84,13 +84,13 @@ namespace en
 		m_MeshData[mesh].parent = parent;
 
 		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.sType			 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = m_DescriptorPool;
 		allocInfo.descriptorSetCount = static_cast<uint32_t>(1);
 		allocInfo.pSetLayouts = &m_DescriptorSetLayout;
 
 		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_MeshData[mesh].descriptorSet) != VK_SUCCESS)
-			throw std::runtime_error("Renderer.cpp::Renderer::VKCreateDescriptorSets() - Failed to allocate descriptor sets!");
+			throw std::runtime_error(" Renderer::PrepareMesh() - Failed to allocate descriptor sets!");
 
 		VkDescriptorBufferInfo bufferInfo{};
 		bufferInfo.buffer = m_MeshData[mesh].parent->m_UniformBuffer->m_Buffer;
@@ -99,8 +99,8 @@ namespace en
 
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = mesh->m_Texture->m_ImageView;
-		imageInfo.sampler = mesh->m_Texture->m_ImageSampler;
+		imageInfo.imageView   = mesh->m_Texture->m_ImageView;
+		imageInfo.sampler     = mesh->m_Texture->m_ImageSampler;
 
 		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -123,6 +123,9 @@ namespace en
 	}
 	void Renderer::RemoveMesh(Mesh* mesh)
 	{
+		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
+
+		vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_DescriptorPool, 1, &m_MeshData[mesh].descriptorSet);
 		m_MeshData.erase(mesh);
 	}
 	void Renderer::EnqueueMesh(Mesh* mesh)
@@ -198,7 +201,7 @@ namespace en
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = m_RenderPass;
+		renderPassInfo.renderPass  = m_RenderPass;
 		renderPassInfo.framebuffer = m_Framebuffers[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChainExtent;
@@ -214,9 +217,7 @@ namespace en
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 
-		int i = 0;
-
-		for (const auto& mesh : m_MeshQueue)
+		for (int i = 0; const auto& mesh : m_MeshQueue)
 		{
 			m_MeshData.at(mesh).parent->m_UniformBuffer->m_UBO.proj = m_MainCamera->GetProjMatrix();
 			m_MeshData.at(mesh).parent->m_UniformBuffer->m_UBO.view = m_MainCamera->GetViewMatrix();
@@ -226,7 +227,7 @@ namespace en
 			mesh->m_IndexBuffer->Bind(commandBuffer);
 
 			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_MeshData.at(mesh).descriptorSet, 0, nullptr);
-
+			
 			vkCmdDrawIndexed(commandBuffer, mesh->m_IndexBuffer->GetSize(), 1, 0, 0, 0);
 
 			i++;
@@ -293,8 +294,6 @@ namespace en
 		g_CurrentRenderer->m_FramebufferResized = true;
 	}
 
-
-
 	void Renderer::VKCreateCommandBuffer()
 	{
 		VkCommandBufferAllocateInfo allocInfo{};
@@ -330,7 +329,7 @@ namespace en
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_Ctx->m_PhysicalDevice, m_Ctx->m_WindowSurface);
+		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_Ctx->m_PhysicalDevice);
 		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 		if (indices.graphicsFamily != indices.presentFamily)
@@ -429,8 +428,8 @@ namespace en
 	}
 	void Renderer::VKCreateGraphicsPipeline()
 	{
-		Shader vShader("Shaders/vertex.spv", ShaderType::VertexShader);
-		Shader fShader("Shaders/fragment.spv", ShaderType::FragmentShader);
+		Shader vShader("Shaders/vertex.spv"  , ShaderType::Vertex);
+		Shader fShader("Shaders/fragment.spv", ShaderType::Fragment);
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
 
@@ -580,13 +579,9 @@ namespace en
 		Helpers::CreateImageView(m_DepthImage, m_DepthImageView, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 		Helpers::TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	}
-	void Renderer::VKCreateBuffers()
-	{
-
-	}
 	void Renderer::VKCreateSyncObjects()
 	{
-		
+
 
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -640,6 +635,7 @@ namespace en
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = static_cast<uint32_t>(m_MaxMeshes);
+		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 			throw std::runtime_error("Renderer.cpp::Renderer::VKCreateDescriptorPool() - Failed to create descriptor pool!");
@@ -693,7 +689,7 @@ namespace en
 	}
 	VkExtent2D Renderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 	{
-		
+
 
 		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 			return capabilities.currentExtent;
@@ -716,7 +712,7 @@ namespace en
 
 	VkFormat Renderer::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 	{
-		
+
 
 		for (VkFormat format : candidates)
 		{

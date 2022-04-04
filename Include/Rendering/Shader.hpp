@@ -9,9 +9,9 @@ namespace en
 {
 	enum struct ShaderType
 	{
-		VertexShader,
-		GeometryShader,
-		FragmentShader
+		Vertex,
+		Geometry,
+		Fragment
 	};
 
 	class Shader

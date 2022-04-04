@@ -20,13 +20,13 @@ namespace en
         VkShaderStageFlagBits shaderStage;
         switch (shaderType)
         {
-        case ShaderType::VertexShader:
+        case ShaderType::Vertex:
             shaderStage = VK_SHADER_STAGE_VERTEX_BIT;
             break;
-        case ShaderType::GeometryShader:
+        case ShaderType::Geometry:
             shaderStage = VK_SHADER_STAGE_GEOMETRY_BIT;
             break;
-        case ShaderType::FragmentShader:
+        case ShaderType::Fragment:
             shaderStage = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
         }
