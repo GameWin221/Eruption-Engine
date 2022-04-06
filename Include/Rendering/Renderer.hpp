@@ -36,13 +36,13 @@ namespace en
 	public:
 		Renderer(RendererInfo& rendererInfo);
 		~Renderer();
-
+		
 		void PrepareModel(Model* model);
-		void RemoveModel(Model* model);
+		void RemoveModel (Model* model);
 		void EnqueueModel(Model* model);
 
 		void PrepareMesh(Mesh* mesh, Model* parent);
-		void RemoveMesh(Mesh* mesh);
+		void RemoveMesh (Mesh* mesh);
 		void EnqueueMesh(Mesh* mesh);
 
 		void Render();
@@ -55,9 +55,46 @@ namespace en
 		Renderer& GetRenderer();
 
 	private:
+		struct FramebufferAttachment
+		{
+			VkImage		   image;
+			VkDeviceMemory imageMemory;
+			VkImageView    imageView;
+
+			void Destroy(VkDevice& device)
+			{
+				vkFreeMemory	  (device, imageMemory, nullptr);
+				vkDestroyImageView(device, imageView  , nullptr);
+				vkDestroyImage	  (device, image	  , nullptr);
+			}
+		};
+		struct GBuffer
+		{
+			// Albedo: X, Y, Z are color values, W - Specular
+			// Position: X, Y, Z are position, W - Free
+			// Normal: X, Y, Z are normal values, W - Free
+			FramebufferAttachment albedo, position, normal;
+			FramebufferAttachment depth;
+			VkFramebuffer         framebuffer;
+
+			void Destroy(VkDevice& device)
+			{
+				albedo.Destroy(device);
+				position.Destroy(device);
+				normal.Destroy(device);
+				depth.Destroy(device);
+				
+				vkDestroyFramebuffer(device, framebuffer, nullptr);
+			}
+		} m_OffscreenFramebuffer;
+
 		VkRenderPass	 m_RenderPass;
 		VkPipelineLayout m_PipelineLayout;
 		VkPipeline		 m_GraphicsPipeline;
+
+		VkRenderPass m_PresentPass;
+		VkPipelineLayout m_PresentPipelineLayout;
+		VkPipeline m_PresentPipeline;
 
 		VkSwapchainKHR			   m_SwapChain;
 		std::vector<VkImage>	   m_SwapChainImages;
@@ -71,9 +108,8 @@ namespace en
 		VkDescriptorPool	  m_DescriptorPool;
 		VkDescriptorSetLayout m_DescriptorSetLayout;
 
-		VkImage		   m_DepthImage;
-		VkDeviceMemory m_DepthImageMemory;
-		VkImageView    m_DepthImageView;
+		VkDescriptorPool	  m_PresentDPool;
+		VkDescriptorSetLayout m_PresentDSetLayout;
 
 		VkSemaphore m_ImageAvailableSemaphore;
 		VkSemaphore m_RenderFinishedSemaphore;
@@ -107,16 +143,22 @@ namespace en
 
 		void VKCreateCommandBuffer();
 		void VKCreateSwapChain();
-		void VKCreateImageViews();
-		void VKCreateRenderPass();
-		void VKCreateGraphicsPipeline();
-		void VKCreateFramebuffers();
-		void VKCreateDepthBuffer();
-		void VKCreateSyncObjects();
-		void VKCreateDescriptorSetLayout();
+
 		void VKCreateDescriptorPool();
-		void VKCreateDescriptorSets();
-		void VKCreateBuffers();
+		void VKCreatePresentDPool();
+
+		void VKCreateRenderPass();
+		void VKCreateDescriptorSetLayout();
+		void VKCreateGraphicsPipeline();
+
+		void VKCreatePresentPass();
+		void VKCreatePresentDSetLayout();
+		void VKCreatePresentPipeline();
+		void VKCreateFramebuffers();
+
+		void VKCreateGBuffer();
+
+		void VKCreateSyncObjects();
 	};
 }
 

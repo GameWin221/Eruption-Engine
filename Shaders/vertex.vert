@@ -12,6 +12,8 @@ layout(location = 2) in vec2 vTexcoord;
 
 layout(location = 0) out vec3 fNormal;
 layout(location = 1) out vec2 fTexcoord;
+layout(location = 2) out vec3 fPosition;
+
 
 void main() 
 {
@@ -19,4 +21,5 @@ void main()
 
     fNormal = mat3(transpose(inverse(ubo.model))) * vNormal;
     fTexcoord = vTexcoord;
+    fPosition = vec3(ubo.model * vec4(vPos, 1.0));
 }
