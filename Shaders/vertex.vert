@@ -19,7 +19,7 @@ void main()
 {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(vPos, 1.0);
 
-    fNormal = mat3(transpose(inverse(ubo.model))) * vNormal;
-    fTexcoord = vTexcoord;
     fPosition = vec3(ubo.model * vec4(vPos, 1.0));
+    fNormal   = mat3(transpose(inverse(ubo.model))) * vNormal;
+    fTexcoord = vTexcoord;
 }
