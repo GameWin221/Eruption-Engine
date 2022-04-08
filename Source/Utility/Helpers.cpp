@@ -151,11 +151,14 @@ namespace en
             if (vkCreateImageView(ctx.m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
                 throw std::runtime_error("Failed to create texture image view!");
         }
-        void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout)
+        void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdBuffer)
         {
-            UseContext();
+            VkCommandBuffer commandBuffer;
 
-            VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+            if (cmdBuffer == VK_NULL_HANDLE)
+                commandBuffer = BeginSingleTimeCommands();
+            else
+                commandBuffer = cmdBuffer;
 
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -205,6 +208,25 @@ namespace en
                 sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             }
+
+            // From shader optimal to color attachment 
+            else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            {
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+                sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            }
+            // From color attachment to shader optimal
+            else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            {
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                sourceStage      = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            }
             else
                 throw std::invalid_argument("Unsupported layout transition!");
 
@@ -217,7 +239,8 @@ namespace en
                 1, &barrier
             );
 
-            EndSingleTimeCommands(commandBuffer);
+            if(cmdBuffer == VK_NULL_HANDLE)
+                EndSingleTimeCommands(commandBuffer);
         }
         void DestroyImage(VkImage& image, VkDeviceMemory& memory)
         {

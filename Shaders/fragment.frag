@@ -10,9 +10,14 @@ layout(location = 2) out vec4 gNormal;
 
 layout(binding = 1) uniform sampler2D mTexture;
 
+const float specularity = 0.5;
+
 void main() 
 {
     gColor = texture(mTexture, fTexcoord);
-    gPosition = vec4(fPosition, 1.0);
-    gNormal = vec4(normalize(fNormal), 1.0);
+
+    gPosition.xyz = fPosition;
+    gPosition.a = specularity;
+
+    gNormal.xyz = normalize(fNormal);
 }

@@ -68,6 +68,7 @@ namespace en
 				vkDestroyImage	  (device, image	  , nullptr);
 			}
 		};
+
 		struct GBuffer
 		{
 			// Albedo: X, Y, Z are color values, W - Specular
@@ -76,44 +77,81 @@ namespace en
 			FramebufferAttachment albedo, position, normal;
 			FramebufferAttachment depth;
 			VkFramebuffer         framebuffer;
+			VkSampler			  sampler;
 
 			void Destroy(VkDevice& device)
 			{
-				albedo.Destroy(device);
+				albedo	.Destroy(device);
 				position.Destroy(device);
-				normal.Destroy(device);
-				depth.Destroy(device);
+				normal	.Destroy(device);
+				depth	.Destroy(device);
 				
+				vkDestroySampler	(device, sampler    , nullptr);
 				vkDestroyFramebuffer(device, framebuffer, nullptr);
 			}
-		} m_OffscreenFramebuffer;
 
-		VkRenderPass	 m_RenderPass;
-		VkPipelineLayout m_PipelineLayout;
-		VkPipeline		 m_GraphicsPipeline;
+		};
 
-		VkRenderPass m_PresentPass;
-		VkPipelineLayout m_PresentPipelineLayout;
-		VkPipeline m_PresentPipeline;
+		struct Pipeline
+		{
+			VkDescriptorPool	  descriptorPool;
+			VkDescriptorSetLayout descriptorSetLayout;
 
-		VkSwapchainKHR			   m_SwapChain;
-		std::vector<VkImage>	   m_SwapChainImages;
-		VkFormat				   m_SwapChainImageFormat;
-		VkExtent2D				   m_SwapChainExtent;
-		std::vector<VkImageView>   m_SwapChainImageViews;
-		std::vector<VkFramebuffer> m_Framebuffers;
+			VkRenderPass	 renderPass;
+			VkPipelineLayout layout;
+			VkPipeline		 pipeline;
+
+			VkSemaphore finishedSemaphore;
+
+			void Destroy(VkDevice& device)
+			{
+				vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+				vkDestroyDescriptorPool		(device, descriptorPool, nullptr);
+
+				vkDestroySemaphore(device, finishedSemaphore, nullptr);
+
+				vkDestroyPipeline	   (device, pipeline, nullptr);
+				vkDestroyPipelineLayout(device, layout, nullptr);
+				vkDestroyRenderPass	   (device, renderPass, nullptr);
+			}
+		};
+
+		struct SwapChain
+		{
+			VkSwapchainKHR			   swapChain;
+			std::vector<VkImage>	   images;
+			std::vector<VkImageView>   imageViews;
+			VkFormat				   imageFormat;
+			std::vector<VkFramebuffer> framebuffers;
+			VkExtent2D				   extent;
+
+			void Destroy(VkDevice& device)
+			{
+				vkDestroySwapchainKHR(device, swapChain, nullptr);
+
+				for (auto& imageView : imageViews)
+					vkDestroyImageView(device, imageView, nullptr);
+
+				for(auto& image : images)
+					vkDestroyImage(device, image, nullptr);
+
+				for (auto& framebuffer : framebuffers)
+					vkDestroyFramebuffer(device, framebuffer, nullptr);
+			}
+		};
+
+		SwapChain m_SwapChain;
+
+		GBuffer m_OffscreenFramebuffer;
+
+		Pipeline m_GraphicsPipeline;
+		Pipeline m_PresentationPipeline;
+
+		VkDescriptorSet m_PresentationDescriptor;
 
 		VkCommandBuffer m_CommandBuffer;
 
-		VkDescriptorPool	  m_DescriptorPool;
-		VkDescriptorSetLayout m_DescriptorSetLayout;
-
-		VkDescriptorPool	  m_PresentDPool;
-		VkDescriptorSetLayout m_PresentDSetLayout;
-
-		VkSemaphore m_ImageAvailableSemaphore;
-		VkSemaphore m_RenderFinishedSemaphore;
-		VkFence		m_InFlightFence;
+		VkFence	m_InFlightFence;
 
 		// References to existing objects
 		Context* m_Ctx;
@@ -132,14 +170,8 @@ namespace en
 
 		void RecordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 
-		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice& device);
-		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-		VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-		VkFormat FindDepthFormat();
-		bool HasStencilComponent(const VkFormat format);
+		void GraphicsPass(VkCommandBuffer& commandBuffer);
+		void PresentationPass(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 
 		void VKCreateCommandBuffer();
 		void VKCreateSwapChain();
@@ -159,6 +191,15 @@ namespace en
 		void VKCreateGBuffer();
 
 		void VKCreateSyncObjects();
+
+		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice& device);
+		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+		VkFormat FindDepthFormat();
+		bool HasStencilComponent(const VkFormat format);
 	};
 }
 

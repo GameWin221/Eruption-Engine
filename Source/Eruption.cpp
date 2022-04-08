@@ -1,7 +1,7 @@
 #include <EnPch.hpp>
 #include <Eruption.hpp>
 
-bool spawnedChalet;
+bool modelSpawned;
 
 void Eruption::Init()
 {
@@ -18,14 +18,10 @@ void Eruption::Init()
 	m_AssetManager = new en::AssetManager;
 
 	m_AssetManager->LoadTexture("BackpackTexture", "Models/Backpack/backpack_albedo.jpg");
-	m_AssetManager->LoadModel("BackpackModel", "Models/Backpack/backpack.obj", "BackpackTexture");
+	m_AssetManager->LoadModel("BackpackModel", "Models/Backpack/Backpack.obj", "BackpackTexture");
 
-	//m_AssetManager->LoadTexture("ChaletTexture", "Models/chalet.jpg");
-	//m_AssetManager->LoadModel("ChaletModel", "Models/chalet.obj", "ChaletTexture");
-
-	m_AssetManager->LoadTexture("Swapper", "Models/vk.png");
-
-	//m_AssetManager->GetModel("ChaletModel")->m_UniformBuffer->m_UBO.model = glm::rotate(glm::mat4(1), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg");
+	m_AssetManager->LoadModel("AdditionalModel", "Models/Skull/skull.obj", "AdditionalTexture");
 
 	en::UniformBufferObject& ubo = m_AssetManager->GetModel("BackpackModel")->m_UniformBuffer->m_UBO;
 	ubo.model = glm::translate(ubo.model, glm::vec3(2, 0.5f, 0));
@@ -80,18 +76,18 @@ void Eruption::Update()
 	if (m_Input->IsKeyDown(en::Key::Escape))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	/*
-	if (m_Input->IsKeyDown(en::Key::R) && !spawnedChalet)
+	
+	if (m_Input->IsKeyDown(en::Key::R) && !modelSpawned)
 	{
-		m_Renderer->PrepareModel(m_AssetManager->GetModel("ChaletModel"));
-		spawnedChalet = true;
+		m_Renderer->PrepareModel(m_AssetManager->GetModel("AdditionalModel"));
+		modelSpawned = true;
 	}
-	else if (m_Input->IsKeyDown(en::Key::T) && spawnedChalet)
+	else if (m_Input->IsKeyDown(en::Key::T) && modelSpawned)
 	{
-		m_Renderer->RemoveModel(m_AssetManager->GetModel("ChaletModel"));
-		spawnedChalet = false;
+		m_Renderer->RemoveModel(m_AssetManager->GetModel("AdditionalModel"));
+		modelSpawned = false;
 	}
-	*/
+	
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Free && m_Input->IsMouseButtonDown(en::Button::Left))
 		m_Input->SetCursorMode(en::CursorMode::Locked);
@@ -123,8 +119,8 @@ void Eruption::Update()
 }
 void Eruption::Render()
 {
-	//if (spawnedChalet)
-		//m_Renderer->EnqueueModel(m_AssetManager->GetModel("ChaletModel"));
+	if (modelSpawned)
+		m_Renderer->EnqueueModel(m_AssetManager->GetModel("AdditionalModel"));
 
 	m_Renderer->EnqueueModel(m_AssetManager->GetModel("BackpackModel"));
 
