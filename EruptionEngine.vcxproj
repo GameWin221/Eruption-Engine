@@ -213,6 +213,7 @@
     <ClCompile Include="Source\Rendering\Window.cpp" />
     <ClCompile Include="Source\Utility\Helpers.cpp" />
     <ClCompile Include="Source\Utility\InputManager.cpp" />
+    <ClCompile Include="Source\Rendering\VulkanRendererBackend.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
@@ -231,6 +232,7 @@
     <ClInclude Include="Include\Utility\Helpers.hpp" />
     <ClInclude Include="Include\Rendering\Mesh.hpp" />
     <ClInclude Include="Include\Utility\InputManager.hpp" />
+    <ClInclude Include="Include\Rendering\VulkanRendererBackend.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
