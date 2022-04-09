@@ -3,9 +3,12 @@
 #ifndef EN_VULKANBACKEND_HPP
 #define EN_VULKANBACKEND_HPP
 
+#include "../../EruptionEngine.ini"
+
 #include "Window.hpp"
 #include "Context.hpp"
 #include "Camera.hpp"
+#include "Light.hpp"
 #include "Model.hpp"
 
 namespace en
@@ -130,6 +133,22 @@ namespace en
 			}
 		};
 
+		struct Lights
+		{
+			struct LightsArray
+			{
+				PointLight::Buffer lights[MAX_LIGHTS];
+			} array;
+
+			PointLight pointLights[MAX_LIGHTS];
+
+			VkBuffer       buffer;
+			VkDeviceMemory bufferMemory;
+			VkDeviceSize   bufferSize;
+
+		} m_Lights;
+
+
 		GBuffer m_GBuffer;
 
 		Swapchain m_Swapchain;
@@ -157,8 +176,8 @@ namespace en
 
 		// References to existing objects
 		Context* m_Ctx;
-		Window* m_Window;
-		Camera* m_MainCamera;
+		Window*  m_Window;
+		Camera*  m_MainCamera;
 
 		uint32_t m_ImageIndex;
 
@@ -183,6 +202,7 @@ namespace en
 		void GCreatePipeline();
 
 		void InitLightingPipeline();
+		void LCreateLightsBuffer();
 		void LCreateDescriptorSetLayout();
 		void LCreateDescriptorPool();
 		void LCreateDescriptorSet();

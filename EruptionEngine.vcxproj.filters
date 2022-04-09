@@ -93,6 +93,9 @@
     <ClCompile Include="Source\Rendering\VulkanRendererBackend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Rendering\Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -146,5 +149,11 @@
     <ClInclude Include="Include\Rendering\VulkanRendererBackend.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Rendering\Light.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="EruptionEngine.ini" />
   </ItemGroup>
 </Project>

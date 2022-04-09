@@ -26,6 +26,7 @@ namespace en
 		Renderer& GetRenderer();
 
 	private:
+
 		VulkanRendererBackend m_Backend;
 	};
 }

@@ -26,6 +26,8 @@ private:
 	en::Renderer*	   m_Renderer;
 	en::Camera*		   m_Camera;
 
+	double m_TargetFPS = 144.0;
+
 	double m_DeltaTime;
 	float  m_fDeltaTime;
 };

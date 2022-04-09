@@ -6,10 +6,10 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.1.4";
+	windowInfo.title	  = "Eruption Engine v0.2.2";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
-	windowInfo.size		  = glm::ivec2(2000, 1200);
+	windowInfo.size		  = glm::ivec2(1920, 1080);
 
 	m_Window = new en::Window(windowInfo);
 
@@ -51,6 +51,8 @@ void Eruption::Init()
 void Eruption::Update()
 {
 	static int counter = 0;
+
+	const double m_TargetFrameTime = 1000000.0 / m_TargetFPS;
 
 	static std::chrono::high_resolution_clock::time_point lastFrame;
 

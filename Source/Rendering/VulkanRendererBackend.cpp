@@ -38,6 +38,10 @@ namespace en
 		CreateSwapchainFramebuffers();
 
 		CreateSyncObjects();
+
+		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
+		m_Lights.pointLights[0].m_Color = glm::vec3(1, 0, 0);
+		m_Lights.pointLights[0].m_Active = true;
 	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
@@ -58,6 +62,8 @@ namespace en
 
 		for (auto& preparedMesh : m_PreparedMeshes)
 			vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_GeometryPipeline.descriptorPool, 1, &preparedMesh.second.descriptorSet);
+
+		en::Helpers::DestroyBuffer(m_Lights.buffer, m_Lights.bufferMemory);
 
 		//delete g_DefaultCamera;
 	}
@@ -128,13 +134,22 @@ namespace en
 
 		vkCmdEndRenderPass(m_CommandBuffer);
 	}
+
 	void VulkanRendererBackend::LightingPass()
 	{
-		// Maybe I can change the final layout of the framebuffers instead of transitioning them twice
-		Helpers::TransitionImageLayout(m_GBuffer.albedo.image, m_GBuffer.albedo.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_GBuffer.albedo.image  , m_GBuffer.albedo.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer.position.image, m_GBuffer.position.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-		Helpers::TransitionImageLayout(m_GBuffer.normal.image, m_GBuffer.normal.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_GBuffer.normal.image  , m_GBuffer.normal.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 
+		// Prepare lights
+		for (int i = 0; i < MAX_LIGHTS; i++)
+		{
+			m_Lights.array.lights[i].position = m_Lights.pointLights[i].m_Position;
+			m_Lights.array.lights[i].color    = m_Lights.pointLights[i].m_Color * static_cast<float>(m_Lights.pointLights[i].m_Active);
+		}
+
+		en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.array, m_Lights.bufferSize);
+	
 		VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
 
 		VkRenderPassBeginInfo renderPassInfo{};
@@ -152,13 +167,9 @@ namespace en
 
 		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0, 1, &m_LightingDescriptorSet, 0, nullptr);
 
-		vkCmdDraw(m_CommandBuffer, 6, 1, 0, 0);
+		vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
 
 		vkCmdEndRenderPass(m_CommandBuffer);
-
-		Helpers::TransitionImageLayout(m_GBuffer.albedo.image, m_GBuffer.albedo.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
-		Helpers::TransitionImageLayout(m_GBuffer.position.image, m_GBuffer.position.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
-		Helpers::TransitionImageLayout(m_GBuffer.normal.image, m_GBuffer.normal.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
 	}
 	void VulkanRendererBackend::EndRender()
 	{
@@ -470,6 +481,7 @@ namespace en
 		LCreateCommandBuffer();
 		LRecordCommandBuffer();
 		LCreateRenderPass();
+		LCreateLightsBuffer();
 		LCreateDescriptorPool();
 		LCreateDescriptorSetLayout();
 		LCreateDescriptorSet();
@@ -765,10 +777,19 @@ namespace en
 			throw std::runtime_error("VulkanRendererBackend::GCreatePipeline() - Failed to create graphics pipeline!");
 	}
 
+	void VulkanRendererBackend::LCreateLightsBuffer()
+	{
+		m_Lights.bufferSize = sizeof(m_Lights.array);
+		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
+	}
 	void VulkanRendererBackend::LCreateDescriptorSetLayout()
 	{
-		std::array<VkDescriptorSetLayoutBinding, 3> bindings;
-
+		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
+		//0: Color Framebuffer
+		//1: Position Framebuffer (Alpha channel is specularity)
+		//2: Normal Framebuffer
+		//3: Lights Buffer
+		
 		for (int i = 0; auto & binding : bindings)
 		{
 			binding.binding			   = static_cast<uint32_t>(i);
@@ -779,6 +800,9 @@ namespace en
 
 			i++;
 		}
+
+		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -807,6 +831,9 @@ namespace en
 			poolSize.descriptorCount = 1;
 		}
 
+		// Lights buffer
+		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
@@ -834,8 +861,14 @@ namespace en
 		imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imageInfos[2].imageView   = m_GBuffer.normal.imageView;
 		imageInfos[2].sampler	  = m_GBuffer.sampler;
+		
+		// Light Buffer
+		VkDescriptorBufferInfo lightBufferInfo{};
+		lightBufferInfo.buffer = m_Lights.buffer;
+		lightBufferInfo.offset = 0;
+		lightBufferInfo.range  = sizeof(m_Lights.array);
 
-		std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 
 		for (int i = 0; auto & descriptorWrite : descriptorWrites)
 		{
@@ -845,9 +878,16 @@ namespace en
 			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pImageInfo		= &imageInfos[i];
+
+			if(i!=3)
+				descriptorWrite.pImageInfo  = &imageInfos[i];
+
 			i++;
 		}
+
+		// Light Buffer
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[3].pBufferInfo    = &lightBufferInfo;
 
 		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
@@ -945,7 +985,7 @@ namespace en
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode			   = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth			   = 1.0f;
-		rasterizer.cullMode				   = VK_CULL_MODE_BACK_BIT;
+		rasterizer.cullMode				   = VK_CULL_MODE_FRONT_BIT;
 		rasterizer.frontFace			   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable		   = VK_FALSE;
 
@@ -956,7 +996,7 @@ namespace en
 
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 		colorBlendAttachment.colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable		 = VK_TRUE;
+		colorBlendAttachment.blendEnable		 = VK_FALSE;
 		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		colorBlendAttachment.colorBlendOp		 = VK_BLEND_OP_ADD;
