@@ -1,2 +1,4 @@
-Build/
 .vs
+
+!Build
+Build/
