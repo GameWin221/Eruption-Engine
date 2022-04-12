@@ -29,9 +29,13 @@ If you already have the dependencies properly installed, you can skip to step 4.
 
 Also, you can delete the `External/GLFW` directory when compiling on Linux because it contains (unnecessary) Windows-only files.
 1. Download GL:
-`sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev`
+
+```sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev```
+
 2. Download GLFW:
-`sudo apt install libglfw3-dev`
+
+```sudo apt install libglfw3-dev```
+
 3. Download the Vulkan SDK [as shown on the official LunarG site](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html).
 Although it's simpler **on Ubuntu 20.04**:
 
