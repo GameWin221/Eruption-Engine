@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <cstring>
 #include <string>
 #include <map>
 #include <unordered_map>
