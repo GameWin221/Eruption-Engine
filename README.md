@@ -1,7 +1,6 @@
 # Eruption-Engine
 
 ![](https://forthebadge.com/images/badges/works-on-my-machine.svg)
-![](https://forthebadge.com/images/badges/made-with-c-plus-plus.svg)
 
 My own rendering engine made with Vulkan.
 
