@@ -100,9 +100,6 @@ namespace en
 				for (auto& imageView : imageViews)
 					vkDestroyImageView(device, imageView, nullptr);
 
-				for (auto& image : images)
-					vkDestroyImage(device, image, nullptr);
-
 				for (auto& framebuffer : framebuffers)
 					vkDestroyFramebuffer(device, framebuffer, nullptr);
 			}
@@ -173,6 +170,8 @@ namespace en
 		VkFence	m_InFlightFence;
 
 		RendererInfo m_RendererInfo;
+
+		bool m_IsRendering;
 
 		// References to existing objects
 		Context* m_Ctx;

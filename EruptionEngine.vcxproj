@@ -82,7 +82,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)\Intermediates\</IntDir>
+    <IntDir>$(SolutionDir)Build\$(Platform)\$(Configuration)\Intermediates\</IntDir>
+    <OutDir>$(SolutionDir)Build\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -120,7 +121,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Include;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -151,7 +152,7 @@ compile.bat</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Include;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -251,6 +252,24 @@ compile.bat</Command>
     <ClInclude Include="Include\Utility\InputManager.hpp" />
     <ClInclude Include="Include\Rendering\VulkanRendererBackend.hpp" />
     <ClInclude Include="Include\Rendering\Light.hpp" />
+    <ClInclude Include="Source\EnPch.hpp" />
+    <ClInclude Include="Source\Eruption.hpp" />
+    <ClInclude Include="Source\Rendering\Camera.hpp" />
+    <ClInclude Include="Source\Rendering\Context.hpp" />
+    <ClInclude Include="Source\Rendering\IndexBuffer.hpp" />
+    <ClInclude Include="Source\Rendering\Light.hpp" />
+    <ClInclude Include="Source\Rendering\Mesh.hpp" />
+    <ClInclude Include="Source\Rendering\Model.hpp" />
+    <ClInclude Include="Source\Rendering\Renderer.hpp" />
+    <ClInclude Include="Source\Rendering\Shader.hpp" />
+    <ClInclude Include="Source\Rendering\Texture.hpp" />
+    <ClInclude Include="Source\Rendering\UniformBuffer.hpp" />
+    <ClInclude Include="Source\Rendering\VertexBuffer.hpp" />
+    <ClInclude Include="Source\Rendering\VulkanRendererBackend.hpp" />
+    <ClInclude Include="Source\Rendering\Window.hpp" />
+    <ClInclude Include="Source\Utility\AssetManager.hpp" />
+    <ClInclude Include="Source\Utility\Helpers.hpp" />
+    <ClInclude Include="Source\Utility\InputManager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />

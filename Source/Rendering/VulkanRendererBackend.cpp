@@ -40,8 +40,16 @@ namespace en
 		CreateSyncObjects();
 
 		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
-		m_Lights.pointLights[0].m_Color = glm::vec3(1, 0, 0);
+		m_Lights.pointLights[0].m_Color = glm::vec3(0.1, 1.0, 0.1);
 		m_Lights.pointLights[0].m_Active = true;
+
+		m_Lights.pointLights[1].m_Position = glm::vec3(-2, 2, 2);
+		m_Lights.pointLights[1].m_Color = glm::vec3(1, 0.1, 0.1);
+		m_Lights.pointLights[1].m_Active = true;
+
+		m_Lights.pointLights[2].m_Position = glm::vec3(2, 2, -2);
+		m_Lights.pointLights[2].m_Color = glm::vec3(0.1, 0.1, 1.0);
+		m_Lights.pointLights[2].m_Active = true;
 	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
@@ -82,6 +90,8 @@ namespace en
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 			throw std::runtime_error("VulkanRendererBackend::BeginRender() - Failed to acquire swap chain image!");
 
+		m_IsRendering = true;
+
 		vkResetFences(m_Ctx->m_LogicalDevice, 1, &m_InFlightFence);
 
 		vkResetCommandBuffer(m_CommandBuffer, 0);
@@ -115,7 +125,7 @@ namespace en
 
 		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.pipeline);
 
-		for (int i = 0; const auto & mesh : m_MeshQueue)
+		for (int i = 0; const auto& mesh : m_MeshQueue)
 		{
 			m_PreparedMeshes.at(mesh).parent->m_UniformBuffer->m_UBO.proj = m_MainCamera->GetProjMatrix();
 			m_PreparedMeshes.at(mesh).parent->m_UniformBuffer->m_UBO.view = m_MainCamera->GetViewMatrix();
@@ -134,7 +144,6 @@ namespace en
 
 		vkCmdEndRenderPass(m_CommandBuffer);
 	}
-
 	void VulkanRendererBackend::LightingPass()
 	{
 		Helpers::TransitionImageLayout(m_GBuffer.albedo.image  , m_GBuffer.albedo.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
@@ -204,6 +213,8 @@ namespace en
 		presentInfo.pSwapchains = &m_Swapchain.swapChain;
 		presentInfo.pImageIndices = &m_ImageIndex;
 		presentInfo.pResults = nullptr;
+
+		m_IsRendering = false;
 
 		VkResult result = vkQueuePresentKHR(m_Ctx->m_PresentQueue, &presentInfo);
 
@@ -290,31 +301,46 @@ namespace en
 	}
 	void VulkanRendererBackend::RecreateFramebuffer()
 	{
-		int width = 0, height = 0;
-		glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
-		while (width == 0 || height == 0)
+		if (!m_IsRendering)
 		{
+			int width = 0, height = 0;
 			glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
-			glfwWaitEvents();
+			while (width == 0 || height == 0)
+			{
+				glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
+				glfwWaitEvents();
+			}
+
+			vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
+
+			m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
+			CreateSwapchain();
+
+			vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_LightingPipeline.pipeline, nullptr);
+			vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_LightingPipeline.layout, nullptr);
+			vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_LightingPipeline.renderPass, nullptr);
+
+			vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_GeometryPipeline.pipeline, nullptr);
+			vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_GeometryPipeline.layout, nullptr);
+			vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_GeometryPipeline.renderPass, nullptr);
+
+
+			m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
+
+			CreateGBufferAttachments();
+
+			GCreateRenderPass();
+			GCreatePipeline();
+
+			CreateGBuffer();
+
+			LCreateRenderPass();
+			LCreatePipeline();
+
+			CreateSwapchainFramebuffers();
+
+			m_FramebufferResized = false;
 		}
-
-		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
-
-		m_LightingPipeline.Destroy(m_Ctx->m_LogicalDevice);
-		m_GeometryPipeline.Destroy(m_Ctx->m_LogicalDevice);
-
-		m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
-		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
-
-		CreateSwapchain();
-		CreateGBuffer();
-
-		InitGeometryPipeline();
-		InitLightingPipeline();
-
-		CreateSwapchainFramebuffers();
-
-		m_FramebufferResized = false;
 	}
 
 	void VulkanRendererBackend::SetMainCamera(Camera* camera)
