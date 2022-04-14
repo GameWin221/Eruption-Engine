@@ -75,43 +75,42 @@ void Eruption::Update()
 
 	m_Window->PollEvents();
 	
-	m_Input->UpdateInput();
+	m_Input->UpdateMouse();
 
-	if (m_Input->IsKeyDown(en::Key::Escape))
+	if (m_Input->IsKey(en::Key::Escape, en::InputState::Pressed))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
 	
-	if (m_Input->IsKeyDown(en::Key::R) && !modelSpawned)
+	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed) && !modelSpawned)
 	{
 		m_Renderer->PrepareModel(m_AssetManager->GetModel("AdditionalModel"));
 		modelSpawned = true;
 	}
-	else if (m_Input->IsKeyDown(en::Key::T) && modelSpawned)
+	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed) && modelSpawned)
 	{
 		m_Renderer->RemoveModel(m_AssetManager->GetModel("AdditionalModel"));
 		modelSpawned = false;
 	}
 	
-
-	if (m_Input->GetCursorMode() == en::CursorMode::Free && m_Input->IsMouseButtonDown(en::Button::Left))
+	if (m_Input->GetCursorMode() == en::CursorMode::Free && m_Input->IsMouseButton(en::Button::Left, en::InputState::Pressed))
 		m_Input->SetCursorMode(en::CursorMode::Locked);
 
-	if (m_Input->IsKeyDown(en::Key::W))
+	if (m_Input->IsKey(en::Key::W))
 		m_Camera->m_Position += m_Camera->GetFront() * m_fDeltaTime;
 
-	else if (m_Input->IsKeyDown(en::Key::S))
+	else if (m_Input->IsKey(en::Key::S))
 		m_Camera->m_Position -= m_Camera->GetFront() * m_fDeltaTime;
 
-	if (m_Input->IsKeyDown(en::Key::A))
+	if (m_Input->IsKey(en::Key::A))
 		m_Camera->m_Position -= m_Camera->GetRight() * m_fDeltaTime;
 
-	else if (m_Input->IsKeyDown(en::Key::D))
+	else if (m_Input->IsKey(en::Key::D))
 		m_Camera->m_Position += m_Camera->GetRight() * m_fDeltaTime;
 
-	if (m_Input->IsKeyDown(en::Key::Space))
+	if (m_Input->IsKey(en::Key::Space))
 		m_Camera->m_Position += m_Camera->GetUp() * m_fDeltaTime;
 
-	else if (m_Input->IsKeyDown(en::Key::Ctrl))
+	else if (m_Input->IsKey(en::Key::Ctrl))
 		m_Camera->m_Position -= m_Camera->GetUp() * m_fDeltaTime;
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
@@ -119,6 +118,8 @@ void Eruption::Update()
 		m_Camera->m_Yaw   += m_Input->GetMouseVelocity().x;
 		m_Camera->m_Pitch -= m_Input->GetMouseVelocity().y;
 	}
+
+	m_Input->UpdateInput();
 }
 void Eruption::Render()
 {

@@ -70,7 +70,7 @@ namespace en
 	enum struct InputState
 	{
 		Pressed,
-		Held,
+		Down,
 		Released
 	};
 
@@ -79,10 +79,11 @@ namespace en
 	public:
 		InputManager();
 		
+		void UpdateMouse();
 		void UpdateInput();
 
-		bool IsKeyDown        (const Key&    key   );
-		bool IsMouseButtonDown(const Button& button);
+		bool IsKey		  (const Key& key	   , const InputState& inputState = InputState::Down);
+		bool IsMouseButton(const Button& button, const InputState& inputState = InputState::Down);
 
 		void SetCursorMode(const CursorMode& cursorMode);
 
@@ -100,8 +101,9 @@ namespace en
 		glm::vec2 m_LastMousePos;
 		glm::vec2 m_MouseVel;
 
-		//std::unordered_map<Key   , bool> m_LastKeyStates;
-		//std::unordered_map<Button, bool> m_LastButtonStates;
+		// True / False - Down / Up
+		std::unordered_map<int, bool> m_LastKeyStates;
+		std::unordered_map<int, bool> m_LastButtonStates;
 
 		GLFWwindow* m_Window;
 	};
