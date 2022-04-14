@@ -13,6 +13,11 @@ namespace en
 	}
 	Renderer::~Renderer(){}
 
+	void Renderer::PrepareImGuiUI(std::function<void()> imGuiRenderCallback)
+	{
+		m_ImGuiRenderCallback = imGuiRenderCallback;
+	}
+
 	void Renderer::PrepareModel(Model* model)
 	{
 		m_Backend.PrepareModel(model);
@@ -33,6 +38,10 @@ namespace en
 		m_Backend.GeometryPass();
 		m_Backend.LightingPass();
 
+		m_Backend.BeginImGuiPass();
+		m_ImGuiRenderCallback();
+		m_Backend.EndImGuiPass();
+
 		m_Backend.EndRender();
 	}
 
@@ -48,5 +57,10 @@ namespace en
 	Renderer& Renderer::GetRenderer()
 	{
 		return *g_CurrentRenderer;
+	}
+
+	void Renderer::ReloadRenderer()
+	{
+		m_Backend.ReloadBackend();
 	}
 }

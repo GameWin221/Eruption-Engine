@@ -96,6 +96,9 @@
     <ClCompile Include="Source\Rendering\Light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="External\ImGui\imgui_impl_glfw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">

@@ -4,6 +4,7 @@
 #define EN_RENDERER_HPP
 
 #include "VulkanRendererBackend.hpp"
+#include <functional>
 
 namespace en
 {
@@ -14,6 +15,8 @@ namespace en
 		Renderer(RendererInfo& rendererInfo);
 		~Renderer();
 		
+		void PrepareImGuiUI(std::function<void()> imGuiRenderCallback);
+
 		void PrepareModel(Model* model);
 		void RemoveModel (Model* model);
 		void EnqueueModel(Model* model);
@@ -25,9 +28,12 @@ namespace en
 
 		Renderer& GetRenderer();
 
-	private:
+		void ReloadRenderer();
 
+	private:
 		VulkanRendererBackend m_Backend;
+
+		std::function<void()> m_ImGuiRenderCallback;
 	};
 }
 

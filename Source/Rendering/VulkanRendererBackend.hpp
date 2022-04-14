@@ -5,6 +5,10 @@
 
 #include "../../EruptionEngine.ini"
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+
 #include "Window.hpp"
 #include "Context.hpp"
 #include "Camera.hpp"
@@ -38,7 +42,12 @@ namespace en
 		void GeometryPass();
 		void LightingPass();
 
+		void BeginImGuiPass();
+		void EndImGuiPass();
+
 		void EndRender();
+
+		void ReloadBackend();
 
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera();
@@ -68,8 +77,8 @@ namespace en
 			Attachment albedo, position, normal;
 			Attachment depth;
 
-			VkFramebuffer         framebuffer;
-			VkSampler			  sampler;
+			VkFramebuffer framebuffer;
+			VkSampler	  sampler;
 
 			void Destroy(VkDevice& device)
 			{
@@ -86,7 +95,7 @@ namespace en
 
 		struct Swapchain
 		{
-			VkSwapchainKHR			   swapChain;
+			VkSwapchainKHR			   swapchain;
 			std::vector<VkImage>	   images;
 			std::vector<VkImageView>   imageViews;
 			VkFormat				   imageFormat;
@@ -95,7 +104,7 @@ namespace en
 
 			void Destroy(VkDevice& device)
 			{
-				vkDestroySwapchainKHR(device, swapChain, nullptr);
+				vkDestroySwapchainKHR(device, swapchain, nullptr);
 
 				for (auto& imageView : imageViews)
 					vkDestroyImageView(device, imageView, nullptr);
@@ -167,11 +176,23 @@ namespace en
 
 		VkCommandBuffer m_CommandBuffer;
 
+		struct ImGuiAPI
+		{
+			VkDescriptorPool DescriptorPool;
+			VkRenderPass	 RenderPass;
+
+			VkCommandPool CommandPool;
+
+			std::vector<VkCommandBuffer> CommandBuffers;
+		} m_ImGui;
+		
+
 		VkFence	m_InFlightFence;
 
 		RendererInfo m_RendererInfo;
 
 		bool m_IsRendering;
+		bool m_SkipFrame = false;
 
 		// References to existing objects
 		Context* m_Ctx;
@@ -182,9 +203,9 @@ namespace en
 
 		bool m_FramebufferResized = false;
 
+
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
-
 
 		void RecordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
 
@@ -213,6 +234,8 @@ namespace en
 		void CreateSwapchainFramebuffers();
 
 		void CreateSyncObjects();
+
+		void InitImGui();
 
 		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice& device);
 		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

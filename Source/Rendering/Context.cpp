@@ -53,7 +53,6 @@ namespace en
 		if (enableValidationLayers && !CheckValidationLayerSupport())
 			throw std::runtime_error("Context.cpp::Context::VKCreateInstance() - Validation layers requested, but not available!");
 
-
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		appInfo.pApplicationName = "Eruption Renderer";
@@ -146,7 +145,7 @@ namespace en
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
-		deviceFeatures.independentBlend  = VK_TRUE;
+
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -173,15 +172,7 @@ namespace en
 
 	void Context::VKCreateCommandPool()
 	{
-		Helpers::QueueFamilyIndices queueFamilyIndices = Helpers::FindQueueFamilies(m_PhysicalDevice);
-
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-		if (vkCreateCommandPool(m_LogicalDevice, &poolInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
-			throw std::runtime_error("Context.cpp::Context::VKCreateCommandPool() - Failed to create command pool!");
+		Helpers::CreateCommandPool(m_CommandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	}
 
 	bool Context::CheckValidationLayerSupport()

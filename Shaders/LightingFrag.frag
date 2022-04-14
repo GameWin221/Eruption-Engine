@@ -16,7 +16,8 @@ struct PointLight
     vec3 color;
 };
 
-layout(binding = 3) uniform UniformBufferObject {
+layout(binding = 3) uniform UBO 
+{
     PointLight lights[MAX_LIGHTS];
 } lightsBuffer;
 
@@ -35,7 +36,7 @@ void main()
     vec3 normal = texture(gNormal, fTexcoord).rgb;
     vec3 position = texture(gPosition, fTexcoord).rgb;
     
-    //float specularity = texture(gPosition, fTexcoord).a;
+    float specularity = texture(gColor, fTexcoord).a;
     
     vec3 diffuse = vec3(0);
 

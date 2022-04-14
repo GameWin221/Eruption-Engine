@@ -1,7 +1,9 @@
 #pragma once
 
-#ifndef TEXTURE_HPP
-#define TEXTURE_HPP
+#ifndef EN_TEXTURE_HPP
+#define EN_TEXTURE_HPP
+
+#include "../../EruptionEngine.ini"
 
 #include "Utility/Helpers.hpp"
 

@@ -33,6 +33,7 @@ void Eruption::Init()
 	rendererInfo.cullMode    = VK_CULL_MODE_BACK_BIT;
 
 	m_Renderer = new en::Renderer(rendererInfo);
+	m_Renderer->PrepareImGuiUI(std::bind(&Eruption::DrawImGuiUI, this));
 
 	m_Renderer->PrepareModel(m_AssetManager->GetModel("BackpackModel"));
 
@@ -43,6 +44,7 @@ void Eruption::Init()
 	en::CameraInfo cameraInfo{};
 	cameraInfo.dynamicallyScaled = true;
 	cameraInfo.fov = 70.0f;
+	cameraInfo.position = glm::vec3(0, 1, 0);
 
 	m_Camera = new en::Camera(cameraInfo);
 
@@ -117,7 +119,6 @@ void Eruption::Update()
 		m_Camera->m_Yaw   += m_Input->GetMouseVelocity().x;
 		m_Camera->m_Pitch -= m_Input->GetMouseVelocity().y;
 	}
-	
 }
 void Eruption::Render()
 {
@@ -127,6 +128,11 @@ void Eruption::Render()
 	m_Renderer->EnqueueModel(m_AssetManager->GetModel("BackpackModel"));
 
 	m_Renderer->Render();
+}
+
+void Eruption::DrawImGuiUI()
+{
+	ImGui::ShowDemoWindow();
 }
 
 void Eruption::Run()

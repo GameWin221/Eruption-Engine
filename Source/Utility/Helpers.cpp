@@ -249,6 +249,31 @@ namespace en
             vkDestroyImage(ctx.m_LogicalDevice, image, nullptr);
             vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
         }
+
+        void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags)
+        {
+            UseContext();
+
+            VkCommandPoolCreateInfo commandPoolCreateInfo = {};
+            commandPoolCreateInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            commandPoolCreateInfo.queueFamilyIndex = FindQueueFamilies(ctx.m_PhysicalDevice).graphicsFamily.value();
+            commandPoolCreateInfo.flags            = commandPoolCreateFlags;
+
+            if (vkCreateCommandPool(ctx.m_LogicalDevice, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS)
+                throw std::runtime_error("Failed to create a command pool!");
+        }
+
+        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool)
+        {
+            UseContext();
+
+            VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+            commandBufferAllocateInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            commandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            commandBufferAllocateInfo.commandPool        = commandPool;
+            commandBufferAllocateInfo.commandBufferCount = commandBufferCount;
+            vkAllocateCommandBuffers(ctx.m_LogicalDevice, &commandBufferAllocateInfo, commandBuffers);
+        }
         
         uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
         {

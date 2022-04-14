@@ -19,6 +19,8 @@ private:
 	void Update();
 	void Render();
 
+	void DrawImGuiUI();
+
 	en::Window*		   m_Window;
 	en::Context*	   m_Context;
 	en::AssetManager*  m_AssetManager;

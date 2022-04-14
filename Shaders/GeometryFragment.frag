@@ -14,10 +14,9 @@ const float specularity = 0.5;
 
 void main() 
 {
-    gColor = texture(mTexture, fTexcoord);
+    gColor = vec4(texture(mTexture, fTexcoord).rgb, specularity);
 
-    gPosition.xyz = fPosition;
-    gPosition.a = specularity;
+    gPosition = vec4(fPosition, 1.0);
 
-    gNormal.xyz = normalize(fNormal);
+    gNormal = vec4(normalize(fNormal), 1.0);
 }

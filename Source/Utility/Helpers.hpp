@@ -22,6 +22,9 @@ namespace en
 		extern void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdBuffer = VK_NULL_HANDLE);
 		extern void DestroyImage(VkImage& image, VkDeviceMemory& memory);
 
+		void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags);
+		void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool);
+
 		extern uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 		struct QueueFamilyIndices

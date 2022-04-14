@@ -1,4 +1,6 @@
 .vs
 
-!Build
-Build/
+imgui.ini
+
+Build
+x64
