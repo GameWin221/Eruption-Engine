@@ -6,7 +6,7 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.2.2";
+	windowInfo.title	  = "Eruption Engine v0.3.0";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
