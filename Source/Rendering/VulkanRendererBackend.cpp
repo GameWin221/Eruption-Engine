@@ -44,14 +44,17 @@ namespace en
 		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
 		m_Lights.pointLights[0].m_Color = glm::vec3(0.1, 1.0, 0.1);
 		m_Lights.pointLights[0].m_Active = true;
+		m_Lights.pointLights[0].m_Radius = 3.5f;
 
 		m_Lights.pointLights[1].m_Position = glm::vec3(-2, 2, 2);
 		m_Lights.pointLights[1].m_Color = glm::vec3(1, 0.1, 0.1);
 		m_Lights.pointLights[1].m_Active = true;
+		m_Lights.pointLights[1].m_Radius = 3.5f;
 
 		m_Lights.pointLights[2].m_Position = glm::vec3(2, 2, -2);
 		m_Lights.pointLights[2].m_Color = glm::vec3(0.1, 0.1, 1.0);
 		m_Lights.pointLights[2].m_Active = true;
+		m_Lights.pointLights[2].m_Radius = 3.5f;
 	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
@@ -166,15 +169,16 @@ namespace en
 	{
 		if (!m_SkipFrame)
 		{
-			Helpers::TransitionImageLayout(m_GBuffer.albedo.image, m_GBuffer.albedo.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.albedo.image  , m_GBuffer.albedo.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_GBuffer.position.image, m_GBuffer.position.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_GBuffer.normal.image, m_GBuffer.normal.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.normal.image  , m_GBuffer.normal.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 
 			// Prepare lights
 			for (int i = 0; i < MAX_LIGHTS; i++)
 			{
 				m_Lights.array.lights[i].position = m_Lights.pointLights[i].m_Position;
-				m_Lights.array.lights[i].color = m_Lights.pointLights[i].m_Color * static_cast<float>(m_Lights.pointLights[i].m_Active);
+				m_Lights.array.lights[i].color    = m_Lights.pointLights[i].m_Color * (float)m_Lights.pointLights[i].m_Active;
+				m_Lights.array.lights[i].radius   = m_Lights.pointLights[i].m_Radius;
 			}
 
 			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.array, m_Lights.bufferSize);
@@ -619,7 +623,7 @@ namespace en
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes	   = poolSizes.data();
-		poolInfo.maxSets	   = static_cast<uint32_t>(m_RendererInfo.maxMeshes);
+		poolInfo.maxSets	   = static_cast<uint32_t>(MAX_MESHES);
 		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_GeometryPipeline.descriptorPool) != VK_SUCCESS)
@@ -1009,9 +1013,9 @@ namespace en
 		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
 		dependency.dstSubpass	 = 0;
 		dependency.srcAccessMask = 0;
-		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;

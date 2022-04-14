@@ -22,7 +22,6 @@ namespace en
 		VkClearColorValue clearColor  = { 0.0f, 0.0f, 0.0f, 1.0f };
 		VkPolygonMode     polygonMode = VK_POLYGON_MODE_FILL;
 		VkCullModeFlags   cullMode    = VK_CULL_MODE_BACK_BIT;
-		uint32_t		  maxMeshes   = 64;
 	};
 
 	class VulkanRendererBackend
