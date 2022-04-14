@@ -41,9 +41,7 @@ namespace en
 
 		void GeometryPass();
 		void LightingPass();
-
-		void BeginImGuiPass();
-		void EndImGuiPass();
+		void ImGuiPass(std::function<void()>& imGuiUIDrawFunction);
 
 		void EndRender();
 

@@ -37,10 +37,7 @@ namespace en
 
 		m_Backend.GeometryPass();
 		m_Backend.LightingPass();
-
-		m_Backend.BeginImGuiPass();
-		m_ImGuiRenderCallback();
-		m_Backend.EndImGuiPass();
+		m_Backend.ImGuiPass(m_ImGuiRenderCallback);
 
 		m_Backend.EndRender();
 	}

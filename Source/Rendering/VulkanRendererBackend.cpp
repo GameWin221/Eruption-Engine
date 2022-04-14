@@ -201,32 +201,29 @@ namespace en
 			vkCmdEndRenderPass(m_CommandBuffer);
 		}
 	}
-	void VulkanRendererBackend::BeginImGuiPass()
+	void VulkanRendererBackend::ImGuiPass(std::function<void()>& imGuiUIDrawFunction)
 	{
 		if (!m_SkipFrame)
 		{
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
-		}
-	}
-	void VulkanRendererBackend::EndImGuiPass()
-	{
-		if (!m_SkipFrame)
-		{
+
+			imGuiUIDrawFunction();
+
 			ImGui::Render();
 
 			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass  = m_ImGui.RenderPass;
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = m_ImGui.RenderPass;
 			renderPassInfo.framebuffer = m_Swapchain.framebuffers[m_ImageIndex];
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = m_Swapchain.extent;
 
-			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 0.0f };
+			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 			renderPassInfo.clearValueCount = 1;
-			renderPassInfo.pClearValues    = &clearValue;
+			renderPassInfo.pClearValues = &clearValue;
 
 			VkCommandBufferBeginInfo beginInfo{};
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
