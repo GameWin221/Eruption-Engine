@@ -12,7 +12,7 @@ namespace en
 	class AssetManager
 	{
 	public:
-		void LoadModel	(std::string nameID, std::string path, std::string defaultTexture);
+		void LoadModel	(std::string nameID, std::string path, std::string defaultTexture = "WHITE_TEXTURE");
 		void LoadTexture(std::string nameID, std::string path);
 
 		void UnloadModel  (std::string nameID);

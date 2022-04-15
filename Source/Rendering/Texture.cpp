@@ -3,10 +3,10 @@
 
 namespace en
 {
-	std::array<unsigned char, 4> enNoTexturePixels    = { 240, 60 , 255, 255 };
-	std::array<unsigned char, 4> enWhiteTexturePixels = { 255, 255, 255, 255 };
+	std::array<unsigned char, 4> g_NoTexturePixels    = { 240, 60 , 255, 255 };
+	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
 
-	Texture* enWhiteTexture;
+	Texture* g_WhiteTexture;
 
 	Texture::Texture(std::string texturePath)
 	{
@@ -23,7 +23,7 @@ namespace en
 
 		if (!pixels)
 		{
-			pixels = enNoTexturePixels.data();
+			pixels = g_NoTexturePixels.data();
 			m_Size = glm::uvec2(1);
 			m_Channels = 4;
 
@@ -91,10 +91,10 @@ namespace en
 
 	Texture* Texture::GetWhiteTexture()
 	{
-		if (!enWhiteTexture)
-			enWhiteTexture = new Texture(enWhiteTexturePixels.data(), glm::uvec2(1));
+		if (!g_WhiteTexture)
+			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), glm::uvec2(1));
 
-		return enWhiteTexture;
+		return g_WhiteTexture;
 	}
 
 	void Texture::CreateImageSampler()

@@ -6,7 +6,7 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.3.4";
+	windowInfo.title	  = "Eruption Engine v0.3.6";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -46,7 +46,6 @@ void Eruption::Init()
 
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;
-	m_Input->SetCursorMode(en::CursorMode::Locked);
 
 	en::CameraInfo cameraInfo{};
 	cameraInfo.dynamicallyScaled = true;
@@ -81,13 +80,15 @@ void Eruption::Update()
 		counter++;
 
 	m_Window->PollEvents();
-	
 	m_Input->UpdateMouse();
 
-	if (m_Input->IsKey(en::Key::Escape, en::InputState::Pressed))
+	// Locking / Freeing the mouse
+	if (m_Input->IsMouseButton(en::Button::Right, en::InputState::Pressed))
+		m_Input->SetCursorMode(en::CursorMode::Locked);
+	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	
+	// Spawning / Despawning the additional model
 	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed) && !modelSpawned)
 	{
 		m_Renderer->PrepareModel(m_AssetManager->GetModel("AdditionalModel"));
@@ -99,29 +100,26 @@ void Eruption::Update()
 		modelSpawned = false;
 	}
 	
-	if (m_Input->GetCursorMode() == en::CursorMode::Free && m_Input->IsMouseButton(en::Button::Left, en::InputState::Pressed))
-		m_Input->SetCursorMode(en::CursorMode::Locked);
-
-	if (m_Input->IsKey(en::Key::W))
-		m_Camera->m_Position += m_Camera->GetFront() * m_fDeltaTime;
-
-	else if (m_Input->IsKey(en::Key::S))
-		m_Camera->m_Position -= m_Camera->GetFront() * m_fDeltaTime;
-
-	if (m_Input->IsKey(en::Key::A))
-		m_Camera->m_Position -= m_Camera->GetRight() * m_fDeltaTime;
-
-	else if (m_Input->IsKey(en::Key::D))
-		m_Camera->m_Position += m_Camera->GetRight() * m_fDeltaTime;
-
-	if (m_Input->IsKey(en::Key::Space))
-		m_Camera->m_Position += m_Camera->GetUp() * m_fDeltaTime;
-
-	else if (m_Input->IsKey(en::Key::Ctrl))
-		m_Camera->m_Position -= m_Camera->GetUp() * m_fDeltaTime;
-
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
+		if (m_Input->IsKey(en::Key::W))
+			m_Camera->m_Position += m_Camera->GetFront() * m_fDeltaTime;
+
+		else if (m_Input->IsKey(en::Key::S))
+			m_Camera->m_Position -= m_Camera->GetFront() * m_fDeltaTime;
+
+		if (m_Input->IsKey(en::Key::A))
+			m_Camera->m_Position -= m_Camera->GetRight() * m_fDeltaTime;
+
+		else if (m_Input->IsKey(en::Key::D))
+			m_Camera->m_Position += m_Camera->GetRight() * m_fDeltaTime;
+
+		if (m_Input->IsKey(en::Key::Space))
+			m_Camera->m_Position += m_Camera->GetUp() * m_fDeltaTime;
+
+		else if (m_Input->IsKey(en::Key::Ctrl))
+			m_Camera->m_Position -= m_Camera->GetUp() * m_fDeltaTime;
+
 		m_Camera->m_Yaw   += m_Input->GetMouseVelocity().x;
 		m_Camera->m_Pitch -= m_Input->GetMouseVelocity().y;
 	}
@@ -141,7 +139,11 @@ void Eruption::Render()
 
 void Eruption::DrawImGuiUI()
 {
-	ImGui::ShowDemoWindow();
+	ImGui::Begin("Lights");
+
+	
+
+	ImGui::End();
 }
 
 void Eruption::Run()

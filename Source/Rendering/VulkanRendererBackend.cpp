@@ -67,7 +67,7 @@ namespace en
 		m_GeometryPipeline.Destroy(m_Ctx->m_LogicalDevice);
 		m_LightingPipeline.Destroy(m_Ctx->m_LogicalDevice);
 
-		vkDestroyFence(m_Ctx->m_LogicalDevice, m_InFlightFence, nullptr);
+		vkDestroyFence(m_Ctx->m_LogicalDevice, m_SubmitFence, nullptr);
 
 		vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_LightingPipeline.descriptorPool, 1, &m_LightingDescriptorSet);
 
@@ -85,10 +85,9 @@ namespace en
 		ImGui::DestroyContext();
 		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_ImGui.DescriptorPool, nullptr);
 	}
-
 	void VulkanRendererBackend::BeginRender()
 	{
-		vkWaitForFences(m_Ctx->m_LogicalDevice, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
+		vkWaitForFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence, VK_TRUE, UINT64_MAX);
 
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline.passFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
@@ -105,7 +104,7 @@ namespace en
 
 		if (!m_SkipFrame)
 		{
-			vkResetFences(m_Ctx->m_LogicalDevice, 1, &m_InFlightFence);
+			vkResetFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence);
 
 			vkResetCommandBuffer(m_CommandBuffer, 0);
 
@@ -269,7 +268,7 @@ namespace en
 			submitInfo.signalSemaphoreCount = 1;
 			submitInfo.pSignalSemaphores    = signalSemaphores;
 
-			if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1, &submitInfo, m_InFlightFence) != VK_SUCCESS)
+			if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1, &submitInfo, m_SubmitFence) != VK_SUCCESS)
 				throw std::runtime_error("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
 
 			VkPresentInfoKHR presentInfo{};
@@ -359,6 +358,12 @@ namespace en
 	}
 	void VulkanRendererBackend::EnqueueMesh(Mesh* mesh)
 	{
+		if (!m_PreparedMeshes.contains(mesh))
+		{
+			std::cout << "Failed to enqueue \"" << mesh << "\" mesh because it wasn't prepared yet!\n";
+			return;
+		}
+
 		m_MeshQueue.emplace_back(mesh);
 	}
 
@@ -1156,7 +1161,7 @@ namespace en
 
 		if (vkCreateSemaphore(m_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &m_GeometryPipeline.passFinished) != VK_SUCCESS ||
 			vkCreateSemaphore(m_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &m_LightingPipeline.passFinished) != VK_SUCCESS ||
-			vkCreateFence	 (m_Ctx->m_LogicalDevice, &fenceInfo	, nullptr, &m_InFlightFence				   ) != VK_SUCCESS)
+			vkCreateFence	 (m_Ctx->m_LogicalDevice, &fenceInfo	, nullptr, &m_SubmitFence				   ) != VK_SUCCESS)
 		{
 			throw std::runtime_error("VulkanRendererBackend::CreateSyncObjects() - Failed to create sync objects!");
 		}

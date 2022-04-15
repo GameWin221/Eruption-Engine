@@ -185,7 +185,7 @@ namespace en
 		} m_ImGui;
 		
 
-		VkFence	m_InFlightFence;
+		VkFence	m_SubmitFence;
 
 		RendererInfo m_RendererInfo;
 

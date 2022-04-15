@@ -19,6 +19,8 @@ namespace en
 
 		std::unique_ptr<UniformBuffer> m_UniformBuffer;
 
+		static Model* GetNoModel();
+
 	private:
 		std::string m_FilePath;
 

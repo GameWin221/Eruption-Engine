@@ -3,6 +3,8 @@
 
 namespace en
 {
+	Model* g_NoModel;
+
 	Model::Model(std::string objPath)
 	{
 		m_FilePath = objPath;
@@ -10,6 +12,14 @@ namespace en
 		m_UniformBuffer = std::make_unique<UniformBuffer>();
 
 		LoadModel();
+	}
+
+	Model* Model::GetNoModel()
+	{
+		if (!g_NoModel)
+			g_NoModel = new Model("Models/NoModel.obj");
+
+		return g_NoModel;
 	}
 
 	void Model::LoadModel()
