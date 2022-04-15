@@ -4,6 +4,8 @@
 
 My own rendering engine made with Vulkan.
 
+[Eruption Engine Milanote Board](https://app.milanote.com/1NmtuU1jo13IbQ?p=vUC5d3l4PKq)
+
 The engine is in a really early stage of development.
 
 # Dependencies
