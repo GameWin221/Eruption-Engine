@@ -25,6 +25,12 @@ layout(binding = 3) uniform UBO
     vec3 viewPos;
 } lightsBuffer;
 
+
+float whenNotEqual(float x, float y) {
+  return abs(sign(x - y));
+}
+
+
 vec3 CalculateLight(int lightIndex, vec3 color, vec3 position, vec3 normal, float dist)
 {
     vec3  lPos = lightsBuffer.lights[lightIndex].position;
@@ -45,10 +51,10 @@ vec3 CalculateLight(int lightIndex, vec3 color, vec3 position, vec3 normal, floa
     vec3 reflectDir = reflect(-lightDir, normal);
     vec3 halfwayDir = normalize(lightDir + viewDir);  
     float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0); // 32 is specularity
+    spec *= whenNotEqual(diff, 0.0);
     vec3 specular = lCol * spec;
 
     vec3 result = (diffuse + specular) * attenuation;
-
     return result;
 }
 
