@@ -41,20 +41,20 @@ namespace en
 
 		InitImGui();
 
-		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
-		m_Lights.pointLights[0].m_Color = glm::vec3(0.1, 1.0, 0.1);
-		m_Lights.pointLights[0].m_Active = true;
-		m_Lights.pointLights[0].m_Radius = 3.5f;
+		m_Lights.PointLights[0].m_Position = glm::vec3(2, 2, 2);
+		m_Lights.PointLights[0].m_Color = glm::vec3(0.1, 1.0, 0.1);
+		m_Lights.PointLights[0].m_Active = true;
+		m_Lights.PointLights[0].m_Radius = 3.5f;
 
-		m_Lights.pointLights[1].m_Position = glm::vec3(-2, 2, 2);
-		m_Lights.pointLights[1].m_Color = glm::vec3(1, 0.1, 0.1);
-		m_Lights.pointLights[1].m_Active = true;
-		m_Lights.pointLights[1].m_Radius = 3.5f;
+		m_Lights.PointLights[1].m_Position = glm::vec3(-2, 2, 2);
+		m_Lights.PointLights[1].m_Color = glm::vec3(1, 0.1, 0.1);
+		m_Lights.PointLights[1].m_Active = true;
+		m_Lights.PointLights[1].m_Radius = 3.5f;
 
-		m_Lights.pointLights[2].m_Position = glm::vec3(2, 2, -2);
-		m_Lights.pointLights[2].m_Color = glm::vec3(0.1, 0.1, 1.0);
-		m_Lights.pointLights[2].m_Active = true;
-		m_Lights.pointLights[2].m_Radius = 3.5f;
+		m_Lights.PointLights[2].m_Position = glm::vec3(2, 2, -2);
+		m_Lights.PointLights[2].m_Color = glm::vec3(0.1, 0.1, 1.0);
+		m_Lights.PointLights[2].m_Active = true;
+		m_Lights.PointLights[2].m_Radius = 3.5f;
 	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
@@ -76,7 +76,7 @@ namespace en
 		for (auto& preparedMesh : m_PreparedMeshes)
 			vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_GeometryPipeline.descriptorPool, 1, &preparedMesh.second.descriptorSet);
 
-		en::Helpers::DestroyBuffer(m_Lights.buffer, m_Lights.bufferMemory);
+		en::Helpers::DestroyBuffer(m_Lights.Buffer, m_Lights.BufferMemory);
 
 		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.RenderPass, nullptr);
 
@@ -176,12 +176,13 @@ namespace en
 			// Prepare lights
 			for (int i = 0; i < MAX_LIGHTS; i++)
 			{
-				m_Lights.array.lights[i].position = m_Lights.pointLights[i].m_Position;
-				m_Lights.array.lights[i].color    = m_Lights.pointLights[i].m_Color * (float)m_Lights.pointLights[i].m_Active;
-				m_Lights.array.lights[i].radius   = m_Lights.pointLights[i].m_Radius;
+				m_Lights.LBO.Lights[i].position = m_Lights.PointLights[i].m_Position;
+				m_Lights.LBO.Lights[i].color    = m_Lights.PointLights[i].m_Color * (float)m_Lights.PointLights[i].m_Active;
+				m_Lights.LBO.Lights[i].radius   = m_Lights.PointLights[i].m_Radius;
 			}
+			m_Lights.LBO.ViewPos = m_MainCamera->m_Position;
 
-			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.array, m_Lights.bufferSize);
+			en::Helpers::MapBuffer(m_Lights.BufferMemory, &m_Lights.LBO, m_Lights.BufferSize);
 
 			VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
 
@@ -867,8 +868,8 @@ namespace en
 
 	void VulkanRendererBackend::LCreateLightsBuffer()
 	{
-		m_Lights.bufferSize = sizeof(m_Lights.array);
-		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
+		m_Lights.BufferSize = sizeof(m_Lights.LBO);
+		en::Helpers::CreateBuffer(m_Lights.BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.Buffer, m_Lights.BufferMemory);
 	}
 	void VulkanRendererBackend::LCreateDescriptorSetLayout()
 	{
@@ -952,9 +953,9 @@ namespace en
 		
 		// Light Buffer
 		VkDescriptorBufferInfo lightBufferInfo{};
-		lightBufferInfo.buffer = m_Lights.buffer;
+		lightBufferInfo.buffer = m_Lights.Buffer;
 		lightBufferInfo.offset = 0;
-		lightBufferInfo.range  = sizeof(m_Lights.array);
+		lightBufferInfo.range  = sizeof(m_Lights.LBO);
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 

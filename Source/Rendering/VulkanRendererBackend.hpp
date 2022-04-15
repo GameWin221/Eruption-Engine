@@ -138,16 +138,17 @@ namespace en
 
 		struct Lights
 		{
-			struct LightsArray
+			struct LightsBufferObject
 			{
-				PointLight::Buffer lights[MAX_LIGHTS];
-			} array;
+				PointLight::Buffer Lights[MAX_LIGHTS];
+				glm::vec3 ViewPos;
+			} LBO;
 
-			PointLight pointLights[MAX_LIGHTS];
+			PointLight PointLights[MAX_LIGHTS];
 
-			VkBuffer       buffer;
-			VkDeviceMemory bufferMemory;
-			VkDeviceSize   bufferSize;
+			VkBuffer       Buffer;
+			VkDeviceMemory BufferMemory;
+			VkDeviceSize   BufferSize;
 
 		} m_Lights;
 

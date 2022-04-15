@@ -6,7 +6,7 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.3.2";
+	windowInfo.title	  = "Eruption Engine v0.3.4";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -23,9 +23,16 @@ void Eruption::Init()
 	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg");
 	m_AssetManager->LoadModel("AdditionalModel", "Models/Skull/skull.obj", "AdditionalTexture");
 
+	m_AssetManager->LoadTexture("FloorTexture", "Models/floor.png");
+	m_AssetManager->LoadModel("FloorModel", "Models/Plane.obj", "FloorTexture");
+
 	en::UniformBufferObject& ubo = m_AssetManager->GetModel("BackpackModel")->m_UniformBuffer->m_UBO;
 	ubo.model = glm::translate(ubo.model, glm::vec3(2, 0.5f, 0));
-	ubo.model = glm::scale(ubo.model, glm::vec3(0.2f));
+	ubo.model = glm::scale	  (ubo.model, glm::vec3(0.2f));
+
+	en::UniformBufferObject& uboSkull = m_AssetManager->GetModel("AdditionalModel")->m_UniformBuffer->m_UBO;
+	uboSkull.model = glm::translate(uboSkull.model, glm::vec3(0, 0.5f, 0));
+	uboSkull.model = glm::rotate   (uboSkull.model, glm::radians(45.0f), glm::vec3(-1, 0, 0));
 
 	en::RendererInfo rendererInfo{};
 	rendererInfo.clearColor  = { 0.01f, 0.01f, 0.01f, 1.0f };
@@ -34,8 +41,8 @@ void Eruption::Init()
 
 	m_Renderer = new en::Renderer(rendererInfo);
 	m_Renderer->PrepareImGuiUI(std::bind(&Eruption::DrawImGuiUI, this));
-
 	m_Renderer->PrepareModel(m_AssetManager->GetModel("BackpackModel"));
+	m_Renderer->PrepareModel(m_AssetManager->GetModel("FloorModel"));
 
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;
@@ -127,6 +134,7 @@ void Eruption::Render()
 		m_Renderer->EnqueueModel(m_AssetManager->GetModel("AdditionalModel"));
 
 	m_Renderer->EnqueueModel(m_AssetManager->GetModel("BackpackModel"));
+	m_Renderer->EnqueueModel(m_AssetManager->GetModel("FloorModel"));
 
 	m_Renderer->Render();
 }
