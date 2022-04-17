@@ -13,7 +13,7 @@ The engine is in a really early stage of development.
 - Vulkan SDK 1.3+
 
 # How to compile?
-1. Download [Vulkan SDK]([https://vulkan.lunarg.com/sdk/home#windows](https://vulkan.lunarg.com/sdk/home#windows)) and install it wherever you want.
+1. Download [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows) and install it wherever you want.
 2. Open the `EruptionEngine.sln` file  with Visual Studio 2022 and compile it by pressing `F11`.
 
 # How to compile the shaders?
