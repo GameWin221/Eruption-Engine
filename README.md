@@ -1,4 +1,4 @@
-# Eruption-Engine
+# Eruption Rendering Engine
 
 ![](https://forthebadge.com/images/badges/made-with-c-plus-plus.svg)
 
