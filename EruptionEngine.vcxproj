@@ -122,11 +122,11 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;$(SolutionDir)External\TGLTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>EnPch.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>Core/EnPch.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,11 +153,11 @@ compile.bat</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;$(SolutionDir)External\TGLTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>EnPch.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>Core/EnPch.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -205,8 +205,15 @@ compile.bat</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Rendering\Light.cpp" />
-    <ClCompile Include="Source\Utility\AssetManager.cpp" />
+    <ClCompile Include="External\TGLTF\tiny_gltf.cc">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Lights\PointLight.cpp" />
+    <ClCompile Include="Source\Assets\AssetManager.cpp" />
     <ClCompile Include="External\STB\stb_image.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -215,69 +222,55 @@ compile.bat</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Rendering\Mesh.cpp" />
-    <ClCompile Include="Source\Eruption.cpp" />
-    <ClCompile Include="Source\EnPch.cpp">
+    <ClCompile Include="Source\Assets\Mesh.cpp" />
+    <ClCompile Include="Source\Core\Eruption.cpp" />
+    <ClCompile Include="Source\Core\EnPch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">EnPch.hpp</PrecompiledHeaderFile>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">EnPch.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Rendering\Camera.cpp" />
-    <ClCompile Include="Source\Rendering\Context.cpp" />
-    <ClCompile Include="Source\Rendering\IndexBuffer.cpp" />
-    <ClCompile Include="Source\Rendering\Model.cpp" />
-    <ClCompile Include="Source\Rendering\Renderer.cpp" />
-    <ClCompile Include="Source\Rendering\Shader.cpp" />
-    <ClCompile Include="Source\Rendering\Texture.cpp" />
-    <ClCompile Include="Source\Rendering\UniformBuffer.cpp" />
-    <ClCompile Include="Source\Rendering\VertexBuffer.cpp" />
-    <ClCompile Include="Source\Rendering\Window.cpp" />
-    <ClCompile Include="Source\Utility\Helpers.cpp" />
-    <ClCompile Include="Source\Utility\InputManager.cpp" />
-    <ClCompile Include="Source\Rendering\VulkanRendererBackend.cpp" />
+    <ClCompile Include="Source\Renderer\Camera.cpp" />
+    <ClCompile Include="Source\Renderer\Context.cpp" />
+    <ClCompile Include="Source\Assets\Model.cpp" />
+    <ClCompile Include="Source\Renderer\Renderer.cpp" />
+    <ClCompile Include="Source\Renderer\Shader.cpp" />
+    <ClCompile Include="Source\Assets\Texture.cpp" />
+    <ClCompile Include="Source\Renderer\Window.cpp" />
+    <ClCompile Include="Source\Common\Helpers.cpp" />
+    <ClCompile Include="Source\Input\InputManager.cpp" />
+    <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
-    <ClInclude Include="Include\Rendering\Camera.hpp" />
-    <ClInclude Include="Include\Rendering\Context.hpp" />
-    <ClInclude Include="Include\Rendering\IndexBuffer.hpp" />
-    <ClInclude Include="Include\Rendering\Model.hpp" />
-    <ClInclude Include="Include\Rendering\Renderer.hpp" />
-    <ClInclude Include="Include\Rendering\Shader.hpp" />
-    <ClInclude Include="Include\Rendering\Texture.hpp" />
-    <ClInclude Include="Include\Rendering\UniformBuffer.hpp" />
-    <ClInclude Include="Include\Rendering\VertexBuffer.hpp" />
-    <ClInclude Include="Include\Rendering\Window.hpp" />
-    <ClInclude Include="Include\Utility\Helpers.hpp" />
-    <ClInclude Include="Include\Rendering\Mesh.hpp" />
-    <ClInclude Include="Include\Utility\InputManager.hpp" />
-    <ClInclude Include="Include\Rendering\VulkanRendererBackend.hpp" />
-    <ClInclude Include="Include\Rendering\Light.hpp" />
-    <ClInclude Include="Source\EnPch.hpp" />
-    <ClInclude Include="Source\Eruption.hpp" />
-    <ClInclude Include="Source\Rendering\Camera.hpp" />
-    <ClInclude Include="Source\Rendering\Context.hpp" />
-    <ClInclude Include="Source\Rendering\IndexBuffer.hpp" />
-    <ClInclude Include="Source\Rendering\Light.hpp" />
-    <ClInclude Include="Source\Rendering\Mesh.hpp" />
-    <ClInclude Include="Source\Rendering\Model.hpp" />
-    <ClInclude Include="Source\Rendering\Renderer.hpp" />
-    <ClInclude Include="Source\Rendering\Shader.hpp" />
-    <ClInclude Include="Source\Rendering\Texture.hpp" />
-    <ClInclude Include="Source\Rendering\UniformBuffer.hpp" />
-    <ClInclude Include="Source\Rendering\VertexBuffer.hpp" />
-    <ClInclude Include="Source\Rendering\VulkanRendererBackend.hpp" />
-    <ClInclude Include="Source\Rendering\Window.hpp" />
-    <ClInclude Include="Source\Utility\AssetManager.hpp" />
-    <ClInclude Include="Source\Utility\Helpers.hpp" />
-    <ClInclude Include="Source\Utility\InputManager.hpp" />
+    <ClInclude Include="Source\Core\EnPch.hpp" />
+    <ClInclude Include="Source\Core\Eruption.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\UniformBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Camera.hpp" />
+    <ClInclude Include="Source\Renderer\Context.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
+    <ClInclude Include="Source\Assets\Mesh.hpp" />
+    <ClInclude Include="Source\Assets\Model.hpp" />
+    <ClInclude Include="Source\Renderer\Renderer.hpp" />
+    <ClInclude Include="Source\Renderer\Shader.hpp" />
+    <ClInclude Include="Source\Assets\Texture.hpp" />
+    <ClInclude Include="Source\Renderer\RendererBackend.hpp" />
+    <ClInclude Include="Source\Renderer\Window.hpp" />
+    <ClInclude Include="Source\Assets\AssetManager.hpp" />
+    <ClInclude Include="Source\Common\Helpers.hpp" />
+    <ClInclude Include="Source\Input\InputManager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
+    <None Include="Shaders\GeometryFragment.frag" />
+    <None Include="Shaders\GeometryVertex.vert" />
+    <None Include="Shaders\LightingFrag.frag" />
+    <None Include="Shaders\LightingVert.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
