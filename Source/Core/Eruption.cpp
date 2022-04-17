@@ -6,7 +6,7 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.3.6";
+	windowInfo.title	  = "Eruption Engine v0.3.8";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -17,18 +17,30 @@ void Eruption::Init()
 
 	m_AssetManager = new en::AssetManager;
 
-	m_AssetManager->LoadTexture("BackpackTexture", "Models/Backpack/backpack_albedo.jpg");
-	m_AssetManager->LoadModel("BackpackModel", "Models/Backpack/Backpack.obj", "BackpackTexture");
+	m_AssetManager->LoadModel("BackpackModel"  , "Models/Backpack/Backpack.obj");
+	m_AssetManager->LoadModel("AdditionalModel", "Models/Skull/skull.obj"	   );
+	m_AssetManager->LoadModel("FloorModel"     , "Models/Plane.obj"			   );
 
-	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg");
-	m_AssetManager->LoadModel("AdditionalModel", "Models/Skull/skull.obj", "AdditionalTexture");
+	m_AssetManager->LoadTexture("BackpackTexture"  , "Models/Backpack/backpack_albedo.jpg");
+	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg"	  );
+	m_AssetManager->LoadTexture("FloorTexture"     , "Models/floor.png"					  );
+
+	m_AssetManager->LoadTexture("BackpackSpecularTexture"  , "Models/Backpack/backpack_specular.jpg");
+	m_AssetManager->LoadTexture("AdditionalSpecularTexture", "Models/Skull/skull_specular.jpg"		);
+	m_AssetManager->LoadTexture("FloorSpecularTexture"     , "Models/floor_specular.png"			);
+
+	m_AssetManager->CreateMaterial("BackpackMaterial"  , glm::vec3(1.0f), m_AssetManager->GetTexture("BackpackTexture"  ), m_AssetManager->GetTexture("BackpackSpecularTexture"  ));
+	m_AssetManager->CreateMaterial("AdditionalMaterial", glm::vec3(1.0f), m_AssetManager->GetTexture("AdditionalTexture"), m_AssetManager->GetTexture("AdditionalSpecularTexture"));
+	m_AssetManager->CreateMaterial("FloorMaterial"	   , glm::vec3(1.0f), m_AssetManager->GetTexture("FloorTexture"     ), m_AssetManager->GetTexture("FloorSpecularTexture"     ));
+
+	m_AssetManager->GetModel("BackpackModel"  )->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial"  );
+	m_AssetManager->GetModel("AdditionalModel")->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("AdditionalMaterial");
+	m_AssetManager->GetModel("FloorModel"     )->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"     );
 
 	// The Cerberus file is not in the repo because it's too heavy (100mb+)
 	//m_AssetManager->LoadTexture("CerberusAlbedo", "Models/Cerberus/CerberusAlbedo.png", false);
 	//m_AssetManager->LoadModel("Cerberus", "Models/Cerberus/Cerberus.obj", "CerberusAlbedo");
 
-	m_AssetManager->LoadTexture("FloorTexture", "Models/floor.png");
-	m_AssetManager->LoadModel("FloorModel", "Models/Plane.obj", "FloorTexture");
 
 	en::UniformBufferObject& ubo = m_AssetManager->GetModel("BackpackModel")->m_UniformBuffer->m_UBO;
 	ubo.model = glm::translate(ubo.model, glm::vec3(2, 0.5f, 0));
@@ -52,7 +64,7 @@ void Eruption::Init()
 	m_Renderer->PrepareImGuiUI(std::bind(&Eruption::DrawImGuiUI, this));
 	m_Renderer->PrepareModel(m_AssetManager->GetModel("BackpackModel"));
 	m_Renderer->PrepareModel(m_AssetManager->GetModel("FloorModel"));
-	m_Renderer->PrepareModel(m_AssetManager->GetModel("Cerberus"));
+	//m_Renderer->PrepareModel(m_AssetManager->GetModel("Cerberus"));
 
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;

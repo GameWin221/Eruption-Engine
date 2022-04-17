@@ -94,7 +94,7 @@ namespace en
 				indices.emplace_back(uniqueVertices[vertex]);
 			}
 
-			m_Meshes.emplace_back(Texture::GetWhiteTexture(), vertices, indices);
+			m_Meshes.emplace_back(vertices, indices);
 		}
 	}
 	void Model::LoadGLTFModel()

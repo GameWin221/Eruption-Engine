@@ -3,9 +3,9 @@
 
 namespace en
 {
-	Mesh::Mesh(Texture* texture, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+	Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
 	{
-		m_Texture		= texture;
+		m_Material		= Material::GetDefaultMaterial();
 		m_VertexBuffer  = std::make_unique<VertexBuffer>(vertices);
 		m_IndexBuffer   = std::make_unique<IndexBuffer>(indices);
 	}

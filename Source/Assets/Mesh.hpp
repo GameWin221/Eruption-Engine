@@ -9,16 +9,16 @@
 #include <Renderer/Buffers/IndexBuffer.hpp>
 #include <Renderer/Buffers/UniformBuffer.hpp>
 
-#include <Assets/Texture.hpp>
+#include <Assets/Material.hpp>
 
 namespace en
 {
 	class Mesh
 	{
 	public:
-		Mesh(Texture* texture, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+		Mesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
 
-		Texture* m_Texture;
+		Material* m_Material;
 	
 		std::unique_ptr<VertexBuffer>  m_VertexBuffer;
 		std::unique_ptr<IndexBuffer>   m_IndexBuffer;

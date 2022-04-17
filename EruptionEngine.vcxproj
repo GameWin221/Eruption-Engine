@@ -209,6 +209,7 @@ compile.bat</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
@@ -246,6 +247,7 @@ compile.bat</Command>
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
+    <ClInclude Include="Source\Assets\Material.hpp" />
     <ClInclude Include="Source\Core\EnPch.hpp" />
     <ClInclude Include="Source\Core\Eruption.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />

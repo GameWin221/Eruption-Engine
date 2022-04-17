@@ -24,6 +24,7 @@ namespace en
 		VkDeviceMemory m_ImageMemory;
 
 		static Texture* GetWhiteTexture();
+		static Texture* GetBlackTexture();
 
 		const glm::ivec2& GetSize()     const { return this->m_Size; };
 		const std::string& GetFilePath() const { return this->m_FilePath; };

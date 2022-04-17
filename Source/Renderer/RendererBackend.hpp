@@ -192,9 +192,6 @@ namespace en
 
 		RendererInfo m_RendererInfo;
 
-		bool m_IsRendering;
-		bool m_SkipFrame = false;
-
 		// References to existing objects
 		Context* m_Ctx;
 		Window*  m_Window;
@@ -203,7 +200,7 @@ namespace en
 		uint32_t m_ImageIndex;
 
 		bool m_FramebufferResized = false;
-
+		bool m_SkipFrame = false;
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();

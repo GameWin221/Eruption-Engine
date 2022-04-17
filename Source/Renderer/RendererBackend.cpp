@@ -108,15 +108,11 @@ namespace en
 
 			vkResetCommandBuffer(m_CommandBuffer, 0);
 
-			m_IsRendering = false;
-
 			VkCommandBufferBeginInfo beginInfo{};
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 			if (vkBeginCommandBuffer(m_CommandBuffer, &beginInfo) != VK_SUCCESS)
 				throw std::runtime_error("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
-
-			m_IsRendering = true;
 		}
 	}
 	void VulkanRendererBackend::GeometryPass()
@@ -311,10 +307,10 @@ namespace en
 		m_PreparedMeshes[mesh].parent = parent;
 
 		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = m_GeometryPipeline.descriptorPool;
+		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool	 = m_GeometryPipeline.descriptorPool;
 		allocInfo.descriptorSetCount = static_cast<uint32_t>(1);
-		allocInfo.pSetLayouts = &m_GeometryPipeline.descriptorSetLayout;
+		allocInfo.pSetLayouts		 = &m_GeometryPipeline.descriptorSetLayout;
 
 		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_PreparedMeshes[mesh].descriptorSet) != VK_SUCCESS)
 			throw std::runtime_error("VulkanRendererBackend::PrepareMesh() - Failed to allocate descriptor sets!");
@@ -322,30 +318,43 @@ namespace en
 		VkDescriptorBufferInfo bufferInfo{};
 		bufferInfo.buffer = m_PreparedMeshes[mesh].parent->m_UniformBuffer->m_Buffer;
 		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
+		bufferInfo.range  = sizeof(UniformBufferObject);
 
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = mesh->m_Texture->m_ImageView;
-		imageInfo.sampler = mesh->m_Texture->m_ImageSampler;
+		VkDescriptorImageInfo albedoImageInfo{};
+		albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		albedoImageInfo.imageView   = mesh->m_Material->m_Albedo->m_ImageView;
+		albedoImageInfo.sampler     = mesh->m_Material->m_Albedo->m_ImageSampler;
+
+		VkDescriptorImageInfo specularImageInfo{};
+		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		specularImageInfo.imageView   = mesh->m_Material->m_Specular->m_ImageView;
+		specularImageInfo.sampler     = mesh->m_Material->m_Specular->m_ImageSampler;
 
 
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = m_PreparedMeshes[mesh].descriptorSet;
-		descriptorWrites[0].dstBinding = 0;
+		std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+		descriptorWrites[0].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet			= m_PreparedMeshes[mesh].descriptorSet;
+		descriptorWrites[0].dstBinding		= 0;
 		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
+		descriptorWrites[0].pBufferInfo	    = &bufferInfo;
 
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = m_PreparedMeshes[mesh].descriptorSet;
-		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].sType		    = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet			= m_PreparedMeshes[mesh].descriptorSet;
+		descriptorWrites[1].dstBinding		= 1;
 		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
+		descriptorWrites[1].pImageInfo		= &albedoImageInfo;
+
+		descriptorWrites[2].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet			= m_PreparedMeshes[mesh].descriptorSet;
+		descriptorWrites[2].dstBinding		= 2;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].pImageInfo      = &specularImageInfo;
 
 		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
@@ -601,14 +610,21 @@ namespace en
 		uboLayoutBinding.descriptorCount = 1;
 		uboLayoutBinding.stageFlags		 = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-		samplerLayoutBinding.binding			= 1;
-		samplerLayoutBinding.descriptorCount	= 1;
-		samplerLayoutBinding.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		samplerLayoutBinding.pImmutableSamplers = nullptr;
-		samplerLayoutBinding.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding albedoSamplerLayoutBinding{};
+		albedoSamplerLayoutBinding.binding			  = 1;
+		albedoSamplerLayoutBinding.descriptorCount	  = 1;
+		albedoSamplerLayoutBinding.descriptorType	  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		albedoSamplerLayoutBinding.pImmutableSamplers = nullptr;
+		albedoSamplerLayoutBinding.stageFlags		  = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+		VkDescriptorSetLayoutBinding specularSamplerLayoutBinding{};
+		specularSamplerLayoutBinding.binding		    = 2;
+		specularSamplerLayoutBinding.descriptorCount    = 1;
+		specularSamplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		specularSamplerLayoutBinding.pImmutableSamplers = nullptr;
+		specularSamplerLayoutBinding.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, albedoSamplerLayoutBinding, specularSamplerLayoutBinding };
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType	    = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -619,11 +635,13 @@ namespace en
 	}
 	void VulkanRendererBackend::GCreateDescriptorPool()
 	{
-		std::array<VkDescriptorPoolSize, 2> poolSizes{};
+		std::array<VkDescriptorPoolSize, 3> poolSizes{};
 		poolSizes[0].type		     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = static_cast<uint32_t>(1);
 		poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		poolSizes[1].descriptorCount = static_cast<uint32_t>(1);
+		poolSizes[2].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[2].descriptorCount = static_cast<uint32_t>(1);
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

@@ -4,8 +4,10 @@
 namespace en
 {
 	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
+	std::array<unsigned char, 4> g_BlackTexturePixels = {   0,   0,   0, 255 };
 
 	Texture* g_WhiteTexture;
+	Texture* g_BlackTexture;
 
 	Texture::Texture(std::string texturePath, bool flipTexture)
 	{
@@ -94,6 +96,13 @@ namespace en
 			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), glm::uvec2(1));
 
 		return g_WhiteTexture;
+	}
+	Texture* Texture::GetBlackTexture()
+	{
+		if (!g_BlackTexture)
+			g_BlackTexture = new Texture(g_BlackTexturePixels.data(), glm::uvec2(1));
+
+		return g_BlackTexture;
 	}
 
 	void Texture::CreateImageSampler()
