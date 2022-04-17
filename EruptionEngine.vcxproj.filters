@@ -181,4 +181,10 @@
     <None Include="Shaders\LightingFrag.frag" />
     <None Include="Shaders\LightingVert.vert" />
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="Shaders\LightingVert.spv" />
+    <CopyFileToFolders Include="Shaders\LightingFrag.spv" />
+    <CopyFileToFolders Include="Shaders\GeometryVertex.spv" />
+    <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />
+  </ItemGroup>
 </Project>

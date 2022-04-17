@@ -60,4 +60,8 @@ namespace en
 	{
 		m_Backend.ReloadBackend();
 	}
+	void Renderer::SetDebugMode(int& mode)
+	{
+		m_Backend.m_DebugMode = mode;
+	}
 }

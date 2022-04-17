@@ -162,9 +162,30 @@ void Eruption::Render()
 
 void Eruption::DrawImGuiUI()
 {
-	ImGui::Begin("Lights");
+	static int mode = 0;
 
+	ImGui::Begin("Debug Menu");
 	
+	if (ImGui::SliderInt("Debug View", &mode, 0, 6))
+		m_Renderer->SetDebugMode(mode);
+
+	std::string modeName;
+
+	switch (mode)
+	{
+	case 0: modeName = "No Debug View"; break;
+	case 1: modeName = "Albedo";        break;
+	case 2: modeName = "Normals";       break;
+	case 3: modeName = "Position";      break;
+	case 4: modeName = "Specular";	    break;
+	case 5: modeName = "Lights Only";   break;
+	case 6: modeName = "Depth";		    break;
+	default: modeName = "Unknown Mode"; break;
+	}
+
+	ImGui::Text(modeName.c_str());
+
+	ImGui::Text(std::to_string(1.0 / m_DeltaTime).c_str());
 
 	ImGui::End();
 }

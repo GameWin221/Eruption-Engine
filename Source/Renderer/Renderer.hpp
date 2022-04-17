@@ -10,7 +10,6 @@ namespace en
 	class Renderer
 	{
 	public:
-		
 		Renderer(RendererInfo& rendererInfo);
 		~Renderer();
 		
@@ -28,6 +27,8 @@ namespace en
 		Renderer& GetRenderer();
 
 		void ReloadRenderer();
+
+		void SetDebugMode(int& mode);
 
 	private:
 		VulkanRendererBackend m_Backend;

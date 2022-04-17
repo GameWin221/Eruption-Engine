@@ -9,6 +9,7 @@ layout(location = 0) out vec4 FragColor;
 layout(binding = 0) uniform sampler2D gColor;
 layout(binding = 1) uniform sampler2D gPosition;
 layout(binding = 2) uniform sampler2D gNormal;
+layout(binding = 3) uniform sampler2D gDepth;
 
 const vec3 ambientLight = vec3(0.03);
 const float baseSpecularity = 32.0f;
@@ -20,10 +21,11 @@ struct PointLight
     float radius;
 };
 
-layout(binding = 3) uniform UBO 
+layout(binding = 4) uniform UBO 
 {
     PointLight lights[MAX_LIGHTS];
     vec3 viewPos;
+    int debugMode;
 } lightsBuffer;
 
 
@@ -58,15 +60,13 @@ vec3 CalculateLight(int lightIndex, vec3 color, float specularity, vec3 position
     return result;
 }
 
-// 0 - 5
-const int debugView = 0;
-
 void main() 
 {
-    vec3 color = texture(gColor, fTexcoord).rgb;
-    vec3 normal = texture(gNormal, fTexcoord).rgb;
-    vec3 position = texture(gPosition, fTexcoord).rgb;
-    float specularity = texture(gColor, fTexcoord).a;
+    vec3  color    = texture(gColor, fTexcoord).rgb;
+    vec3  normal   = texture(gNormal, fTexcoord).rgb;
+    vec3  position = texture(gPosition, fTexcoord).rgb;
+    float specular = texture(gColor, fTexcoord).a;
+    float depth    = texture(gDepth, fTexcoord).r;
     
     vec3 ambient = color * ambientLight;
     vec3 lighting = vec3(0);
@@ -78,13 +78,13 @@ void main()
             float dist = length(position - lightsBuffer.lights[i].position);
 
             if(dist < lightsBuffer.lights[i].radius)
-                lighting += CalculateLight(i, color, specularity, position, normal, dist);
+                lighting += CalculateLight(i, color, specular, position, normal, dist);
         }
     }
     
     vec3 result = vec3(0);
 
-    switch(debugView)
+    switch(lightsBuffer.debugMode)
     {
         case 0:
             result = ambient + lighting;
@@ -99,10 +99,13 @@ void main()
             result = position;
             break;
         case 4:
-            result = vec3(specularity);
+            result = vec3(specular);
             break;
         case 5:
             result = lighting;
+            break;
+        case 6:
+            result = vec3((depth-0.965)*20.0);
             break;
     }
     

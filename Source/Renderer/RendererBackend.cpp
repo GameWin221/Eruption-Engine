@@ -85,6 +85,7 @@ namespace en
 		ImGui::DestroyContext();
 		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_ImGui.DescriptorPool, nullptr);
 	}
+
 	void VulkanRendererBackend::BeginRender()
 	{
 		vkWaitForFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence, VK_TRUE, UINT64_MAX);
@@ -167,6 +168,7 @@ namespace en
 			Helpers::TransitionImageLayout(m_GBuffer.albedo.image  , m_GBuffer.albedo.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_GBuffer.position.image, m_GBuffer.position.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_GBuffer.normal.image  , m_GBuffer.normal.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.depth.image   , m_GBuffer.depth.format   , VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 
 			// Prepare lights
 			for (int i = 0; i < MAX_LIGHTS; i++)
@@ -176,19 +178,20 @@ namespace en
 				m_Lights.LBO.Lights[i].radius   = m_Lights.PointLights[i].m_Radius;
 			}
 			m_Lights.LBO.ViewPos = m_MainCamera->m_Position;
+			m_Lights.LBO.DebugMode = m_DebugMode;
 
 			en::Helpers::MapBuffer(m_Lights.BufferMemory, &m_Lights.LBO, m_Lights.BufferSize);
 
 			VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
 
 			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = m_LightingPipeline.renderPass;
-			renderPassInfo.framebuffer = m_Swapchain.framebuffers[m_ImageIndex];
+			renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass		 = m_LightingPipeline.renderPass;
+			renderPassInfo.framebuffer		 = m_Swapchain.framebuffers[m_ImageIndex];
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = m_Swapchain.extent;
-			renderPassInfo.clearValueCount = 1;
-			renderPassInfo.pClearValues = &clearValue;
+			renderPassInfo.clearValueCount	 = 1;
+			renderPassInfo.pClearValues		 = &clearValue;
 
 			vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -712,7 +715,7 @@ namespace en
 		depthAttachment.format		   = m_GBuffer.depth.format;
 		depthAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
 		depthAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
 		depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -896,11 +899,12 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorSetLayout()
 	{
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
+		std::array<VkDescriptorSetLayoutBinding, 5> bindings;
 		//0: Color Framebuffer
 		//1: Position Framebuffer (Alpha channel is specularity)
 		//2: Normal Framebuffer
-		//3: Lights Buffer
+		//3: Depth Framebuffer
+		//4: Lights Buffer
 		
 		for (int i = 0; auto & binding : bindings)
 		{
@@ -914,7 +918,7 @@ namespace en
 		}
 
 		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -935,7 +939,7 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorPool()
 	{
-		std::array<VkDescriptorPoolSize, 4> poolSizes{};
+		std::array<VkDescriptorPoolSize, 5> poolSizes{};
 
 		for (auto& poolSize : poolSizes)
 		{
@@ -944,7 +948,7 @@ namespace en
 		}
 
 		// Lights buffer
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -957,7 +961,7 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorSet()
 	{
-		std::array<VkDescriptorImageInfo, 3> imageInfos{};
+		std::array<VkDescriptorImageInfo, 4> imageInfos{};
 
 		// Albedo
 		imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -973,14 +977,19 @@ namespace en
 		imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imageInfos[2].imageView   = m_GBuffer.normal.imageView;
 		imageInfos[2].sampler	  = m_GBuffer.sampler;
-		
+
+		// Depth
+		imageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfos[3].imageView   = m_GBuffer.depth.imageView;
+		imageInfos[3].sampler     = m_GBuffer.sampler;
+
 		// Light Buffer
 		VkDescriptorBufferInfo lightBufferInfo{};
 		lightBufferInfo.buffer = m_Lights.Buffer;
 		lightBufferInfo.offset = 0;
 		lightBufferInfo.range  = sizeof(m_Lights.LBO);
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+		std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
 
 		for (int i = 0; auto & descriptorWrite : descriptorWrites)
 		{
@@ -991,15 +1000,15 @@ namespace en
 			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrite.descriptorCount = 1;
 
-			if(i!=3)
+			if(i!=4)
 				descriptorWrite.pImageInfo  = &imageInfos[i];
 
 			i++;
 		}
 
 		// Light Buffer
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[3].pBufferInfo    = &lightBufferInfo;
+		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[4].pBufferInfo    = &lightBufferInfo;
 
 		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}

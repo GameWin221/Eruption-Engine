@@ -47,6 +47,8 @@ namespace en
 
 		void EndRender();
 
+		int m_DebugMode = 0;
+
 		void ReloadBackend();
 
 		void SetMainCamera(Camera* camera);
@@ -145,6 +147,7 @@ namespace en
 			{
 				PointLight::Buffer Lights[MAX_LIGHTS];
 				glm::vec3 ViewPos;
+				int DebugMode;
 			} LBO;
 
 			PointLight PointLights[MAX_LIGHTS];

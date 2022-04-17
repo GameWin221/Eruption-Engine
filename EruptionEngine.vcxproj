@@ -269,10 +269,38 @@ compile.bat</Command>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
-    <None Include="Shaders\GeometryFragment.frag" />
-    <None Include="Shaders\GeometryVertex.vert" />
-    <None Include="Shaders\LightingFrag.frag" />
-    <None Include="Shaders\LightingVert.vert" />
+    <None Include="Shaders\GeometryFragment.frag">
+      <FileType>Document</FileType>
+    </None>
+    <CopyFileToFolders Include="Shaders\GeometryFragment.spv">
+      <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="Shaders\GeometryVertex.spv">
+      <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+    </CopyFileToFolders>
+    <None Include="Shaders\GeometryVertex.vert">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Shaders\LightingFrag.frag">
+      <FileType>Document</FileType>
+    </None>
+    <CopyFileToFolders Include="Shaders\LightingFrag.spv">
+      <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="Shaders\LightingVert.spv">
+      <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
+    </CopyFileToFolders>
+    <None Include="Shaders\LightingVert.vert">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
