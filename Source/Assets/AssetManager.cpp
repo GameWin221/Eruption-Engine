@@ -33,7 +33,7 @@ namespace en
         m_Textures.erase(nameID);
     }
 
-    void AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, Texture* albedoTexture, Texture* specularTexture)
+    void AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, Texture* albedoTexture, Texture* specularTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -41,7 +41,7 @@ namespace en
             return;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(color, albedoTexture, specularTexture);
+        m_Materials[nameID] = std::make_unique<Material>(color, shininess, albedoTexture, specularTexture);
     }
     void AssetManager::DeleteMaterial(std::string nameID)
     {

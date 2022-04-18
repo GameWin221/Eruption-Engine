@@ -6,7 +6,7 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.3.8";
+	windowInfo.title	  = "Eruption Engine v0.3.9";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -29,9 +29,9 @@ void Eruption::Init()
 	m_AssetManager->LoadTexture("AdditionalSpecularTexture", "Models/Skull/skull_specular.jpg"		);
 	m_AssetManager->LoadTexture("FloorSpecularTexture"     , "Models/floor_specular.png"			);
 
-	m_AssetManager->CreateMaterial("BackpackMaterial"  , glm::vec3(1.0f), m_AssetManager->GetTexture("BackpackTexture"  ), m_AssetManager->GetTexture("BackpackSpecularTexture"  ));
-	m_AssetManager->CreateMaterial("AdditionalMaterial", glm::vec3(1.0f), m_AssetManager->GetTexture("AdditionalTexture"), m_AssetManager->GetTexture("AdditionalSpecularTexture"));
-	m_AssetManager->CreateMaterial("FloorMaterial"	   , glm::vec3(1.0f), m_AssetManager->GetTexture("FloorTexture"     ), m_AssetManager->GetTexture("FloorSpecularTexture"     ));
+	m_AssetManager->CreateMaterial("BackpackMaterial"  , glm::vec3(1.0f), 30.0f , m_AssetManager->GetTexture("BackpackTexture"  ), m_AssetManager->GetTexture("BackpackSpecularTexture"  ));
+	m_AssetManager->CreateMaterial("AdditionalMaterial", glm::vec3(1.0f), 100.0f , m_AssetManager->GetTexture("AdditionalTexture"), m_AssetManager->GetTexture("AdditionalSpecularTexture"));
+	m_AssetManager->CreateMaterial("FloorMaterial"	   , glm::vec3(1.0f), 75.0f, m_AssetManager->GetTexture("FloorTexture"     ), m_AssetManager->GetTexture("FloorSpecularTexture"     ));
 
 	m_AssetManager->GetModel("BackpackModel"  )->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial"  );
 	m_AssetManager->GetModel("AdditionalModel")->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("AdditionalMaterial");
@@ -50,21 +50,18 @@ void Eruption::Init()
 	uboSkull.model = glm::translate(uboSkull.model, glm::vec3(0, 0.5f, 0));
 	uboSkull.model = glm::rotate   (uboSkull.model, glm::radians(45.0f), glm::vec3(-1, 0, 0));
 
-	//en::UniformBufferObject& uboCerberus = m_AssetManager->GetModel("Cerberus")->m_UniformBuffer->m_UBO;
-	//uboCerberus.model = glm::translate(uboCerberus.model, glm::vec3(0, 1.4f, 2.5f));
-	//uboCerberus.model = glm::rotate(uboCerberus.model, glm::radians(8.0f), glm::vec3(-1.0f, 0.0f, 0.0f));
-	//uboCerberus.model = glm::scale(uboCerberus.model, glm::vec3(0.3f));
-
 	en::RendererInfo rendererInfo{};
 	rendererInfo.clearColor  = { 0.01f, 0.01f, 0.01f, 1.0f };
 	rendererInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	rendererInfo.cullMode    = VK_CULL_MODE_BACK_BIT;
 
 	m_Renderer = new en::Renderer(rendererInfo);
-	m_Renderer->PrepareImGuiUI(std::bind(&Eruption::DrawImGuiUI, this));
 	m_Renderer->PrepareModel(m_AssetManager->GetModel("BackpackModel"));
 	m_Renderer->PrepareModel(m_AssetManager->GetModel("FloorModel"));
 	//m_Renderer->PrepareModel(m_AssetManager->GetModel("Cerberus"));
+
+	m_UILayer = new en::UILayer;
+	m_UILayer->AttachTo(m_Renderer, &m_DeltaTime);
 
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;
@@ -158,36 +155,6 @@ void Eruption::Render()
 	//m_Renderer->EnqueueModel(m_AssetManager->GetModel("Cerberus"));
 
 	m_Renderer->Render();
-}
-
-void Eruption::DrawImGuiUI()
-{
-	static int mode = 0;
-
-	ImGui::Begin("Debug Menu");
-	
-	if (ImGui::SliderInt("Debug View", &mode, 0, 6))
-		m_Renderer->SetDebugMode(mode);
-
-	std::string modeName;
-
-	switch (mode)
-	{
-	case 0: modeName = "No Debug View"; break;
-	case 1: modeName = "Albedo";        break;
-	case 2: modeName = "Normals";       break;
-	case 3: modeName = "Position";      break;
-	case 4: modeName = "Specular";	    break;
-	case 5: modeName = "Lights Only";   break;
-	case 6: modeName = "Depth";		    break;
-	default: modeName = "Unknown Mode"; break;
-	}
-
-	ImGui::Text(modeName.c_str());
-
-	ImGui::Text(std::to_string(1.0 / m_DeltaTime).c_str());
-
-	ImGui::End();
 }
 
 void Eruption::Run()

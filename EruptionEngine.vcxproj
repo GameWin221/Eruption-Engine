@@ -242,6 +242,7 @@ compile.bat</Command>
     <ClCompile Include="Source\Common\Helpers.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
+    <ClCompile Include="Source\Core\UILayer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
@@ -266,6 +267,7 @@ compile.bat</Command>
     <ClInclude Include="Source\Assets\AssetManager.hpp" />
     <ClInclude Include="Source\Common\Helpers.hpp" />
     <ClInclude Include="Source\Input\InputManager.hpp" />
+    <ClInclude Include="Source\Core\UILayer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />

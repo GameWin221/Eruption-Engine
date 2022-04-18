@@ -6,7 +6,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
 
     vec3 color;
-    float specularity;
+    float shininess;
 } ubo;
 
 layout(location = 0) in vec3 vPos;
@@ -17,6 +17,7 @@ layout(location = 0) out vec3 fNormal;
 layout(location = 1) out vec2 fTexcoord;
 layout(location = 2) out vec3 fPosition;
 layout(location = 3) out vec3 fColor;
+layout(location = 4) out float fShininess;
 
 void main() 
 {
@@ -27,4 +28,5 @@ void main()
     fTexcoord = vTexcoord;
 
     fColor = ubo.color;
+    fShininess = ubo.shininess;
 }

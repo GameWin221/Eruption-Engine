@@ -13,6 +13,7 @@ namespace en
         alignas(16) glm::mat4 view     = glm::mat4(1.0f);
         alignas(16) glm::mat4 proj     = glm::mat4(1.0f);
         alignas(4)  glm::vec3 color    = glm::vec3(1.0f);
+        alignas(4)  float shininess    = 32.0f;
     };
 
     class UniformBuffer

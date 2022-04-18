@@ -10,9 +10,11 @@ namespace en
 	class Material
 	{
 	public:
-		Material(glm::vec3 color, Texture* albedoTexture, Texture* specularTexture);
+		Material(glm::vec3 color, float shininess, Texture* albedoTexture, Texture* specularTexture);
 
 		glm::vec3 m_Color;
+
+		float m_Shininess;
 
 		Texture* m_Albedo;
 		Texture* m_Specular;

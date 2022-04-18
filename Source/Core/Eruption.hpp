@@ -8,6 +8,7 @@
 #include <Renderer/Renderer.hpp>
 #include <Assets/AssetManager.hpp>
 #include <Input/InputManager.hpp>
+#include <Core/UILayer.hpp>
 
 class Eruption
 {
@@ -19,8 +20,7 @@ private:
 	void Update();
 	void Render();
 
-	void DrawImGuiUI();
-
+	en::UILayer*	   m_UILayer;
 	en::Window*		   m_Window;
 	en::Context*	   m_Context;
 	en::AssetManager*  m_AssetManager;

@@ -4,6 +4,8 @@ layout(location = 0) in vec3 fNormal;
 layout(location = 1) in vec2 fTexcoord;
 layout(location = 2) in vec3 fPosition;
 layout(location = 3) in vec3 fColor;
+layout(location = 4) in float fShininess;
+
 
 layout(location = 0) out vec4 gColor;
 layout(location = 1) out vec4 gPosition;
@@ -16,7 +18,7 @@ void main()
 {
     gColor = vec4(texture(albedoTexture, fTexcoord).rgb * fColor, texture(specularTexture, fTexcoord).r);
 
-    gPosition = vec4(fPosition, 1.0);
+    gPosition = vec4(fPosition, fShininess);
 
     gNormal = vec4(normalize(fNormal), 1.0);
 }

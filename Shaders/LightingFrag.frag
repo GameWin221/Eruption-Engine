@@ -12,7 +12,6 @@ layout(binding = 2) uniform sampler2D gNormal;
 layout(binding = 3) uniform sampler2D gDepth;
 
 const vec3 ambientLight = vec3(0.03);
-const float baseSpecularity = 32.0f;
 
 struct PointLight
 {
@@ -29,11 +28,11 @@ layout(binding = 4) uniform UBO
 } lightsBuffer;
 
 
-float whenNotEqual(float x, float y) {
+float WhenNotEqual(float x, float y) {
     return abs(sign(x - y));
 }
 
-vec3 CalculateLight(int lightIndex, vec3 color, float specularity, vec3 position, vec3 normal, float dist)
+vec3 CalculateLight(int lightIndex, vec3 color, float specularity, float shininess, vec3 position, vec3 normal, float dist)
 {
     vec3  lPos = lightsBuffer.lights[lightIndex].position;
     vec3  lCol = lightsBuffer.lights[lightIndex].color; 
@@ -52,8 +51,8 @@ vec3 CalculateLight(int lightIndex, vec3 color, float specularity, vec3 position
     vec3 viewDir = normalize(lightsBuffer.viewPos - position);
     vec3 reflectDir = reflect(-lightDir, normal);
     vec3 halfwayDir = normalize(lightDir + viewDir);  
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), baseSpecularity);
-    spec *= whenNotEqual(diff, 0.0);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
+    spec *= WhenNotEqual(diff, 0.0);
     vec3 specular = lCol * spec * specularity;
 
     vec3 result = (diffuse + specular) * attenuation;
@@ -62,11 +61,12 @@ vec3 CalculateLight(int lightIndex, vec3 color, float specularity, vec3 position
 
 void main() 
 {
-    vec3  color    = texture(gColor, fTexcoord).rgb;
-    vec3  normal   = texture(gNormal, fTexcoord).rgb;
-    vec3  position = texture(gPosition, fTexcoord).rgb;
-    float specular = texture(gColor, fTexcoord).a;
-    float depth    = texture(gDepth, fTexcoord).r;
+    vec3  color     = texture(gColor   , fTexcoord).rgb;
+    vec3  normal    = texture(gNormal  , fTexcoord).rgb;
+    vec3  position  = texture(gPosition, fTexcoord).rgb;
+    float shininess = texture(gPosition, fTexcoord).a;
+    float specular  = texture(gColor   , fTexcoord).a;
+    float depth     = texture(gDepth   , fTexcoord).r;
     
     vec3 ambient = color * ambientLight;
     vec3 lighting = vec3(0);
@@ -78,7 +78,7 @@ void main()
             float dist = length(position - lightsBuffer.lights[i].position);
 
             if(dist < lightsBuffer.lights[i].radius)
-                lighting += CalculateLight(i, color, specular, position, normal, dist);
+                lighting += CalculateLight(i, color, specular, shininess, position, normal, dist);
         }
     }
     
@@ -102,9 +102,12 @@ void main()
             result = vec3(specular);
             break;
         case 5:
-            result = lighting;
+            result = vec3(shininess/200.0);
             break;
         case 6:
+            result = lighting;
+            break;
+        case 7:
             result = vec3((depth-0.965)*20.0);
             break;
     }

@@ -18,7 +18,7 @@ namespace en
 		void UnloadModel  (std::string nameID);
 		void UnloadTexture(std::string nameID);
 
-		void CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), Texture* albedoTexture = nullptr, Texture* specularTexture = nullptr);
+		void CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 32.0f, Texture* albedoTexture = nullptr, Texture* specularTexture = nullptr);
 		void DeleteMaterial(std::string nameID);
 
 		Model*    GetModel   (std::string nameID);

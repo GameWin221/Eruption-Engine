@@ -13,11 +13,6 @@ namespace en
 	}
 	Renderer::~Renderer(){}
 
-	void Renderer::PrepareImGuiUI(std::function<void()> imGuiRenderCallback)
-	{
-		m_ImGuiRenderCallback = imGuiRenderCallback;
-	}
-
 	void Renderer::PrepareModel(Model* model)
 	{
 		m_Backend.PrepareModel(model);
@@ -37,7 +32,7 @@ namespace en
 
 		m_Backend.GeometryPass();
 		m_Backend.LightingPass();
-		m_Backend.ImGuiPass(m_ImGuiRenderCallback);
+		m_Backend.ImGuiPass();
 
 		m_Backend.EndRender();
 	}
@@ -60,8 +55,17 @@ namespace en
 	{
 		m_Backend.ReloadBackend();
 	}
+	void Renderer::SetUIRenderCallback(std::function<void()> callback)
+	{
+		m_Backend.m_ImGuiRenderCallback = callback;
+	}
 	void Renderer::SetDebugMode(int& mode)
 	{
 		m_Backend.m_DebugMode = mode;
+	}
+
+	std::array<PointLight, MAX_LIGHTS>& Renderer::GetPointLights()
+	{
+		return m_Backend.GetPointLights();
 	}
 }

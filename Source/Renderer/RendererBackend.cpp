@@ -143,12 +143,16 @@ namespace en
 
 			for (int i = 0; const auto & mesh : m_MeshQueue)
 			{
-				m_PreparedMeshes.at(mesh).parent->m_UniformBuffer->m_UBO.proj = m_MainCamera->GetProjMatrix();
-				m_PreparedMeshes.at(mesh).parent->m_UniformBuffer->m_UBO.view = m_MainCamera->GetViewMatrix();
-				m_PreparedMeshes.at(mesh).parent->m_UniformBuffer->Bind();
+				UniformBuffer* uniformBuffer   = m_PreparedMeshes.at(mesh).parent->m_UniformBuffer.get();
+
+				uniformBuffer->m_UBO.proj      = m_MainCamera->GetProjMatrix();
+				uniformBuffer->m_UBO.view      = m_MainCamera->GetViewMatrix();
+				uniformBuffer->m_UBO.color     = mesh->m_Material->m_Color;
+				uniformBuffer->m_UBO.shininess = mesh->m_Material->m_Shininess;
+				uniformBuffer->Bind();
 
 				mesh->m_VertexBuffer->Bind(m_CommandBuffer);
-				mesh->m_IndexBuffer->Bind(m_CommandBuffer);
+				mesh->m_IndexBuffer ->Bind(m_CommandBuffer);
 
 				vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.layout, 0, 1, &m_PreparedMeshes.at(mesh).descriptorSet, 0, nullptr);
 
@@ -174,7 +178,7 @@ namespace en
 			for (int i = 0; i < MAX_LIGHTS; i++)
 			{
 				m_Lights.LBO.Lights[i].position = m_Lights.PointLights[i].m_Position;
-				m_Lights.LBO.Lights[i].color    = m_Lights.PointLights[i].m_Color * (float)m_Lights.PointLights[i].m_Active;
+				m_Lights.LBO.Lights[i].color    = m_Lights.PointLights[i].m_Color * (float)m_Lights.PointLights[i].m_Active * m_Lights.PointLights[i].m_Intensity;
 				m_Lights.LBO.Lights[i].radius   = m_Lights.PointLights[i].m_Radius;
 			}
 			m_Lights.LBO.ViewPos = m_MainCamera->m_Position;
@@ -204,15 +208,15 @@ namespace en
 			vkCmdEndRenderPass(m_CommandBuffer);
 		}
 	}
-	void VulkanRendererBackend::ImGuiPass(std::function<void()>& imGuiUIDrawFunction)
+	void VulkanRendererBackend::ImGuiPass()
 	{
-		if (!m_SkipFrame)
+		if (!m_SkipFrame && m_ImGuiRenderCallback != nullptr)
 		{
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 
-			imGuiUIDrawFunction();
+			m_ImGuiRenderCallback();
 
 			ImGui::Render();
 
@@ -444,6 +448,11 @@ namespace en
 	Camera* VulkanRendererBackend::GetMainCamera()
 	{
 		return m_MainCamera;
+	}
+
+	std::array<PointLight, MAX_LIGHTS>& VulkanRendererBackend::GetPointLights()
+	{
+		return m_Lights.PointLights;
 	}
 
 	void VulkanRendererBackend::CreateSwapchain()

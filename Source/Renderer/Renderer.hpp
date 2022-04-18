@@ -12,13 +12,11 @@ namespace en
 	public:
 		Renderer(RendererInfo& rendererInfo);
 		~Renderer();
-		
-		void PrepareImGuiUI(std::function<void()> imGuiRenderCallback);
 
 		void PrepareModel(Model* model);
 		void RemoveModel (Model* model);
 		void EnqueueModel(Model* model);
-
+		
 		void Render();
 
 		void SetMainCamera(Camera* camera);
@@ -28,12 +26,13 @@ namespace en
 
 		void ReloadRenderer();
 
+		void SetUIRenderCallback(std::function<void()> callback);
 		void SetDebugMode(int& mode);
+
+		std::array<PointLight, MAX_LIGHTS>& GetPointLights();
 
 	private:
 		VulkanRendererBackend m_Backend;
-
-		std::function<void()> m_ImGuiRenderCallback;
 	};
 }
 

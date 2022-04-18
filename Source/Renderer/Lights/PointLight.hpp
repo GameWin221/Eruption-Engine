@@ -6,7 +6,7 @@
 class PointLight
 {
 public:
-	PointLight(glm::vec3 position, glm::vec3 color, float radius);
+	PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius);
 	PointLight() {};
 	~PointLight() {};
 
@@ -14,6 +14,7 @@ public:
 
 	glm::vec3 m_Position = glm::vec3(0.0);
 	glm::vec3 m_Color	 = glm::vec3(1.0);
+	float m_Intensity = 1.0f;
 	float m_Radius = 5.0f;
 
 	struct Buffer

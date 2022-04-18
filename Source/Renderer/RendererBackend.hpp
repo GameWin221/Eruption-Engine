@@ -30,7 +30,6 @@ namespace en
 	class VulkanRendererBackend
 	{
 	public:
-		VulkanRendererBackend(){};
 		~VulkanRendererBackend();
 
 		void Init(RendererInfo& rendererInfo);
@@ -43,16 +42,19 @@ namespace en
 
 		void GeometryPass();
 		void LightingPass();
-		void ImGuiPass(std::function<void()>& imGuiUIDrawFunction);
+		void ImGuiPass();
 
 		void EndRender();
-
-		int m_DebugMode = 0;
 
 		void ReloadBackend();
 
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera();
+
+		std::array<PointLight, MAX_LIGHTS>& GetPointLights();
+
+		int m_DebugMode = 0;
+		std::function<void()> m_ImGuiRenderCallback;
 
 	private:
 		void PrepareMesh(Mesh* mesh, Model* parent);
@@ -150,7 +152,7 @@ namespace en
 				int DebugMode;
 			} LBO;
 
-			PointLight PointLights[MAX_LIGHTS];
+			std::array<PointLight, MAX_LIGHTS> PointLights;
 
 			VkBuffer       Buffer;
 			VkDeviceMemory BufferMemory;
