@@ -3,30 +3,30 @@
 
 namespace en
 {
-    void AssetManager::LoadModel(std::string nameID, std::string path)
+    void AssetManager::LoadMesh(std::string nameID, std::string path)
     {
-        if (m_Models.contains(nameID))
+        if (m_Meshes.contains(nameID))
         {
-            std::cout << "AssetManager::LoadModel() - Failed to load a model with name \"" << nameID << "\" because a model with that name already exists!\n";
+            EN_WARN("AssetManager::LoadModel() - Failed to load a mesh with name \"" + nameID + "\" because a model with that name already exists!");
             return;
         }
 
-        m_Models[nameID] = std::make_unique<Model>(path);
+        m_Meshes[nameID] = std::make_unique<Mesh>(path);
     }
     void AssetManager::LoadTexture(std::string nameID, std::string path, bool loadFlipped)
     {
         if (m_Textures.contains(nameID))
         {
-            std::cout << "AssetManager::LoadTexture() - Failed to load a texture with name \"" << nameID << "\" because a texture with that name already exists!\n";
+            EN_WARN("AssetManager::LoadTexture() - Failed to load a texture with name \"" + nameID + "\" because a texture with that name already exists!");
             return;
         }
 
         m_Textures[nameID] = std::make_unique<Texture>(path, loadFlipped);
     }
 
-    void AssetManager::UnloadModel(std::string nameID)
+    void AssetManager::UnloadMesh(std::string nameID)
     {
-        m_Models.erase(nameID);
+        m_Meshes.erase(nameID);
     }
     void AssetManager::UnloadTexture(std::string nameID)
     {
@@ -37,7 +37,7 @@ namespace en
     {
         if (m_Materials.contains(nameID))
         {
-            std::cout << "AssetManager::CreateMaterial() - Failed to create a material with name \"" << nameID << "\" because a material with that name already exists!\n";
+            EN_WARN("AssetManager::CreateMaterial() - Failed to create a material with name \"" + nameID + "\" because a material with that name already exists!");
             return;
         }
 
@@ -48,23 +48,23 @@ namespace en
         m_Materials.erase(nameID);
     }
 
-    Model* AssetManager::GetModel(std::string nameID)
+    Mesh* AssetManager::GetMesh(std::string nameID)
     {
         // If there's no `nameID` model:
-        if (!m_Models.contains(nameID))
+        if (!m_Meshes.contains(nameID))
         {
-            std::cout << "AssetManager::GetModel() - There's currently no loaded model named \"" << nameID << "\"!\n";
-            return Model::GetNoModel();
+            EN_WARN("AssetManager::GetModel() - There's currently no loaded mesh named \"" + nameID + "\"!");
+            return Mesh::GetDefaultMesh();
         }
 
-        return m_Models.at(nameID).get();
+        return m_Meshes.at(nameID).get();
     }
     Texture* en::AssetManager::GetTexture(std::string nameID)
     {
         // If there's no `nameID` texture:
         if (!m_Textures.contains(nameID))
         {
-            std::cout << "AssetManager::GetTexture() - There's currently no loaded texture named \"" << nameID << "\"!\n";
+            EN_WARN("AssetManager::GetTexture() - There's currently no loaded texture named \"" + nameID + "\"!");
             return Texture::GetWhiteTexture();
         }
 
@@ -75,7 +75,7 @@ namespace en
         // If there's no `nameID` material:
         if (!m_Materials.contains(nameID))
         {
-            std::cout << "AssetManager::GetMaterial() - There's currently no material named \"" << nameID << "\"!\n";
+            EN_WARN("AssetManager::GetMaterial() - There's currently no material named \"" + nameID + "\"!");
             return Material::GetDefaultMaterial();
         }
 

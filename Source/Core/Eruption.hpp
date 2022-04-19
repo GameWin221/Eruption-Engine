@@ -28,6 +28,11 @@ private:
 	en::Renderer*	   m_Renderer;
 	en::Camera*		   m_Camera;
 
+	// For now it's here, but it will be moved to Scene class once I'll make one
+	en::SceneObject* m_Skull;
+	en::SceneObject* m_Floor;
+	en::SceneObject* m_Backpack;
+
 	double m_TargetFPS = 144.0;
 
 	double m_DeltaTime;

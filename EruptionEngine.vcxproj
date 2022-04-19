@@ -122,7 +122,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;$(SolutionDir)External\TGLTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;$(SolutionDir)External\TGLTF;$(SolutionDir)External\CL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -153,14 +153,14 @@ compile.bat</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;$(SolutionDir)External\TGLTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\TOBJ;$(SolutionDir)External\ImGui;$(SolutionDir)External\TGLTF;$(SolutionDir)External\CL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Core/EnPch.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -177,6 +177,10 @@ compile.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="External\CL\ColorfulLogging.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="External\ImGui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -209,6 +213,7 @@ compile.bat</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Source\Scene\SceneObject.cpp" />
     <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp" />
@@ -223,7 +228,7 @@ compile.bat</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Assets\Mesh.cpp" />
+    <ClCompile Include="Source\Assets\SubMesh.cpp" />
     <ClCompile Include="Source\Core\Eruption.cpp" />
     <ClCompile Include="Source\Core\EnPch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -234,7 +239,7 @@ compile.bat</Command>
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Renderer\Camera.cpp" />
     <ClCompile Include="Source\Renderer\Context.cpp" />
-    <ClCompile Include="Source\Assets\Model.cpp" />
+    <ClCompile Include="Source\Assets\Mesh.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Shader.cpp" />
     <ClCompile Include="Source\Assets\Texture.cpp" />
@@ -248,6 +253,8 @@ compile.bat</Command>
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
+    <ClInclude Include="Source\Core\Log.hpp" />
+    <ClInclude Include="Source\Scene\SceneObject.hpp" />
     <ClInclude Include="Source\Assets\Material.hpp" />
     <ClInclude Include="Source\Core\EnPch.hpp" />
     <ClInclude Include="Source\Core\Eruption.hpp" />
@@ -257,8 +264,8 @@ compile.bat</Command>
     <ClInclude Include="Source\Renderer\Camera.hpp" />
     <ClInclude Include="Source\Renderer\Context.hpp" />
     <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
+    <ClInclude Include="Source\Assets\SubMesh.hpp" />
     <ClInclude Include="Source\Assets\Mesh.hpp" />
-    <ClInclude Include="Source\Assets\Model.hpp" />
     <ClInclude Include="Source\Renderer\Renderer.hpp" />
     <ClInclude Include="Source\Renderer\Shader.hpp" />
     <ClInclude Include="Source\Assets\Texture.hpp" />

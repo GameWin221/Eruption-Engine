@@ -17,9 +17,9 @@ void Eruption::Init()
 
 	m_AssetManager = new en::AssetManager;
 
-	m_AssetManager->LoadModel("BackpackModel"  , "Models/Backpack/Backpack.obj");
-	m_AssetManager->LoadModel("AdditionalModel", "Models/Skull/skull.obj"	   );
-	m_AssetManager->LoadModel("FloorModel"     , "Models/Plane.obj"			   );
+	m_AssetManager->LoadMesh("BackpackModel"  , "Models/Backpack/Backpack.obj");
+	m_AssetManager->LoadMesh("AdditionalModel", "Models/Skull/skull.obj"	   );
+	m_AssetManager->LoadMesh("FloorModel"     , "Models/Plane.obj"			   );
 
 	m_AssetManager->LoadTexture("BackpackTexture"  , "Models/Backpack/backpack_albedo.jpg");
 	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg"	  );
@@ -33,22 +33,23 @@ void Eruption::Init()
 	m_AssetManager->CreateMaterial("AdditionalMaterial", glm::vec3(1.0f), 100.0f , m_AssetManager->GetTexture("AdditionalTexture"), m_AssetManager->GetTexture("AdditionalSpecularTexture"));
 	m_AssetManager->CreateMaterial("FloorMaterial"	   , glm::vec3(1.0f), 75.0f, m_AssetManager->GetTexture("FloorTexture"     ), m_AssetManager->GetTexture("FloorSpecularTexture"     ));
 
-	m_AssetManager->GetModel("BackpackModel"  )->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial"  );
-	m_AssetManager->GetModel("AdditionalModel")->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("AdditionalMaterial");
-	m_AssetManager->GetModel("FloorModel"     )->m_Meshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"     );
+	m_AssetManager->GetMesh("BackpackModel"  )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial"  );
+	m_AssetManager->GetMesh("AdditionalModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("AdditionalMaterial");
+	m_AssetManager->GetMesh("FloorModel"     )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"     );
 
 	// The Cerberus file is not in the repo because it's too heavy (100mb+)
 	//m_AssetManager->LoadTexture("CerberusAlbedo", "Models/Cerberus/CerberusAlbedo.png", false);
 	//m_AssetManager->LoadModel("Cerberus", "Models/Cerberus/Cerberus.obj", "CerberusAlbedo");
 
+	m_Skull	   = new en::SceneObject(m_AssetManager->GetMesh("AdditionalModel"));
+	m_Backpack = new en::SceneObject(m_AssetManager->GetMesh("BackpackModel"));
+	m_Floor	   = new en::SceneObject(m_AssetManager->GetMesh("FloorModel"));
 
-	en::UniformBufferObject& ubo = m_AssetManager->GetModel("BackpackModel")->m_UniformBuffer->m_UBO;
-	ubo.model = glm::translate(ubo.model, glm::vec3(2, 0.5f, 0));
-	ubo.model = glm::scale	  (ubo.model, glm::vec3(0.2f));
+	m_Backpack->m_Position = glm::vec3(2, 0.5f, 0);
+	m_Backpack->m_Scale = glm::vec3(0.2f);
 
-	en::UniformBufferObject& uboSkull = m_AssetManager->GetModel("AdditionalModel")->m_UniformBuffer->m_UBO;
-	uboSkull.model = glm::translate(uboSkull.model, glm::vec3(0, 0.5f, 0));
-	uboSkull.model = glm::rotate   (uboSkull.model, glm::radians(45.0f), glm::vec3(-1, 0, 0));
+	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
+	m_Skull->m_Rotation = glm::vec3(-45.0f, 0.0f, 0.0f);
 
 	en::RendererInfo rendererInfo{};
 	rendererInfo.clearColor  = { 0.01f, 0.01f, 0.01f, 1.0f };
@@ -56,9 +57,6 @@ void Eruption::Init()
 	rendererInfo.cullMode    = VK_CULL_MODE_BACK_BIT;
 
 	m_Renderer = new en::Renderer(rendererInfo);
-	m_Renderer->PrepareModel(m_AssetManager->GetModel("BackpackModel"));
-	m_Renderer->PrepareModel(m_AssetManager->GetModel("FloorModel"));
-	//m_Renderer->PrepareModel(m_AssetManager->GetModel("Cerberus"));
 
 	m_UILayer = new en::UILayer;
 	m_UILayer->AttachTo(m_Renderer, &m_DeltaTime);
@@ -90,14 +88,6 @@ void Eruption::Update()
 	m_DeltaTime = duration.count() / 1000000.0;
 	m_fDeltaTime = duration.count() / 1000000.0f;
 
-	if (counter == 6)
-	{
-		std::cout << "fps: " << 1.0 / ((double)duration.count()/1000000.0) << '\n';
-		counter = 0;
-	}
-	else
-		counter++;
-
 	m_Window->PollEvents();
 	m_Input->UpdateMouse();
 
@@ -108,16 +98,11 @@ void Eruption::Update()
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
 	// Spawning / Despawning the additional model
-	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed) && !modelSpawned)
-	{
-		m_Renderer->PrepareModel(m_AssetManager->GetModel("AdditionalModel"));
+	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed))
 		modelSpawned = true;
-	}
-	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed) && modelSpawned)
-	{
-		m_Renderer->RemoveModel(m_AssetManager->GetModel("AdditionalModel"));
+
+	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed))
 		modelSpawned = false;
-	}
 	
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
@@ -148,11 +133,10 @@ void Eruption::Update()
 void Eruption::Render()
 {
 	if (modelSpawned)
-		m_Renderer->EnqueueModel(m_AssetManager->GetModel("AdditionalModel"));
+		m_Renderer->EnqueueSceneObject(m_Skull);
 
-	m_Renderer->EnqueueModel(m_AssetManager->GetModel("BackpackModel"));
-	m_Renderer->EnqueueModel(m_AssetManager->GetModel("FloorModel"));
-	//m_Renderer->EnqueueModel(m_AssetManager->GetModel("Cerberus"));
+	m_Renderer->EnqueueSceneObject(m_Backpack);
+	m_Renderer->EnqueueSceneObject(m_Floor);
 
 	m_Renderer->Render();
 }

@@ -15,7 +15,7 @@ namespace en
         UseContext();
 
         if (vkCreateShaderModule(ctx.m_LogicalDevice, &createInfo, nullptr, &m_ShaderModule) != VK_SUCCESS)
-            throw std::runtime_error("Shader.cpp::Shader::Shader() - Failed to create shader module!");
+            EN_ERROR("Shader.cpp::Shader::Shader() - Failed to create shader module!");
 
         VkShaderStageFlagBits shaderStage;
         switch (shaderType)
@@ -49,7 +49,7 @@ namespace en
         std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
 
         if (!file.is_open())
-            throw std::runtime_error("Shader.cpp::Shader::ReadShaderFile() - Failed to open shader source file!");
+            EN_ERROR("Shader.cpp::Shader::ReadShaderFile() - Failed to open shader source file!");
 
         size_t fileSize = (size_t)file.tellg();
         std::vector<char> buffer(fileSize);

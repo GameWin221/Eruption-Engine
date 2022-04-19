@@ -13,17 +13,9 @@ namespace en
 	}
 	Renderer::~Renderer(){}
 
-	void Renderer::PrepareModel(Model* model)
+	void Renderer::EnqueueSceneObject(SceneObject* sceneObject)
 	{
-		m_Backend.PrepareModel(model);
-	}
-	void Renderer::RemoveModel(Model* model)
-	{
-		m_Backend.RemoveModel(model);
-	}
-	void Renderer::EnqueueModel(Model* model)
-	{
-		m_Backend.EnqueueModel(model);
+		m_Backend.EnqueueSceneObject(sceneObject);
 	}
 
 	void Renderer::Render()

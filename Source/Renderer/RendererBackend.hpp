@@ -16,7 +16,9 @@
 #include <Renderer/Shader.hpp>
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Camera.hpp>
-#include <Assets/Model.hpp>
+#include <Assets/Mesh.hpp>
+
+#include <Scene/SceneObject.hpp>
 
 namespace en
 {
@@ -34,9 +36,10 @@ namespace en
 
 		void Init(RendererInfo& rendererInfo);
 
-		void PrepareModel(Model* model);
-		void RemoveModel(Model* model);
-		void EnqueueModel(Model* model);
+		//void PrepareScene(Scene* scene);
+		//void RemoveScene(Scene* scene);
+
+		void EnqueueSceneObject(SceneObject* sceneObject);
 
 		void BeginRender();
 
@@ -57,10 +60,6 @@ namespace en
 		std::function<void()> m_ImGuiRenderCallback;
 
 	private:
-		void PrepareMesh(Mesh* mesh, Model* parent);
-		void RemoveMesh (Mesh* mesh);
-		void EnqueueMesh(Mesh* mesh);
-
 		struct Attachment
 		{
 			VkImage		   image;
@@ -160,7 +159,6 @@ namespace en
 
 		} m_Lights;
 
-
 		GBuffer m_GBuffer;
 
 		Swapchain m_Swapchain;
@@ -170,15 +168,7 @@ namespace en
 
 		VkDescriptorSet m_LightingDescriptorSet;
 
-		struct PreparedMesh
-		{
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-			Model* parent = nullptr;
-		};
-
-		std::vector<en::Mesh*> m_MeshQueue;
-
-		std::unordered_map<en::Mesh*, PreparedMesh> m_PreparedMeshes;
+		std::vector<SceneObject*> m_RenderQueue;
 
 		VkCommandBuffer m_CommandBuffer;
 
@@ -192,7 +182,6 @@ namespace en
 			std::vector<VkCommandBuffer> CommandBuffers;
 		} m_ImGui;
 		
-
 		VkFence	m_SubmitFence;
 
 		RendererInfo m_RendererInfo;
@@ -218,8 +207,6 @@ namespace en
 		void CreateAttachment(Attachment& attachment, VkFormat format, VkImageLayout imageLayout, VkImageAspectFlags imageAspectFlags, VkImageUsageFlags imageUsageFlags);
 		
 		void InitGeometryPipeline();
-		void GCreateDescriptorSetLayout();
-		void GCreateDescriptorPool();
 		void GCreateCommandBuffer();
 		void GCreateRenderPass();
 		void GCreatePipeline();

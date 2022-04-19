@@ -13,9 +13,7 @@ namespace en
 		Renderer(RendererInfo& rendererInfo);
 		~Renderer();
 
-		void PrepareModel(Model* model);
-		void RemoveModel (Model* model);
-		void EnqueueModel(Model* model);
+		void EnqueueSceneObject(SceneObject* sceneObject);
 		
 		void Render();
 

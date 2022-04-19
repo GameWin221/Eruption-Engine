@@ -8,7 +8,7 @@ namespace en
 	Window::Window(WindowInfo& windowInfo)
 	{
 		if (g_MainWindow)
-			throw std::runtime_error("Failed to open a window! There is an open window already.");
+			EN_ERROR("Failed to open a window! There is an open window already.");
 
 		g_MainWindow = this;
 

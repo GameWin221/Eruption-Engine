@@ -34,7 +34,7 @@ namespace en
 		CreateGBuffer();
 
 		InitLightingPipeline();
-
+		
 		CreateSwapchainFramebuffers();
 
 		CreateSyncObjects();
@@ -73,9 +73,6 @@ namespace en
 
 		vkFreeCommandBuffers(m_Ctx->m_LogicalDevice, m_Ctx->m_CommandPool, 1, &m_CommandBuffer);
 
-		for (auto& preparedMesh : m_PreparedMeshes)
-			vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_GeometryPipeline.descriptorPool, 1, &preparedMesh.second.descriptorSet);
-
 		en::Helpers::DestroyBuffer(m_Lights.Buffer, m_Lights.BufferMemory);
 
 		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.RenderPass, nullptr);
@@ -101,7 +98,7 @@ namespace en
 			return;
 		}
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-			throw std::runtime_error("VulkanRendererBackend::BeginRender() - Failed to acquire swap chain image!");
+			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to acquire swap chain image!");
 
 		if (!m_SkipFrame)
 		{
@@ -113,7 +110,7 @@ namespace en
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 			if (vkBeginCommandBuffer(m_CommandBuffer, &beginInfo) != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
+				EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
 		}
 	}
 	void VulkanRendererBackend::GeometryPass()
@@ -141,26 +138,26 @@ namespace en
 
 			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.pipeline);
 
-			for (int i = 0; const auto & mesh : m_MeshQueue)
+			for (int i = 0; const auto& sceneObject : m_RenderQueue)
 			{
-				UniformBuffer* uniformBuffer   = m_PreparedMeshes.at(mesh).parent->m_UniformBuffer.get();
+				UniformBuffer* uniformBuffer = sceneObject->m_UniformBuffer.get();
+				uniformBuffer->m_Model = sceneObject->GetModelMatrix();
+				uniformBuffer->m_Proj  = m_MainCamera->GetProjMatrix();
+				uniformBuffer->m_View  = m_MainCamera->GetViewMatrix();
+				uniformBuffer->Bind(m_CommandBuffer, m_GeometryPipeline.layout);
 
-				uniformBuffer->m_UBO.proj      = m_MainCamera->GetProjMatrix();
-				uniformBuffer->m_UBO.view      = m_MainCamera->GetViewMatrix();
-				uniformBuffer->m_UBO.color     = mesh->m_Material->m_Color;
-				uniformBuffer->m_UBO.shininess = mesh->m_Material->m_Shininess;
-				uniformBuffer->Bind();
+				for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
+				{
+					subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
+					subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
+					subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline.layout);
 
-				mesh->m_VertexBuffer->Bind(m_CommandBuffer);
-				mesh->m_IndexBuffer ->Bind(m_CommandBuffer);
-
-				vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.layout, 0, 1, &m_PreparedMeshes.at(mesh).descriptorSet, 0, nullptr);
-
-				vkCmdDrawIndexed(m_CommandBuffer, mesh->m_IndexBuffer->GetSize(), 1, 0, 0, 0);
-
+					vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
+				}
+				
 				i++;
 			}
-			m_MeshQueue.clear();
+			m_RenderQueue.clear();
 
 			vkCmdEndRenderPass(m_CommandBuffer);
 		}
@@ -235,7 +232,7 @@ namespace en
 			VkCommandBufferBeginInfo beginInfo{};
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			if (vkBeginCommandBuffer(m_ImGui.CommandBuffers[m_ImageIndex], &beginInfo) != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
+				EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
 
 			vkCmdBeginRenderPass(m_ImGui.CommandBuffers[m_ImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -244,7 +241,7 @@ namespace en
 			vkCmdEndRenderPass(m_ImGui.CommandBuffers[m_ImageIndex]);
 
 			if (vkEndCommandBuffer(m_ImGui.CommandBuffers[m_ImageIndex]) != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::EndRender() - Failed to record ImGui command buffer!");
+				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record ImGui command buffer!");
 		}
 	}
 	void VulkanRendererBackend::EndRender()
@@ -252,7 +249,7 @@ namespace en
 		if (!m_SkipFrame)
 		{
 			if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::EndRender() - Failed to record command buffer!");
+				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record command buffer!");
 
 			VkSubmitInfo submitInfo{};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -272,7 +269,7 @@ namespace en
 			submitInfo.pSignalSemaphores    = signalSemaphores;
 
 			if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1, &submitInfo, m_SubmitFence) != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
+				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
 
 			VkPresentInfoKHR presentInfo{};
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -289,98 +286,13 @@ namespace en
 			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
 				RecreateFramebuffer();
 			else if (result != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::EndRender() - Failed to present swap chain image!");
+				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to present swap chain image!");
 		}
 	}
 
-	void VulkanRendererBackend::PrepareModel(Model* model)
+	void VulkanRendererBackend::EnqueueSceneObject(SceneObject* sceneObject)
 	{
-		for (auto& mesh : model->m_Meshes)
-			PrepareMesh(&mesh, model);
-	}
-	void VulkanRendererBackend::RemoveModel (Model* model)
-	{
-		for (auto& mesh : model->m_Meshes)
-			RemoveMesh(&mesh);
-	}
-	void VulkanRendererBackend::EnqueueModel(Model* model)
-	{
-		for (auto& mesh : model->m_Meshes)
-			EnqueueMesh(&mesh);
-	}
-
-	void VulkanRendererBackend::PrepareMesh(Mesh* mesh, Model* parent)
-	{
-		m_PreparedMeshes[mesh].parent = parent;
-
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = m_GeometryPipeline.descriptorPool;
-		allocInfo.descriptorSetCount = static_cast<uint32_t>(1);
-		allocInfo.pSetLayouts		 = &m_GeometryPipeline.descriptorSetLayout;
-
-		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_PreparedMeshes[mesh].descriptorSet) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::PrepareMesh() - Failed to allocate descriptor sets!");
-
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = m_PreparedMeshes[mesh].parent->m_UniformBuffer->m_Buffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range  = sizeof(UniformBufferObject);
-
-		VkDescriptorImageInfo albedoImageInfo{};
-		albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		albedoImageInfo.imageView   = mesh->m_Material->m_Albedo->m_ImageView;
-		albedoImageInfo.sampler     = mesh->m_Material->m_Albedo->m_ImageSampler;
-
-		VkDescriptorImageInfo specularImageInfo{};
-		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		specularImageInfo.imageView   = mesh->m_Material->m_Specular->m_ImageView;
-		specularImageInfo.sampler     = mesh->m_Material->m_Specular->m_ImageSampler;
-
-
-		std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
-		descriptorWrites[0].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet			= m_PreparedMeshes[mesh].descriptorSet;
-		descriptorWrites[0].dstBinding		= 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo	    = &bufferInfo;
-
-		descriptorWrites[1].sType		    = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet			= m_PreparedMeshes[mesh].descriptorSet;
-		descriptorWrites[1].dstBinding		= 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo		= &albedoImageInfo;
-
-		descriptorWrites[2].sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[2].dstSet			= m_PreparedMeshes[mesh].descriptorSet;
-		descriptorWrites[2].dstBinding		= 2;
-		descriptorWrites[2].dstArrayElement = 0;
-		descriptorWrites[2].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[2].descriptorCount = 1;
-		descriptorWrites[2].pImageInfo      = &specularImageInfo;
-
-		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-	}
-	void VulkanRendererBackend::RemoveMesh (Mesh* mesh)
-	{
-		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
-
-		vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_GeometryPipeline.descriptorPool, 1, &m_PreparedMeshes[mesh].descriptorSet);
-		m_PreparedMeshes.erase(mesh);
-	}
-	void VulkanRendererBackend::EnqueueMesh(Mesh* mesh)
-	{
-		if (!m_PreparedMeshes.contains(mesh))
-		{
-			std::cout << "Failed to enqueue \"" << mesh << "\" mesh because it wasn't prepared yet!\n";
-			return;
-		}
-
-		m_MeshQueue.emplace_back(mesh);
+		m_RenderQueue.emplace_back(sceneObject);
 	}
 
 	void VulkanRendererBackend::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
@@ -503,7 +415,7 @@ namespace en
 		createInfo.oldSwapchain	  = VK_NULL_HANDLE;
 
 		if (vkCreateSwapchainKHR(m_Ctx->m_LogicalDevice, &createInfo, nullptr, &m_Swapchain.swapchain) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::CreateSwapChain() - Failed to create swap chain!");
+			EN_ERROR("VulkanRendererBackend::CreateSwapChain() - Failed to create swap chain!");
 
 		vkGetSwapchainImagesKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, &imageCount, nullptr);
 		m_Swapchain.images.resize(imageCount);
@@ -533,13 +445,14 @@ namespace en
 			framebufferInfo.layers = 1;
 
 			if (vkCreateFramebuffer(m_Ctx->m_LogicalDevice, &framebufferInfo, nullptr, &m_Swapchain.framebuffers[i]) != VK_SUCCESS)
-				throw std::runtime_error("VulkanRendererBackend::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
+				EN_ERROR("VulkanRendererBackend::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
 		}
 	}
 
 	void VulkanRendererBackend::CreateGBuffer()
 	{
-		std::array<VkImageView, 4> attachments = {
+		std::array<VkImageView, 4> attachments = 
+		{
 			m_GBuffer.albedo.imageView,
 			m_GBuffer.position.imageView,
 			m_GBuffer.normal.imageView,
@@ -556,7 +469,7 @@ namespace en
 		framebufferInfo.layers = 1;
 
 		if (vkCreateFramebuffer(m_Ctx->m_LogicalDevice, &framebufferInfo, nullptr, &m_GBuffer.framebuffer) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::InitGBuffer() - Failed to create the GBuffer!");
+			EN_ERROR("VulkanRendererBackend::InitGBuffer() - Failed to create the GBuffer!");
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -577,7 +490,7 @@ namespace en
 		samplerInfo.maxLod = 0.0f;
 
 		if (vkCreateSampler(m_Ctx->m_LogicalDevice, &samplerInfo, nullptr, &m_GBuffer.sampler) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::InitGBuffer() - Failed to create texture sampler!");
+			EN_ERROR("VulkanRendererBackend::InitGBuffer() - Failed to create texture sampler!");
 	}
 	void VulkanRendererBackend::CreateGBufferAttachments()
 	{
@@ -598,8 +511,6 @@ namespace en
 	{
 		GCreateCommandBuffer();
 		GCreateRenderPass();
-		GCreateDescriptorPool();
-		GCreateDescriptorSetLayout();
 		GCreatePipeline();
 	}
 	void VulkanRendererBackend::InitLightingPipeline()
@@ -614,57 +525,6 @@ namespace en
 		LCreatePipeline();
 	}
 
-	void VulkanRendererBackend::GCreateDescriptorSetLayout()
-	{
-		VkDescriptorSetLayoutBinding uboLayoutBinding{};
-		uboLayoutBinding.binding		 = 0;
-		uboLayoutBinding.descriptorType	 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.stageFlags		 = VK_SHADER_STAGE_VERTEX_BIT;
-
-		VkDescriptorSetLayoutBinding albedoSamplerLayoutBinding{};
-		albedoSamplerLayoutBinding.binding			  = 1;
-		albedoSamplerLayoutBinding.descriptorCount	  = 1;
-		albedoSamplerLayoutBinding.descriptorType	  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		albedoSamplerLayoutBinding.pImmutableSamplers = nullptr;
-		albedoSamplerLayoutBinding.stageFlags		  = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding specularSamplerLayoutBinding{};
-		specularSamplerLayoutBinding.binding		    = 2;
-		specularSamplerLayoutBinding.descriptorCount    = 1;
-		specularSamplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		specularSamplerLayoutBinding.pImmutableSamplers = nullptr;
-		specularSamplerLayoutBinding.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, albedoSamplerLayoutBinding, specularSamplerLayoutBinding };
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType	    = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings	= bindings.data();
-
-		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_GeometryPipeline.descriptorSetLayout) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::GCreateDescriptorSetLayout() - Failed to create descriptor set layout!");
-	}
-	void VulkanRendererBackend::GCreateDescriptorPool()
-	{
-		std::array<VkDescriptorPoolSize, 3> poolSizes{};
-		poolSizes[0].type		     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = static_cast<uint32_t>(1);
-		poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = static_cast<uint32_t>(1);
-		poolSizes[2].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[2].descriptorCount = static_cast<uint32_t>(1);
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes	   = poolSizes.data();
-		poolInfo.maxSets	   = static_cast<uint32_t>(MAX_MESHES);
-		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_GeometryPipeline.descriptorPool) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::GCreateDescriptorPool() - Failed to create descriptor pool!");
-	}
 	void VulkanRendererBackend::GCreateCommandBuffer()
 	{
 		VkCommandBufferAllocateInfo allocInfo{};
@@ -674,7 +534,7 @@ namespace en
 		allocInfo.commandBufferCount = 1;
 		
 		if (vkAllocateCommandBuffers(m_Ctx->m_LogicalDevice, &allocInfo, &m_CommandBuffer) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::GCreateCommandBuffer() - Failed to allocate command buffer!");
+			EN_ERROR("VulkanRendererBackend::GCreateCommandBuffer() - Failed to allocate command buffer!");
 	}
 	void VulkanRendererBackend::GCreateRenderPass()
 	{
@@ -771,15 +631,10 @@ namespace en
 		renderPassInfo.pDependencies   = &dependency;
 
 		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_GeometryPipeline.renderPass) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::GCreateRenderPass() - Failed to create render pass!");
+			EN_ERROR("VulkanRendererBackend::GCreateRenderPass() - Failed to create render pass!");
 	}
 	void VulkanRendererBackend::GCreatePipeline()
 	{
-		Shader vShader("Shaders/GeometryVertex.spv"  , ShaderType::Vertex);
-		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
-
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
-
 		auto bindingDescription    = Vertex::GetBindingDescription();
 		auto attributeDescriptions = Vertex::GetAttributeDescriptions();
 
@@ -868,17 +723,24 @@ namespace en
 		depthStencil.front = {};
 		depthStencil.back  = {};
 
+		std::array<VkDescriptorSetLayout, 2> descriptorLayouts = { UniformBuffer::GetUniformDescriptorLayout(), Material::GetMatDescriptorLayout() };
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts	  = &m_GeometryPipeline.descriptorSetLayout;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size());
+		pipelineLayoutInfo.pSetLayouts	  = descriptorLayouts.data();
 
 		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_GeometryPipeline.layout) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::GCreatePipeline() - Failed to create pipeline layout!");
+			EN_ERROR("VulkanRendererBackend::GCreatePipeline() - Failed to create pipeline layout!");
+
+		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
+
+		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
+		pipelineInfo.stageCount = 2U;
 		pipelineInfo.pStages	= shaderStages;
 
 		pipelineInfo.pVertexInputState   = &vertexInputInfo;
@@ -898,7 +760,7 @@ namespace en
 		pipelineInfo.basePipelineIndex  = -1;
 
 		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GeometryPipeline.pipeline) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::GCreatePipeline() - Failed to create graphics pipeline!");
+			EN_ERROR("VulkanRendererBackend::GCreatePipeline() - Failed to create graphics pipeline!");
 	}
 
 	void VulkanRendererBackend::LCreateLightsBuffer()
@@ -935,7 +797,7 @@ namespace en
 		layoutInfo.pBindings    = bindings.data();
 
 		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_LightingPipeline.descriptorSetLayout) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to create descriptor set layout!");
+			EN_ERROR("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to create descriptor set layout!");
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -944,7 +806,7 @@ namespace en
 		allocInfo.pSetLayouts		 = &m_LightingPipeline.descriptorSetLayout;
 
 		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingDescriptorSet) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to allocate descriptor set!");
+			EN_ERROR("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to allocate descriptor set!");
 	}
 	void VulkanRendererBackend::LCreateDescriptorPool()
 	{
@@ -966,7 +828,7 @@ namespace en
 		poolInfo.maxSets	   = 1;
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_LightingPipeline.descriptorPool) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::LCreateDescriptorPool() - Failed to create descriptor pool!");
+			EN_ERROR("VulkanRendererBackend::LCreateDescriptorPool() - Failed to create descriptor pool!");
 	}
 	void VulkanRendererBackend::LCreateDescriptorSet()
 	{
@@ -1069,7 +931,7 @@ namespace en
 		renderPassInfo.pDependencies   = &dependency;
 
 		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_LightingPipeline.renderPass) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::LCreateRenderPass() - Failed to create render pass!");
+			EN_ERROR("VulkanRendererBackend::LCreateRenderPass() - Failed to create render pass!");
 	}
 	void VulkanRendererBackend::LCreatePipeline()
 	{
@@ -1159,7 +1021,7 @@ namespace en
 		pipelineLayoutInfo.pSetLayouts	  = &m_LightingPipeline.descriptorSetLayout;
 
 		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_LightingPipeline.layout) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline layout!");
+			EN_ERROR("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline layout!");
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1183,7 +1045,7 @@ namespace en
 		pipelineInfo.basePipelineIndex  = -1;
 
 		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_LightingPipeline.pipeline) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline!");
+			EN_ERROR("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline!");
 	}
 	
 	void VulkanRendererBackend::CreateSyncObjects()
@@ -1199,7 +1061,7 @@ namespace en
 			vkCreateSemaphore(m_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &m_LightingPipeline.passFinished) != VK_SUCCESS ||
 			vkCreateFence	 (m_Ctx->m_LogicalDevice, &fenceInfo	, nullptr, &m_SubmitFence				   ) != VK_SUCCESS)
 		{
-			throw std::runtime_error("VulkanRendererBackend::CreateSyncObjects() - Failed to create sync objects!");
+			EN_ERROR("VulkanRendererBackend::CreateSyncObjects() - Failed to create sync objects!");
 		}
 	}
 
@@ -1208,7 +1070,7 @@ namespace en
 		if (err == 0) return;
 
 		std::cerr << err << '\n';
-		throw std::runtime_error("ImGui has caused a problem!");
+		EN_ERROR("ImGui has caused a problem!");
 	}
 	void VulkanRendererBackend::InitImGui()
 	{
@@ -1255,7 +1117,7 @@ namespace en
 		renderPassInfo.pDependencies   = &dependency;
 
 		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_ImGui.RenderPass) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::InitImGui() - Failed to create ImGui's render pass!");
+			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's render pass!");
 
 		VkDescriptorPoolSize poolSizes[] =
 		{
@@ -1279,7 +1141,7 @@ namespace en
 		poolInfo.pPoolSizes    = poolSizes;
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_ImGui.DescriptorPool) != VK_SUCCESS)
-			throw std::runtime_error("VulkanRendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
+			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
 
 		ImGui_ImplGlfw_InitForVulkan(m_Window->m_GLFWWindow, true);
 		ImGui_ImplVulkan_InitInfo initInfo = {};
@@ -1389,7 +1251,7 @@ namespace en
 				return format;
 		}
 
-		throw std::runtime_error("VulkanRendererBackend::FindSupportedFormat - Failed to find a supported format!");
+		EN_ERROR("VulkanRendererBackend::FindSupportedFormat - Failed to find a supported format!");
 	}
 	VkFormat VulkanRendererBackend::FindDepthFormat()
 	{

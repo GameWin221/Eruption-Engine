@@ -51,7 +51,7 @@ namespace en
 	void Context::VKCreateInstance()
 	{
 		if (enableValidationLayers && !CheckValidationLayerSupport())
-			throw std::runtime_error("Context.cpp::Context::VKCreateInstance() - Validation layers requested, but not available!");
+			EN_ERROR("Context.cpp::Context::VKCreateInstance() - Validation layers requested, but not available!");
 
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -86,7 +86,7 @@ namespace en
 
 
 		if (vkCreateInstance(&createInfo, nullptr, &m_Instance) != VK_SUCCESS)
-			throw std::runtime_error("Context.cpp::Context::VKCreateInstance() - Failed to create instance!");
+			EN_ERROR("Context.cpp::Context::VKCreateInstance() - Failed to create instance!");
 	}
 	void Context::VKCreateDebugMessenger()
 	{
@@ -96,12 +96,12 @@ namespace en
 		PopulateDebugMessengerCreateInfo(createInfo);
 
 		if (CreateDebugUtilsMessengerEXT(&createInfo) != VK_SUCCESS)
-			throw std::runtime_error("Context.cpp::Context::VKCreateDebugMessenger() - Failed to set up debug messenger!");
+			EN_ERROR("Context.cpp::Context::VKCreateDebugMessenger() - Failed to set up debug messenger!");
 	}
 	void Context::VKCreateWindowSurface()
 	{
 		if (glfwCreateWindowSurface(m_Instance, Window::GetMainWindow().m_GLFWWindow, nullptr, &m_WindowSurface) != VK_SUCCESS)
-			throw std::runtime_error("Context.cpp::Context::VKCreateWindowSurface() - Failed to create window surface!");
+			EN_ERROR("Context.cpp::Context::VKCreateWindowSurface() - Failed to create window surface!");
 	}
 	void Context::VKPickPhysicalDevice()
 	{
@@ -109,7 +109,7 @@ namespace en
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
 
 		if (deviceCount == 0)
-			throw std::runtime_error("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find GPUs with Vulkan support!");
+			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find GPUs with Vulkan support!");
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
@@ -124,7 +124,7 @@ namespace en
 		}
 
 		if (m_PhysicalDevice == VK_NULL_HANDLE)
-			throw std::runtime_error("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
+			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
 	}
 	void Context::VKCreateLogicalDevice()
 	{
@@ -163,7 +163,7 @@ namespace en
 			createInfo.enabledLayerCount = 0;
 
 		if (vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_LogicalDevice) != VK_SUCCESS)
-			throw std::runtime_error("Context.cpp::Context::VKCreateLogicalDevice() - Failed to create logical device!");
+			EN_ERROR("Context.cpp::Context::VKCreateLogicalDevice() - Failed to create logical device!");
 
 		vkGetDeviceQueue(m_LogicalDevice, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
 		vkGetDeviceQueue(m_LogicalDevice, indices.presentFamily.value(), 0, &m_PresentQueue);

@@ -30,7 +30,7 @@ namespace en
 
 			shouldFreeImage = false;
 
-			std::cout << "Failed to load \"" + m_FilePath + "\" image!";
+			EN_WARN("Texture::Texture) - Failed to load \"" + m_FilePath + "\" image! A default white texture will be loaded instead.");
 		}
 
 		VkDeviceSize imageSize = m_Size.x * m_Size.y * 4;
@@ -131,7 +131,7 @@ namespace en
 		samplerInfo.maxLod = 0.0f;
 
 		if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &this->m_ImageSampler) != VK_SUCCESS)
-			throw std::runtime_error("Texture.cpp::Texture::CreateImageSampler() - Failed to create texture sampler!");
+			EN_ERROR("Texture.cpp::Texture::CreateImageSampler() - Failed to create texture sampler!");
 	}
 	void Texture::CopyBufferToImage(const VkBuffer& srcBuffer)
 	{

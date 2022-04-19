@@ -5,30 +5,38 @@
 
 #include <Common/Helpers.hpp>
 
+#include "../../EruptionEngine.ini"
+
 namespace en
 {
-    struct UniformBufferObject 
-    {
-        alignas(16) glm::mat4 model    = glm::mat4(1.0f);
-        alignas(16) glm::mat4 view     = glm::mat4(1.0f);
-        alignas(16) glm::mat4 proj     = glm::mat4(1.0f);
-        alignas(4)  glm::vec3 color    = glm::vec3(1.0f);
-        alignas(4)  float shininess    = 32.0f;
-    };
-
     class UniformBuffer
     {
     public:
         UniformBuffer();
         ~UniformBuffer();
 
-        void Bind();
+        void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
 
-        UniformBufferObject m_UBO;
+        glm::mat4 m_Model;
+        glm::mat4 m_View;
+        glm::mat4 m_Proj;
+
+        static VkDescriptorSetLayout& GetUniformDescriptorLayout();
+
+    private:
+        void CreateDescriptorSet();
+
+        VkDescriptorSet m_DescriptorSet;
 
         VkBuffer       m_Buffer;
         VkDeviceMemory m_BufferMemory;
-        VkDeviceSize   m_BufferSize;
+
+        struct UniformBufferObject
+        {
+            alignas(16) glm::mat4 model = glm::mat4(1.0f);
+            alignas(16) glm::mat4 view = glm::mat4(1.0f);
+            alignas(16) glm::mat4 proj = glm::mat4(1.0f);
+        } m_UBO;
     };
 }
 #endif

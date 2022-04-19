@@ -66,7 +66,7 @@ namespace en
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
             if (vkCreateBuffer(ctx.m_LogicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
-                throw std::runtime_error("Failed to create a buffer!");
+                EN_ERROR("Failed to create a buffer!")
 
             VkMemoryRequirements memRequirements;
             vkGetBufferMemoryRequirements(ctx.m_LogicalDevice, buffer, &memRequirements);
@@ -77,7 +77,7 @@ namespace en
             allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
 
             if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
-                throw std::runtime_error("Failed to allocate buffer memory!");
+                EN_ERROR("Failed to allocate buffer memory!")
 
             vkBindBufferMemory(ctx.m_LogicalDevice, buffer, bufferMemory, 0);
         }
@@ -119,7 +119,7 @@ namespace en
             imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
             if (vkCreateImage(ctx.m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS)
-                throw std::runtime_error("Failed to create image!");
+                EN_ERROR("Failed to create image!");
 
             VkMemoryRequirements memRequirements;
             vkGetImageMemoryRequirements(ctx.m_LogicalDevice, image, &memRequirements);
@@ -130,7 +130,7 @@ namespace en
             allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
 
             if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-                throw std::runtime_error("Failed to allocate image memory!");
+                EN_ERROR("Failed to allocate image memory!");
 
             vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
         }
@@ -150,7 +150,7 @@ namespace en
             viewInfo.subresourceRange.layerCount = 1;
 
             if (vkCreateImageView(ctx.m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-                throw std::runtime_error("Failed to create texture image view!");
+                EN_ERROR("Failed to create texture image view!");
         }
         void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdBuffer)
         {
@@ -229,7 +229,7 @@ namespace en
                 destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             }
             else
-                throw std::invalid_argument("Unsupported layout transition!");
+                EN_ERROR("Unsupported layout transition!");
 
             vkCmdPipelineBarrier(
                 commandBuffer,
@@ -261,7 +261,7 @@ namespace en
             commandPoolCreateInfo.flags            = commandPoolCreateFlags;
 
             if (vkCreateCommandPool(ctx.m_LogicalDevice, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS)
-                throw std::runtime_error("Failed to create a command pool!");
+                EN_ERROR("Failed to create a command pool!");
         }
 
         void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool)
@@ -289,7 +289,7 @@ namespace en
                     return i;
             }
 
-            throw std::runtime_error("Failed to find suitable memory type!");
+            EN_ERROR("Failed to find suitable memory type!");
         }
 
         QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice& device)
