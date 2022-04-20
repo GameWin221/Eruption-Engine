@@ -197,7 +197,8 @@
     <None Include="Shaders\GeometryFragment.frag" />
     <None Include="Shaders\GeometryVertex.vert" />
     <None Include="Shaders\LightingFrag.frag" />
-    <None Include="Shaders\LightingVert.vert" />
+    <None Include="Shaders\FullscreenTriVert.vert" />
+    <None Include="Shaders\PostProcessFrag.frag" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Shaders\LightingVert.spv" />

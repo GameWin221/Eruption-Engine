@@ -45,6 +45,7 @@ namespace en
 
 		void GeometryPass();
 		void LightingPass();
+		void PostProcessPass();
 		void ImGuiPass();
 
 		void EndRender();
@@ -141,6 +142,30 @@ namespace en
 				vkDestroyRenderPass(device, renderPass, nullptr);
 			}
 		};
+		struct PostProcessPipeline
+		{
+			VkDescriptorPool	  DescriptorPool;
+			VkDescriptorSetLayout DescriptorSetLayout;
+			VkDescriptorSet		  DescriptorSet;
+
+			VkRenderPass	 RenderPass;
+			VkPipelineLayout Layout;
+			VkPipeline		 Pipeline;
+
+			VkSemaphore PassFinished;
+
+			void Destroy(VkDevice& device)
+			{
+				vkDestroyDescriptorSetLayout(device, DescriptorSetLayout, nullptr);
+				vkDestroyDescriptorPool(device, DescriptorPool, nullptr);
+
+				vkDestroySemaphore(device, PassFinished, nullptr);
+
+				vkDestroyPipeline(device, Pipeline, nullptr);
+				vkDestroyPipelineLayout(device, Layout, nullptr);
+				vkDestroyRenderPass(device, RenderPass, nullptr);
+			}
+		};
 
 		struct Lights
 		{
@@ -159,19 +184,6 @@ namespace en
 
 		} m_Lights;
 
-		GBuffer m_GBuffer;
-
-		Swapchain m_Swapchain;
-
-		Pipeline m_GeometryPipeline;
-		Pipeline m_LightingPipeline;
-
-		VkDescriptorSet m_LightingDescriptorSet;
-
-		std::vector<SceneObject*> m_RenderQueue;
-
-		VkCommandBuffer m_CommandBuffer;
-
 		struct ImGuiAPI
 		{
 			VkDescriptorPool DescriptorPool;
@@ -181,6 +193,23 @@ namespace en
 
 			std::vector<VkCommandBuffer> CommandBuffers;
 		} m_ImGui;
+
+		GBuffer m_GBuffer;
+
+		Swapchain m_Swapchain;
+
+		Pipeline m_GeometryPipeline;
+		Pipeline m_LightingPipeline;
+
+		PostProcessPipeline m_PostProcessPipeline;
+
+		VkDescriptorSet m_LightingDescriptorSet;
+		VkFramebuffer   m_LightingHDRFramebuffer;
+		Attachment      m_LightingHDRColorBuffer;
+
+		std::vector<SceneObject*> m_RenderQueue;
+
+		VkCommandBuffer m_CommandBuffer;
 		
 		VkFence	m_SubmitFence;
 
@@ -199,8 +228,6 @@ namespace en
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
 
-		void RecordCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t imageIndex);
-
 		void CreateSwapchain();
 		void CreateGBufferAttachments();
 		void CreateGBuffer();
@@ -216,10 +243,16 @@ namespace en
 		void LCreateDescriptorSetLayout();
 		void LCreateDescriptorPool();
 		void LCreateDescriptorSet();
-		void LCreateCommandBuffer();
-		void LRecordCommandBuffer();
 		void LCreateRenderPass();
 		void LCreatePipeline();
+		void LCreateHDRFramebuffer();
+
+		void InitPostProcessPipeline();
+		void PPCreateDescriptorPool();
+		void PPCreateDescriptorSetLayout();
+		void PPCreateDescriptorSet();
+		void PPCreateRenderPass();
+		void PPCreatePipeline();
 
 		void CreateSwapchainFramebuffers();
 

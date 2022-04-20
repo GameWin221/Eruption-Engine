@@ -24,6 +24,7 @@ namespace en
 
 		m_Backend.GeometryPass();
 		m_Backend.LightingPass();
+		m_Backend.PostProcessPass();
 		m_Backend.ImGuiPass();
 
 		m_Backend.EndRender();

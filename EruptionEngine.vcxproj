@@ -307,9 +307,10 @@ compile.bat</Command>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
     </CopyFileToFolders>
-    <None Include="Shaders\LightingVert.vert">
+    <None Include="Shaders\FullscreenTriVert.vert">
       <FileType>Document</FileType>
     </None>
+    <None Include="Shaders\PostProcessFrag.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

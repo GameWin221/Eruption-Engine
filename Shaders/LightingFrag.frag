@@ -9,7 +9,6 @@ layout(location = 0) out vec4 FragColor;
 layout(binding = 0) uniform sampler2D gColor;
 layout(binding = 1) uniform sampler2D gPosition;
 layout(binding = 2) uniform sampler2D gNormal;
-layout(binding = 3) uniform sampler2D gDepth;
 
 const vec3 ambientLight = vec3(0.03);
 
@@ -20,7 +19,7 @@ struct PointLight
     float radius;
 };
 
-layout(binding = 4) uniform UBO 
+layout(binding = 3) uniform UBO 
 {
     PointLight lights[MAX_LIGHTS];
     vec3 viewPos;
@@ -66,7 +65,7 @@ void main()
     vec3  position  = texture(gPosition, fTexcoord).rgb;
     float shininess = texture(gPosition, fTexcoord).a;
     float specular  = texture(gColor   , fTexcoord).a;
-    float depth     = texture(gDepth   , fTexcoord).r;
+    float depth     = length(lightsBuffer.viewPos-position)/30.0;
     
     vec3 ambient = color * ambientLight;
     vec3 lighting = vec3(0);
@@ -108,7 +107,7 @@ void main()
             result = lighting;
             break;
         case 7:
-            result = vec3((depth-0.965)*20.0);
+            result = vec3(depth);
             break;
     }
     

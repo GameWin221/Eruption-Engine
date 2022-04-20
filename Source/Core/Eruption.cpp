@@ -6,7 +6,7 @@ bool modelSpawned;
 void Eruption::Init()
 {
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.4.0";
+	windowInfo.title	  = "Eruption Engine v0.4.1";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -18,8 +18,8 @@ void Eruption::Init()
 	m_AssetManager = new en::AssetManager;
 
 	m_AssetManager->LoadMesh("BackpackModel"  , "Models/Backpack/Backpack.obj");
-	m_AssetManager->LoadMesh("AdditionalModel", "Models/Skull/skull.obj"	   );
-	m_AssetManager->LoadMesh("FloorModel"     , "Models/Plane.obj"			   );
+	m_AssetManager->LoadMesh("AdditionalModel", "Models/Skull/skull.obj"	  );
+	m_AssetManager->LoadMesh("FloorModel"     , "Models/Plane.obj"			  );
 
 	m_AssetManager->LoadTexture("BackpackTexture"  , "Models/Backpack/backpack_albedo.jpg");
 	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg"	  );
@@ -41,7 +41,8 @@ void Eruption::Init()
 	//m_AssetManager->LoadTexture("CerberusAlbedo", "Models/Cerberus/CerberusAlbedo.png", false);
 	//m_AssetManager->LoadModel("Cerberus", "Models/Cerberus/Cerberus.obj", "CerberusAlbedo");
 
-	m_Skull	   = new en::SceneObject(m_AssetManager->GetMesh("AdditionalModel"));
+	m_Skull = new en::SceneObject(m_AssetManager->GetMesh("AdditionalModel"));
+
 	m_Backpack = new en::SceneObject(m_AssetManager->GetMesh("BackpackModel"));
 	m_Floor	   = new en::SceneObject(m_AssetManager->GetMesh("FloorModel"));
 
@@ -50,6 +51,7 @@ void Eruption::Init()
 
 	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
 	m_Skull->m_Rotation = glm::vec3(-45.0f, 0.0f, 0.0f);
+
 
 	en::RendererInfo rendererInfo{};
 	rendererInfo.clearColor  = { 0.01f, 0.01f, 0.01f, 1.0f };
