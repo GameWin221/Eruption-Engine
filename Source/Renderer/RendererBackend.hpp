@@ -61,6 +61,31 @@ namespace en
 		std::function<void()> m_ImGuiRenderCallback;
 
 	private:
+		struct Pipeline
+		{
+			VkDescriptorPool	  descriptorPool;
+			VkDescriptorSetLayout descriptorSetLayout;
+			VkDescriptorSet		  descriptorSet;
+
+			VkRenderPass	 renderPass;
+			VkPipelineLayout layout;
+			VkPipeline		 pipeline;
+
+			VkSemaphore passFinished;
+
+			void Destroy(VkDevice& device)
+			{
+				vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+				vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
+				vkDestroySemaphore(device, passFinished, nullptr);
+
+				vkDestroyPipeline(device, pipeline, nullptr);
+				vkDestroyPipelineLayout(device, layout, nullptr);
+				vkDestroyRenderPass(device, renderPass, nullptr);
+			}
+		};
+
 		struct Attachment
 		{
 			VkImage		   image;
@@ -95,7 +120,7 @@ namespace en
 				vkDestroyFramebuffer(device, framebuffer, nullptr);
 			}
 
-		};
+		} m_GBuffer;
 
 		struct Swapchain
 		{
@@ -117,98 +142,53 @@ namespace en
 					vkDestroyFramebuffer(device, framebuffer, nullptr);
 			}
 
-		};
-
-		struct Pipeline
-		{
-			VkDescriptorPool	  descriptorPool;
-			VkDescriptorSetLayout descriptorSetLayout;
-
-			VkRenderPass	 renderPass;
-			VkPipelineLayout layout;
-			VkPipeline		 pipeline;
-
-			VkSemaphore passFinished;
-
-			void Destroy(VkDevice& device)
-			{
-				vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-				vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-
-				vkDestroySemaphore(device, passFinished, nullptr);
-
-				vkDestroyPipeline(device, pipeline, nullptr);
-				vkDestroyPipelineLayout(device, layout, nullptr);
-				vkDestroyRenderPass(device, renderPass, nullptr);
-			}
-		};
-		struct PostProcessPipeline
-		{
-			VkDescriptorPool	  DescriptorPool;
-			VkDescriptorSetLayout DescriptorSetLayout;
-			VkDescriptorSet		  DescriptorSet;
-
-			VkRenderPass	 RenderPass;
-			VkPipelineLayout Layout;
-			VkPipeline		 Pipeline;
-
-			VkSemaphore PassFinished;
-
-			void Destroy(VkDevice& device)
-			{
-				vkDestroyDescriptorSetLayout(device, DescriptorSetLayout, nullptr);
-				vkDestroyDescriptorPool(device, DescriptorPool, nullptr);
-
-				vkDestroySemaphore(device, PassFinished, nullptr);
-
-				vkDestroyPipeline(device, Pipeline, nullptr);
-				vkDestroyPipelineLayout(device, Layout, nullptr);
-				vkDestroyRenderPass(device, RenderPass, nullptr);
-			}
-		};
+		} m_Swapchain;
 
 		struct Lights
 		{
 			struct LightsBufferObject
 			{
-				PointLight::Buffer Lights[MAX_LIGHTS];
-				glm::vec3 ViewPos;
-				int DebugMode;
+				PointLight::Buffer lights[MAX_LIGHTS];
+				glm::vec3 viewPos;
+				int debugMode;
 			} LBO;
 
-			std::array<PointLight, MAX_LIGHTS> PointLights;
+			std::array<PointLight, MAX_LIGHTS> pointLights;
 
-			VkBuffer       Buffer;
-			VkDeviceMemory BufferMemory;
-			VkDeviceSize   BufferSize;
+			VkBuffer       buffer;
+			VkDeviceMemory bufferMemory;
+			VkDeviceSize   bufferSize;
 
 		} m_Lights;
 
-		struct ImGuiAPI
+		struct PostProcessingParams
 		{
-			VkDescriptorPool DescriptorPool;
-			VkRenderPass	 RenderPass;
+			struct Exposure 
+			{ 
+				float value;
+			};
+		};
+		
+		struct ImGuiVK
+		{
+			VkDescriptorPool descriptorPool;
+			VkRenderPass	 renderPass;
 
-			VkCommandPool CommandPool;
+			VkCommandPool commandPool;
 
-			std::vector<VkCommandBuffer> CommandBuffers;
+			std::vector<VkCommandBuffer> commandBuffers;
+
 		} m_ImGui;
-
-		GBuffer m_GBuffer;
-
-		Swapchain m_Swapchain;
 
 		Pipeline m_GeometryPipeline;
 		Pipeline m_LightingPipeline;
-
-		PostProcessPipeline m_PostProcessPipeline;
-
-		VkDescriptorSet m_LightingDescriptorSet;
-		VkFramebuffer   m_LightingHDRFramebuffer;
-		Attachment      m_LightingHDRColorBuffer;
+		Pipeline m_TonemappingPipeline;
 
 		std::vector<SceneObject*> m_RenderQueue;
 
+		VkFramebuffer   m_LightingHDRFramebuffer;
+		Attachment      m_LightingHDRColorBuffer;
+		
 		VkCommandBuffer m_CommandBuffer;
 		
 		VkFence	m_SubmitFence;

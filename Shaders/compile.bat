@@ -2,6 +2,6 @@
 %VULKAN_SDK%/Bin/glslc.exe GeometryFragment.frag -o GeometryFragment.spv
 %VULKAN_SDK%/Bin/glslc.exe FullscreenTriVert.vert -o FullscreenTriVert.spv
 %VULKAN_SDK%/Bin/glslc.exe LightingFrag.frag -o LightingFrag.spv
-%VULKAN_SDK%/Bin/glslc.exe PostProcessFrag.frag -o PostProcessFrag.spv
+%VULKAN_SDK%/Bin/glslc.exe TonemapFrag.frag -o TonemapFrag.spv
 
 pause

@@ -12,9 +12,11 @@ namespace en
 		m_Fov       = cameraInfo.fov;
 
 		m_Pitch = 0.0f;
-		m_Yaw = 0.0f;
+		m_Yaw   = 0.0f;
 
 		m_DynamicallyScaled = cameraInfo.dynamicallyScaled;
+
+		m_Exposure = cameraInfo.exposure;
 
 		UpdateVectors();
 	}
@@ -25,11 +27,11 @@ namespace en
 
 		float dist = sqrtf((diff.x * diff.x) + (diff.z * diff.z));
 
-		float pitch = glm::degrees(atan2f(diff.y, dist));
-		float yaw = glm::degrees(atan2f(diff.z, diff.x));
+		float pitch = glm::degrees(atan2f(diff.y, dist  ));
+		float yaw   = glm::degrees(atan2f(diff.z, diff.x));
 
 		m_Pitch = pitch;
-		m_Yaw = yaw;
+		m_Yaw   = yaw;
 	}
 
 	void Camera::UpdateProjMatrix()

@@ -20,6 +20,7 @@ namespace en
 
 		void DrawLightsMenu();
 		void DrawDebugMenu();
+		void DrawCameraMenu();
 	};
 }
 

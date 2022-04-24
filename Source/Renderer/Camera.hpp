@@ -18,6 +18,8 @@ namespace en
 
 		glm::vec3 position = glm::vec3(0);
 
+		float exposure = 1.0f;
+
 		bool dynamicallyScaled = false;
 	};
 
@@ -38,6 +40,8 @@ namespace en
 		float m_Yaw;
 
 		float m_Fov;
+
+		float m_Exposure;
 
 		bool m_DynamicallyScaled;
 

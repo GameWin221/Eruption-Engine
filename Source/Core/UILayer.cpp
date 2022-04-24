@@ -15,6 +15,7 @@ namespace en
 	{
 		DrawLightsMenu();
 		DrawDebugMenu();
+		DrawCameraMenu();
 	}
 	
 	void UILayer::DrawLightsMenu()
@@ -82,7 +83,6 @@ namespace en
 
 		ImGui::End();
 	}
-
 	void UILayer::DrawDebugMenu()
 	{
 		static int mode = 0;
@@ -110,6 +110,29 @@ namespace en
 		ImGui::Text(modeName.c_str());
 
 		ImGui::Text(std::to_string(1.0 / *m_DeltaTime).c_str());
+
+		ImGui::End();
+	}
+	void UILayer::DrawCameraMenu()
+	{
+		ImGui::Begin("Camera Properties");
+
+		static float pos[3];
+
+		if(ImGui::InputFloat3("Position", pos))
+			m_Renderer->GetMainCamera()->m_Position = glm::vec3(pos[0], pos[1], pos[2]);
+		else
+		{
+			pos[0] = m_Renderer->GetMainCamera()->m_Position.x;
+			pos[1] = m_Renderer->GetMainCamera()->m_Position.y;
+			pos[2] = m_Renderer->GetMainCamera()->m_Position.z;
+		}
+
+		ImGui::SliderFloat("Pitch"   , &m_Renderer->GetMainCamera()->m_Pitch   ,-90.0f , 90.f );
+		ImGui::SliderFloat("Yaw"	 , &m_Renderer->GetMainCamera()->m_Yaw	   ,-180.0f, 180.f);
+		ImGui::SliderFloat("Fov"	 , &m_Renderer->GetMainCamera()->m_Fov	   , 20.0f , 110.f);
+		ImGui::SliderFloat("Exposure", &m_Renderer->GetMainCamera()->m_Exposure, 0.0f  , 16.0f);
+		ImGui::Checkbox("Dynamically Scaled", &m_Renderer->GetMainCamera()->m_DynamicallyScaled);
 
 		ImGui::End();
 	}

@@ -43,17 +43,17 @@ namespace en
 	
 		InitImGui();
 
-		m_Lights.PointLights[0].m_Position = glm::vec3(2, 2, 2);
-		m_Lights.PointLights[0].m_Color = glm::vec3(0.4, 1.0, 0.4);
-		m_Lights.PointLights[0].m_Active = true;
+		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
+		m_Lights.pointLights[0].m_Color = glm::vec3(0.4, 1.0, 0.4);
+		m_Lights.pointLights[0].m_Active = true;
 
-		m_Lights.PointLights[1].m_Position = glm::vec3(-2, 2, 2);
-		m_Lights.PointLights[1].m_Color = glm::vec3(1, 0.4, 0.4);
-		m_Lights.PointLights[1].m_Active = true;
+		m_Lights.pointLights[1].m_Position = glm::vec3(-2, 2, 2);
+		m_Lights.pointLights[1].m_Color = glm::vec3(1, 0.4, 0.4);
+		m_Lights.pointLights[1].m_Active = true;
 
-		m_Lights.PointLights[2].m_Position = glm::vec3(2, 2, -2);
-		m_Lights.PointLights[2].m_Color = glm::vec3(0.2, 0.2, 1.0);
-		m_Lights.PointLights[2].m_Active = true;
+		m_Lights.pointLights[2].m_Position = glm::vec3(2, 2, -2);
+		m_Lights.pointLights[2].m_Color = glm::vec3(0.2, 0.2, 1.0);
+		m_Lights.pointLights[2].m_Active = true;
 	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
@@ -65,21 +65,22 @@ namespace en
 
 		m_GeometryPipeline.Destroy(m_Ctx->m_LogicalDevice);
 		m_LightingPipeline.Destroy(m_Ctx->m_LogicalDevice);
+		m_TonemappingPipeline.Destroy(m_Ctx->m_LogicalDevice);
 
 		vkDestroyFence(m_Ctx->m_LogicalDevice, m_SubmitFence, nullptr);
 
-		vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_LightingPipeline.descriptorPool, 1, &m_LightingDescriptorSet);
+		vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_LightingPipeline.descriptorPool, 1, &m_LightingPipeline.descriptorSet);
 
 		vkFreeCommandBuffers(m_Ctx->m_LogicalDevice, m_Ctx->m_CommandPool, 1, &m_CommandBuffer);
 
-		en::Helpers::DestroyBuffer(m_Lights.Buffer, m_Lights.BufferMemory);
+		en::Helpers::DestroyBuffer(m_Lights.buffer, m_Lights.bufferMemory);
 
-		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.RenderPass, nullptr);
+		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.renderPass, nullptr);
 
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_ImGui.DescriptorPool, nullptr);
+		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_ImGui.descriptorPool, nullptr);
 	}
 
 	void VulkanRendererBackend::BeginRender()
@@ -173,14 +174,14 @@ namespace en
 			// Prepare lights
 			for (int i = 0; i < MAX_LIGHTS; i++)
 			{
-				m_Lights.LBO.Lights[i].position = m_Lights.PointLights[i].m_Position;
-				m_Lights.LBO.Lights[i].color    = m_Lights.PointLights[i].m_Color * (float)m_Lights.PointLights[i].m_Active * m_Lights.PointLights[i].m_Intensity;
-				m_Lights.LBO.Lights[i].radius   = m_Lights.PointLights[i].m_Radius * (float)m_Lights.PointLights[i].m_Active;
+				m_Lights.LBO.lights[i].position = m_Lights.pointLights[i].m_Position;
+				m_Lights.LBO.lights[i].color    = m_Lights.pointLights[i].m_Color * (float)m_Lights.pointLights[i].m_Active * m_Lights.pointLights[i].m_Intensity;
+				m_Lights.LBO.lights[i].radius   = m_Lights.pointLights[i].m_Radius * (float)m_Lights.pointLights[i].m_Active;
 			}
-			m_Lights.LBO.ViewPos = m_MainCamera->m_Position;
-			m_Lights.LBO.DebugMode = m_DebugMode;
+			m_Lights.LBO.viewPos = m_MainCamera->m_Position;
+			m_Lights.LBO.debugMode = m_DebugMode;
 
-			en::Helpers::MapBuffer(m_Lights.BufferMemory, &m_Lights.LBO, m_Lights.BufferSize);
+			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
 
 			VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
 
@@ -197,7 +198,7 @@ namespace en
 
 			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.pipeline);
 
-			vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0, 1, &m_LightingDescriptorSet, 0, nullptr);
+			vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0, 1, &m_LightingPipeline.descriptorSet, 0, nullptr);
 
 			vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
 
@@ -212,18 +213,22 @@ namespace en
 
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass		 = m_PostProcessPipeline.RenderPass;
+			renderPassInfo.renderPass		 = m_TonemappingPipeline.renderPass;
 			renderPassInfo.framebuffer		 = m_Swapchain.framebuffers[m_ImageIndex];
 			renderPassInfo.renderArea.offset = { 0U, 0U };
 			renderPassInfo.renderArea.extent = m_Swapchain.extent;
 			renderPassInfo.clearValueCount   = 1U;
 			renderPassInfo.pClearValues		 = &clearValue;
-			
+		
 			vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PostProcessPipeline.Pipeline);
+			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.pipeline);
 
-			vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PostProcessPipeline.Layout, 0U, 1U, &m_PostProcessPipeline.DescriptorSet, 0U, nullptr);
+			PostProcessingParams::Exposure exposure { m_MainCamera->m_Exposure };
+
+			vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessingParams::Exposure), &exposure);
+
+			vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.layout, 0U, 1U, &m_TonemappingPipeline.descriptorSet, 0U, nullptr);
 
 			vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
@@ -244,7 +249,7 @@ namespace en
 
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = m_ImGui.RenderPass;
+			renderPassInfo.renderPass = m_ImGui.renderPass;
 			renderPassInfo.framebuffer = m_Swapchain.framebuffers[m_ImageIndex];
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = m_Swapchain.extent;
@@ -256,16 +261,16 @@ namespace en
 
 			VkCommandBufferBeginInfo beginInfo{};
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			if (vkBeginCommandBuffer(m_ImGui.CommandBuffers[m_ImageIndex], &beginInfo) != VK_SUCCESS)
+			if (vkBeginCommandBuffer(m_ImGui.commandBuffers[m_ImageIndex], &beginInfo) != VK_SUCCESS)
 				EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
 
-			vkCmdBeginRenderPass(m_ImGui.CommandBuffers[m_ImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBeginRenderPass(m_ImGui.commandBuffers[m_ImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGui.CommandBuffers[m_ImageIndex]);
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGui.commandBuffers[m_ImageIndex]);
 
-			vkCmdEndRenderPass(m_ImGui.CommandBuffers[m_ImageIndex]);
+			vkCmdEndRenderPass(m_ImGui.commandBuffers[m_ImageIndex]);
 
-			if (vkEndCommandBuffer(m_ImGui.CommandBuffers[m_ImageIndex]) != VK_SUCCESS)
+			if (vkEndCommandBuffer(m_ImGui.commandBuffers[m_ImageIndex]) != VK_SUCCESS)
 				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record ImGui command buffer!");
 		}
 	}
@@ -285,7 +290,7 @@ namespace en
 			submitInfo.pWaitSemaphores = waitSemaphores;
 			submitInfo.pWaitDstStageMask = waitStages;
 
-			std::array<VkCommandBuffer, 2> submitCommandBuffers = { m_CommandBuffer, m_ImGui.CommandBuffers[m_ImageIndex] };
+			std::array<VkCommandBuffer, 2> submitCommandBuffers = { m_CommandBuffer, m_ImGui.commandBuffers[m_ImageIndex] };
 			submitInfo.commandBufferCount = 2;
 			submitInfo.pCommandBuffers	  = submitCommandBuffers.data();
 
@@ -339,9 +344,9 @@ namespace en
 		m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
-		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_PostProcessPipeline.Pipeline, nullptr);
-		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_PostProcessPipeline.Layout, nullptr);
-		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_PostProcessPipeline.RenderPass, nullptr);
+		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.pipeline, nullptr);
+		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.layout, nullptr);
+		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.renderPass, nullptr);
 
 		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_LightingPipeline.pipeline, nullptr);
 		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_LightingPipeline.layout, nullptr);
@@ -399,7 +404,7 @@ namespace en
 
 	std::array<PointLight, MAX_LIGHTS>& VulkanRendererBackend::GetPointLights()
 	{
-		return m_Lights.PointLights;
+		return m_Lights.pointLights;
 	}
 
 	void VulkanRendererBackend::CreateSwapchain()
@@ -472,7 +477,7 @@ namespace en
 		{
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass		= m_PostProcessPipeline.RenderPass;
+			framebufferInfo.renderPass		= m_TonemappingPipeline.renderPass;
 			framebufferInfo.attachmentCount = 1;
 			framebufferInfo.pAttachments	= &m_Swapchain.imageViews[i];
 			framebufferInfo.width			= m_Swapchain.extent.width;
@@ -808,8 +813,8 @@ namespace en
 
 	void VulkanRendererBackend::LCreateLightsBuffer()
 	{
-		m_Lights.BufferSize = sizeof(m_Lights.LBO);
-		en::Helpers::CreateBuffer(m_Lights.BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.Buffer, m_Lights.BufferMemory);
+		m_Lights.bufferSize = sizeof(m_Lights.LBO);
+		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
 	}
 	void VulkanRendererBackend::LCreateDescriptorSetLayout()
 	{
@@ -847,7 +852,7 @@ namespace en
 		allocInfo.descriptorSetCount = static_cast<uint32_t>(1);
 		allocInfo.pSetLayouts		 = &m_LightingPipeline.descriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingDescriptorSet) != VK_SUCCESS)
+		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingPipeline.descriptorSet) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to allocate descriptor set!");
 	}
 	void VulkanRendererBackend::LCreateDescriptorPool()
@@ -893,7 +898,7 @@ namespace en
 
 		// Light Buffer
 		VkDescriptorBufferInfo lightBufferInfo{};
-		lightBufferInfo.buffer = m_Lights.Buffer;
+		lightBufferInfo.buffer = m_Lights.buffer;
 		lightBufferInfo.offset = 0;
 		lightBufferInfo.range  = sizeof(m_Lights.LBO);
 
@@ -902,7 +907,7 @@ namespace en
 		for (int i = 0; auto & descriptorWrite : descriptorWrites)
 		{
 			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet			= m_LightingDescriptorSet;
+			descriptorWrite.dstSet			= m_LightingPipeline.descriptorSet;
 			descriptorWrite.dstBinding		= i;
 			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1096,8 +1101,6 @@ namespace en
 	void VulkanRendererBackend::PPCreateDescriptorSetLayout()
 	{
 		VkDescriptorSetLayoutBinding binding;
-		//0: HDR Framebuffer
-		//1: Post Process Parameters (in future)
 
 		binding.binding			   = 0U;
 		binding.descriptorCount	   = 1U;
@@ -1110,22 +1113,21 @@ namespace en
 		layoutInfo.bindingCount = 1U;
 		layoutInfo.pBindings	= &binding;
 
-		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_PostProcessPipeline.DescriptorSetLayout) != VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_TonemappingPipeline.descriptorSetLayout) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::PPCreateDescriptorSetLayout() - Failed to create descriptor set layout!");
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = m_PostProcessPipeline.DescriptorPool;
+		allocInfo.descriptorPool	 = m_TonemappingPipeline.descriptorPool;
 		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts		 = &m_PostProcessPipeline.DescriptorSetLayout;
+		allocInfo.pSetLayouts		 = &m_TonemappingPipeline.descriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_PostProcessPipeline.DescriptorSet) != VK_SUCCESS)
+		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_TonemappingPipeline.descriptorSet) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::PPCreateDescriptorSetLayout() - Failed to allocate descriptor set!");
 	}
 	void VulkanRendererBackend::PPCreateDescriptorPool()
 	{
 		VkDescriptorPoolSize poolSize{};
-
 		poolSize.type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		poolSize.descriptorCount = 1U;
 
@@ -1135,21 +1137,19 @@ namespace en
 		poolInfo.pPoolSizes	   = &poolSize;
 		poolInfo.maxSets	   = 1U;
 
-		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_PostProcessPipeline.DescriptorPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_TonemappingPipeline.descriptorPool) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::PPCreateDescriptorPool() - Failed to create descriptor pool!");
 	}
 	void VulkanRendererBackend::PPCreateDescriptorSet()
 	{
 		VkDescriptorImageInfo imageInfo{};
-
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imageInfo.imageView   = m_LightingHDRColorBuffer.imageView;
 		imageInfo.sampler	  = m_GBuffer.sampler;
 
 		VkWriteDescriptorSet descriptorWrite{};
-
 		descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet			= m_PostProcessPipeline.DescriptorSet;
+		descriptorWrite.dstSet			= m_TonemappingPipeline.descriptorSet;
 		descriptorWrite.dstBinding		= 0U;
 		descriptorWrite.dstArrayElement = 0U;
 		descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1197,13 +1197,13 @@ namespace en
 		renderPassInfo.dependencyCount = 1U;
 		renderPassInfo.pDependencies   = &dependency;
 
-		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_PostProcessPipeline.RenderPass) != VK_SUCCESS)
+		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_TonemappingPipeline.renderPass) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::PPCreateRenderPass() - Failed to create render pass!");
 	}
 	void VulkanRendererBackend::PPCreatePipeline()
 	{
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/PostProcessFrag.spv", ShaderType::Fragment);
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex  );
+		Shader fShader("Shaders/TonemapFrag.spv"	  , ShaderType::Fragment);
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
 
@@ -1282,12 +1282,20 @@ namespace en
 		depthStencil.front = {};
 		depthStencil.back  = {};
 
+		VkPushConstantRange exposurePushConstant{};
+		exposurePushConstant.offset		= 0U;
+		exposurePushConstant.size		= sizeof(PostProcessingParams::Exposure);
+		exposurePushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1U;
-		pipelineLayoutInfo.pSetLayouts	  = &m_PostProcessPipeline.DescriptorSetLayout;
+		pipelineLayoutInfo.pSetLayouts	  = &m_TonemappingPipeline.descriptorSetLayout;
 
-		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_PostProcessPipeline.Layout) != VK_SUCCESS)
+		pipelineLayoutInfo.pPushConstantRanges	  = &exposurePushConstant;
+		pipelineLayoutInfo.pushConstantRangeCount = 1U;
+
+		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_TonemappingPipeline.layout) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::PPCreatePipeline() - Failed to create pipeline layout!");
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -1304,14 +1312,14 @@ namespace en
 		pipelineInfo.pColorBlendState    = &colorBlending;
 		pipelineInfo.pDynamicState		 = nullptr;
 
-		pipelineInfo.layout		= m_PostProcessPipeline.Layout;
-		pipelineInfo.renderPass = m_PostProcessPipeline.RenderPass;
+		pipelineInfo.layout		= m_TonemappingPipeline.layout;
+		pipelineInfo.renderPass = m_TonemappingPipeline.renderPass;
 		pipelineInfo.subpass	= 0U;
 
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex = -1;
 
-		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_PostProcessPipeline.Pipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_TonemappingPipeline.pipeline) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::PPCreatePipeline() - Failed to create pipeline!");
 	}
 	
@@ -1383,7 +1391,7 @@ namespace en
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies   = &dependency;
 
-		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_ImGui.RenderPass) != VK_SUCCESS)
+		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_ImGui.renderPass) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's render pass!");
 
 		VkDescriptorPoolSize poolSizes[] =
@@ -1407,7 +1415,7 @@ namespace en
 		poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
 		poolInfo.pPoolSizes    = poolSizes;
 
-		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_ImGui.DescriptorPool) != VK_SUCCESS)
+		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_ImGui.descriptorPool) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
 
 		ImGui_ImplGlfw_InitForVulkan(m_Window->m_GLFWWindow, true);
@@ -1418,21 +1426,21 @@ namespace en
 		initInfo.QueueFamily	 = Helpers::FindQueueFamilies(m_Ctx->m_PhysicalDevice).graphicsFamily.value();
 		initInfo.Queue			 = m_Ctx->m_GraphicsQueue;
 		initInfo.PipelineCache   = VK_NULL_HANDLE;
-		initInfo.DescriptorPool  = m_ImGui.DescriptorPool;
+		initInfo.DescriptorPool  = m_ImGui.descriptorPool;
 		initInfo.Allocator		 = VK_NULL_HANDLE;
 		initInfo.MinImageCount   = m_Swapchain.imageViews.size();
 		initInfo.ImageCount		 = m_Swapchain.imageViews.size();
 		initInfo.CheckVkResultFn = ImGuiCheckResult;
-		ImGui_ImplVulkan_Init(&initInfo, m_ImGui.RenderPass);
+		ImGui_ImplVulkan_Init(&initInfo, m_ImGui.renderPass);
 
 		VkCommandBuffer cmd = Helpers::BeginSingleTimeCommands();
 		ImGui_ImplVulkan_CreateFontsTexture(cmd);
 		Helpers::EndSingleTimeCommands(cmd);
 
-		m_ImGui.CommandBuffers.resize(m_Swapchain.imageViews.size());
+		m_ImGui.commandBuffers.resize(m_Swapchain.imageViews.size());
 
-		Helpers::CreateCommandPool(m_ImGui.CommandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-		Helpers::CreateCommandBuffers(m_ImGui.CommandBuffers.data(), static_cast<uint32_t>(m_ImGui.CommandBuffers.size()), m_ImGui.CommandPool);
+		Helpers::CreateCommandPool(m_ImGui.commandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		Helpers::CreateCommandBuffers(m_ImGui.commandBuffers.data(), static_cast<uint32_t>(m_ImGui.commandBuffers.size()), m_ImGui.commandPool);
 
 		ImGui_ImplVulkanH_SelectSurfaceFormat(m_Ctx->m_PhysicalDevice, m_Ctx->m_WindowSurface, &m_Swapchain.imageFormat, 1, VK_COLORSPACE_SRGB_NONLINEAR_KHR);
 	}
