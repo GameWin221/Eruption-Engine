@@ -37,21 +37,15 @@ void Eruption::Init()
 	m_AssetManager->GetMesh("AdditionalModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("AdditionalMaterial");
 	m_AssetManager->GetMesh("FloorModel"     )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"     );
 
-	// The Cerberus file is not in the repo because it's too heavy (100mb+)
-	//m_AssetManager->LoadTexture("CerberusAlbedo", "Models/Cerberus/CerberusAlbedo.png", false);
-	//m_AssetManager->LoadModel("Cerberus", "Models/Cerberus/Cerberus.obj", "CerberusAlbedo");
-
 	m_Skull = new en::SceneObject(m_AssetManager->GetMesh("AdditionalModel"));
+	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
+	m_Skull->m_Rotation = glm::vec3(-45.0f, 0.0f, 0.0f);
 
 	m_Backpack = new en::SceneObject(m_AssetManager->GetMesh("BackpackModel"));
 	m_Floor	   = new en::SceneObject(m_AssetManager->GetMesh("FloorModel"));
 
 	m_Backpack->m_Position = glm::vec3(2, 0.5f, 0);
 	m_Backpack->m_Scale = glm::vec3(0.2f);
-
-	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
-	m_Skull->m_Rotation = glm::vec3(-45.0f, 0.0f, 0.0f);
-
 
 	en::RendererInfo rendererInfo{};
 	rendererInfo.clearColor  = { 0.01f, 0.01f, 0.01f, 1.0f };
