@@ -80,9 +80,9 @@ void main()
                 lighting += CalculateLight(i, color, specular, shininess, position, normal, dist);
         }
     }
-    
-    vec3 result = vec3(0);
 
+    vec3 result = vec3(0);
+    
     switch(lightsBuffer.debugMode)
     {
         case 0:
@@ -110,7 +110,6 @@ void main()
             result = vec3(depth);
             break;
     }
-    
 
     FragColor = vec4(result, 1.0);
 }
