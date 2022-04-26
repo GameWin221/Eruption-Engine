@@ -5,6 +5,14 @@ namespace en
 {
 	void UILayer::AttachTo(Renderer* renderer, double* deltaTimeVar)
 	{
+		if (renderer && deltaTimeVar)
+			EN_SUCCESS("Successfully attached the UI layer")
+		else
+		{
+			EN_WARN("UILayer::AttachTo() - Failed to attach the UI layer!");
+			return;
+		}
+
 		m_DeltaTime = deltaTimeVar;
 		m_Renderer = renderer;
 
@@ -61,12 +69,11 @@ namespace en
 			{
 				ImGui::PushID(&lights[i]);
 
-				ImGui::InputFloat3("Position", pos[i]);
-				ImGui::ColorEdit3 ("Color", col[i]);
-				ImGui::SliderFloat3("Normalized Color", col[i], 0.0f, 1.0f);
-				ImGui::SliderFloat("Intensity", &lights[i].m_Intensity, 0, 8.0f);
-				ImGui::SliderFloat("Radius", &lights[i].m_Radius, 0, 20.0f);
-				ImGui::Checkbox   ("Active", &lights[i].m_Active);
+				ImGui::DragFloat3 ("Position" , pos[i], 0.1f);
+				ImGui::ColorEdit3 ("Color"    , col[i], ImGuiColorEditFlags_Float);
+				ImGui::DragFloat  ("Intensity", &lights[i].m_Intensity, 0.1f, 0.0f, 2000.0f);
+				ImGui::DragFloat  ("Radius"   , &lights[i].m_Radius   , 0.1f, 0.0f, 50.0f  );
+				ImGui::Checkbox   ("Active"   , &lights[i].m_Active);
 
 				lights[i].m_Position = glm::vec3(pos[i][0], pos[i][1], pos[i][2]);
 				lights[i].m_Color = glm::vec3(col[i][0], col[i][1], col[i][2]);

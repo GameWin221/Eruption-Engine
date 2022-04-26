@@ -10,6 +10,8 @@ namespace en
 		g_CurrentRenderer = this;
 
 		m_Backend.Init(rendererInfo);
+
+		EN_SUCCESS("Successfully created the renderer");
 	}
 	Renderer::~Renderer(){}
 
@@ -41,6 +43,9 @@ namespace en
 
 	Renderer& Renderer::GetRenderer()
 	{
+		if (!g_CurrentRenderer)
+			EN_ERROR("Renderer::GetRenderer() - g_CurrentRenderer was a nullptr!");
+
 		return *g_CurrentRenderer;
 	}
 

@@ -8,7 +8,7 @@ namespace en
 	Window::Window(WindowInfo& windowInfo)
 	{
 		if (g_MainWindow)
-			EN_ERROR("Failed to open a window! There is an open window already.");
+			EN_ERROR("Window::Window() - Failed to open a window! There is an open window already.");
 
 		g_MainWindow = this;
 
@@ -16,7 +16,7 @@ namespace en
 
 		glfwInit();
 
-		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		GLFWmonitor*       monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 
 		glfwWindowHint(GLFW_CLIENT_API  , GLFW_NO_API);
@@ -24,6 +24,8 @@ namespace en
 		glfwWindowHint(GLFW_GREEN_BITS  , mode->greenBits);
 		glfwWindowHint(GLFW_BLUE_BITS   , mode->blueBits);
 		glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+		EN_SUCCESS("Successfully created the glfw context");
 
 		// Fullscreen
 		if (m_WindowInfo.fullscreen)
@@ -35,6 +37,8 @@ namespace en
 			glfwWindowHint(GLFW_RESIZABLE, m_WindowInfo.resizable);
 			m_GLFWWindow = glfwCreateWindow(m_WindowInfo.size.x, m_WindowInfo.size.y, m_WindowInfo.title.c_str(), nullptr, nullptr);
 		}
+		
+		EN_SUCCESS("Successfully created a window");
 	}
 	Window::~Window()
 	{
@@ -42,12 +46,17 @@ namespace en
 
 		g_MainWindow = nullptr;
 
+		EN_LOG("Closed the main window");
+
 		glfwTerminate();
+
+		EN_LOG("Destroyed the glfw context");
 	}
 
 	void Window::Close()
 	{
 		glfwSetWindowShouldClose(m_GLFWWindow, true);
+		EN_LOG("Window should close within a frame...");
 	}
 	void Window::PollEvents()
 	{
@@ -56,6 +65,9 @@ namespace en
 
 	Window& Window::GetMainWindow()
 	{
+		if (!g_MainWindow)
+			EN_ERROR("Window::GetMainWindow() - g_MainWindow was a nullptr!");
+
 		return *g_MainWindow;
 	}
 }

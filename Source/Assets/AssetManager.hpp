@@ -11,6 +11,8 @@ namespace en
 	class AssetManager
 	{
 	public:
+		AssetManager();
+
 		void LoadMesh	(std::string nameID, std::string path);
 		void LoadTexture(std::string nameID, std::string path, bool loadFlipped = true);
 

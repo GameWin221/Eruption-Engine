@@ -3,6 +3,10 @@
 
 namespace en
 {
+    AssetManager::AssetManager()
+    {
+        EN_SUCCESS("Successfully created the asset manager");
+    }
     void AssetManager::LoadMesh(std::string nameID, std::string path)
     {
         if (m_Meshes.contains(nameID))
@@ -27,10 +31,12 @@ namespace en
     void AssetManager::UnloadMesh(std::string nameID)
     {
         m_Meshes.erase(nameID);
+        EN_LOG("Unloaded the \"" + nameID + "\" mesh");
     }
     void AssetManager::UnloadTexture(std::string nameID)
     {
         m_Textures.erase(nameID);
+        EN_LOG("Unloaded the \"" + nameID + "\" texture");
     }
 
     void AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, Texture* albedoTexture, Texture* specularTexture)
@@ -42,10 +48,18 @@ namespace en
         }
 
         m_Materials[nameID] = std::make_unique<Material>(color, shininess, albedoTexture, specularTexture);
+
+        EN_LOG("Created a material (Name: \"" + nameID + "\", Color: " + std::to_string(color.x) + ", " +
+                                                                         std::to_string(color.y) + ", " +
+                                                                         std::to_string(color.z) + 
+                                                       ", Shininess: " + std::to_string(shininess) + 
+                                                       ", Albedo: "    + std::to_string((uint64_t)albedoTexture  ) +
+                                                       ", Specular: "  + std::to_string((uint64_t)specularTexture));
     }
     void AssetManager::DeleteMaterial(std::string nameID)
     {
         m_Materials.erase(nameID);
+        EN_LOG("Deleted the \"" + nameID + "\" material");
     }
 
     Mesh* AssetManager::GetMesh(std::string nameID)

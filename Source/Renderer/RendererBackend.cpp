@@ -43,6 +43,8 @@ namespace en
 	
 		InitImGui();
 
+		EN_SUCCESS("Successfully created the renderer Vulkan backend");
+
 		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
 		m_Lights.pointLights[0].m_Color = glm::vec3(0.4, 1.0, 0.4);
 		m_Lights.pointLights[0].m_Active = true;
@@ -1532,7 +1534,7 @@ namespace en
 	{
 		return FindSupportedFormat
 		(
-			{ VK_FORMAT_D16_UNORM },
+			{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D16_UNORM },
 			VK_IMAGE_TILING_OPTIMAL,
 			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
 		);

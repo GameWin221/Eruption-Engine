@@ -28,6 +28,8 @@ namespace en
 		VKPickPhysicalDevice();
 		VKCreateLogicalDevice();
 		VKCreateCommandPool();
+
+		EN_SUCCESS("Successfully created the Vulkan context");
 	}
 	Context::~Context()
 	{
@@ -44,9 +46,17 @@ namespace en
 		vkDestroyInstance(m_Instance, nullptr);
 
 		glfwTerminate();
+
+		EN_LOG("Destroyed the Vulkan context")
 	}
 
-	Context& Context::GetContext() { return *g_CurrentContext; }
+	Context& Context::GetContext() 
+	{
+		if (!g_CurrentContext)
+			EN_ERROR("Context::GetContext()  - g_CurrentContext was a nullptr!");
+
+		return *g_CurrentContext;
+	}
 
 	void Context::VKCreateInstance()
 	{

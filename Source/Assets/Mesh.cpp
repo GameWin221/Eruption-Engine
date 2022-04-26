@@ -33,13 +33,13 @@ namespace en
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
 		std::string warn, err;
-
+		
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, m_FilePath.c_str()))
 		{
-			EN_WARN("Model::LoadOBJMesh() - " + warn + err);
+			EN_WARN("Model::LoadOBJMesh() - Failed to load an .obj mesh from " + m_FilePath + "\"!");
 
 			if (m_FilePath == "Models/NoModel.obj")
-				EN_ERROR("Failed to load NoModel.obj! This is an essential file.");
+				EN_ERROR("Model::LoadOBJMesh() - Failed to load NoModel.obj! This is an essential file.");
 
 			shapes.clear();
 			shapes.shrink_to_fit();
@@ -94,6 +94,8 @@ namespace en
 
 			m_SubMeshes.emplace_back(vertices, indices, Material::GetDefaultMaterial());
 		}
+
+		EN_SUCCESS("Successfully loaded a mesh from \"" + m_FilePath + "\"");
 	}
 	void Mesh::LoadGLTFMesh()
 	{
@@ -112,5 +114,6 @@ namespace en
 			return;
 		}
 		*/
+		//EN_SUCCESS("Loaded a mesh from \"" + m_FilePath + "\"");
 	}
 }

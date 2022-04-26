@@ -24,6 +24,8 @@ namespace en
 		// GLFW_MOUSE_BUTTONs range from 0 to 7
 		for (int button = 0; button <= 7; button++)
 			m_LastButtonStates[button] = false;
+
+		EN_SUCCESS("Successfully created the input manager");
 	}
 	
 	void InputManager::UpdateMouse()

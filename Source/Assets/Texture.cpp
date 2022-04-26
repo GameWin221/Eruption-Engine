@@ -30,7 +30,7 @@ namespace en
 
 			shouldFreeImage = false;
 
-			EN_WARN("Texture::Texture) - Failed to load \"" + m_FilePath + "\" image! A default white texture will be loaded instead.");
+			EN_WARN("Texture::Texture() - Failed to load a texture from \"" + m_FilePath + "\"!");
 		}
 
 		VkDeviceSize imageSize = m_Size.x * m_Size.y * 4;
@@ -51,7 +51,10 @@ namespace en
 		CreateImageSampler();
 
 		if (shouldFreeImage)
+		{
 			stbi_image_free(pixels);
+			EN_SUCCESS("Successfully loaded a texture from \"" + m_FilePath + "\"");
+		}
 
 		en::Helpers::DestroyBuffer(stagingBuffer, stagingBufferMemory);
 	}
