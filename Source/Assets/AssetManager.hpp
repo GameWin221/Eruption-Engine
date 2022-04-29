@@ -14,12 +14,12 @@ namespace en
 		AssetManager();
 
 		void LoadMesh	(std::string nameID, std::string path);
-		void LoadTexture(std::string nameID, std::string path, bool loadFlipped = true);
+		void LoadTexture(std::string nameID, std::string path, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB, bool loadFlipped = true);
 
 		void UnloadMesh   (std::string nameID);
 		void UnloadTexture(std::string nameID);
 
-		void CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 32.0f, Texture* albedoTexture = nullptr, Texture* specularTexture = nullptr);
+		void CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 32.0f, float normalStrength = 0.5f, Texture* albedoTexture = nullptr, Texture* specularTexture = nullptr, Texture* normalTexture = nullptr);
 		void DeleteMaterial(std::string nameID);
 
 		Mesh*     GetMesh    (std::string nameID);

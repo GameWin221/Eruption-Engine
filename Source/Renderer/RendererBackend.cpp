@@ -28,9 +28,9 @@ namespace en
 		CreateSwapchain();
 
 		CreateGBufferAttachments();
-		
+
 		InitGeometryPipeline();
-		
+	
 		CreateGBuffer();
 
 		InitLightingPipeline();
@@ -45,17 +45,17 @@ namespace en
 
 		EN_SUCCESS("Successfully created the renderer Vulkan backend");
 
-		m_Lights.pointLights[0].m_Position = glm::vec3(2, 2, 2);
-		m_Lights.pointLights[0].m_Color = glm::vec3(0.4, 1.0, 0.4);
-		m_Lights.pointLights[0].m_Active = true;
+		m_Lights.pointLights[0].m_Position = glm::vec3(3, 2, 0.5);
+		m_Lights.pointLights[0].m_Color    = glm::vec3(0.4, 1.0, 0.4);
+		m_Lights.pointLights[0].m_Active   = true;
 
 		m_Lights.pointLights[1].m_Position = glm::vec3(-2, 2, 2);
-		m_Lights.pointLights[1].m_Color = glm::vec3(1, 0.4, 0.4);
-		m_Lights.pointLights[1].m_Active = true;
+		m_Lights.pointLights[1].m_Color    = glm::vec3(1, 0.4, 0.4);
+		m_Lights.pointLights[1].m_Active   = true;
 
-		m_Lights.pointLights[2].m_Position = glm::vec3(2, 2, -2);
-		m_Lights.pointLights[2].m_Color = glm::vec3(0.2, 0.2, 1.0);
-		m_Lights.pointLights[2].m_Active = true;
+		m_Lights.pointLights[2].m_Position = glm::vec3(0.4, 1.7, -2);
+		m_Lights.pointLights[2].m_Color    = glm::vec3(0.2, 0.2, 1.0);
+		m_Lights.pointLights[2].m_Active   = true;
 	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
@@ -126,12 +126,13 @@ namespace en
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = m_Swapchain.extent;
 
-			std::array<VkClearValue, 4> clearValues{};
+			std::array<VkClearValue, 5> clearValues{};
 			clearValues[0].color = m_RendererInfo.clearColor;
 			clearValues[1].color = m_RendererInfo.clearColor;
 			clearValues[2].color = m_RendererInfo.clearColor;
+			clearValues[3].color = m_RendererInfo.clearColor;
 
-			clearValues[3].depthStencil = { 1.0f, 0 };
+			clearValues[4].depthStencil = { 1.0f, 0 };
 
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
@@ -168,9 +169,10 @@ namespace en
 	{
 		if (!m_SkipFrame)
 		{
-			Helpers::TransitionImageLayout(m_GBuffer.albedo.image  , m_GBuffer.albedo.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_GBuffer.position.image, m_GBuffer.position.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_GBuffer.normal.image  , m_GBuffer.normal.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.albedo.image   , m_GBuffer.albedo.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.normal.image   , m_GBuffer.normal.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+			Helpers::TransitionImageLayout(m_GBuffer.tangent.image  , m_GBuffer.tangent.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_LightingHDRColorBuffer.image, m_LightingHDRColorBuffer.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
 
 			// Prepare lights
@@ -414,7 +416,7 @@ namespace en
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_Ctx->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode	 = ChooseSwapPresentMode(swapChainSupport.presentModes);
+		VkPresentModeKHR   presentMode   = VK_PRESENT_MODE_FIFO_KHR;
 		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -493,20 +495,21 @@ namespace en
 
 	void VulkanRendererBackend::CreateGBuffer()
 	{
-		std::array<VkImageView, 4> attachments = 
+		std::array<VkImageView, 5> attachments = 
 		{
 			m_GBuffer.albedo.imageView,
 			m_GBuffer.position.imageView,
 			m_GBuffer.normal.imageView,
+			m_GBuffer.tangent.imageView,
 			m_GBuffer.depth.imageView
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = m_GeometryPipeline.renderPass;
+		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass	    = m_GeometryPipeline.renderPass;
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = m_Swapchain.extent.width;
+		framebufferInfo.pAttachments    = attachments.data();
+		framebufferInfo.width  = m_Swapchain.extent.width;
 		framebufferInfo.height = m_Swapchain.extent.height;
 		framebufferInfo.layers = 1;
 
@@ -514,22 +517,22 @@ namespace en
 			EN_ERROR("VulkanRendererBackend::InitGBuffer() - Failed to create the GBuffer!");
 
 		VkSamplerCreateInfo samplerInfo{};
-		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.sType			 = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter		 = VK_FILTER_LINEAR;
+		samplerInfo.minFilter		 = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU	 = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV	 = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW	 = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.maxAnisotropy = 0;
-		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.maxAnisotropy	 = 0;
+		samplerInfo.borderColor		 = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.mipLodBias = 0.0f;
-		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
+		samplerInfo.compareOp	  = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode	  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.mipLodBias	  = 0.0f;
+		samplerInfo.minLod		  = 0.0f;
+		samplerInfo.maxLod		  = 0.0f;
 
 		if (vkCreateSampler(m_Ctx->m_LogicalDevice, &samplerInfo, nullptr, &m_GBuffer.sampler) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitGBuffer() - Failed to create texture sampler!");
@@ -538,6 +541,7 @@ namespace en
 	{
 		CreateAttachment(m_GBuffer.albedo  , m_Swapchain.imageFormat	  , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		CreateAttachment(m_GBuffer.position, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		CreateAttachment(m_GBuffer.tangent , VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		CreateAttachment(m_GBuffer.normal  , VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		
 		CreateAttachment(m_GBuffer.depth, FindDepthFormat(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -630,6 +634,20 @@ namespace en
 		normalAttachmentRef.attachment = 2;
 		normalAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+		VkAttachmentDescription tangentAttachment{};
+		tangentAttachment.format		 = m_GBuffer.tangent.format;
+		tangentAttachment.samples		 = VK_SAMPLE_COUNT_1_BIT;
+		tangentAttachment.loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		tangentAttachment.storeOp		 = VK_ATTACHMENT_STORE_OP_STORE;
+		tangentAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		tangentAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		tangentAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+		tangentAttachment.finalLayout	 = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference tangentAttachmentRef{};
+		tangentAttachmentRef.attachment = 3;
+		tangentAttachmentRef.layout	    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 		VkAttachmentDescription depthAttachment{};
 		depthAttachment.format		   = m_GBuffer.depth.format;
 		depthAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
@@ -641,13 +659,14 @@ namespace en
 		depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference depthAttachmentRef{};
-		depthAttachmentRef.attachment = 3;
+		depthAttachmentRef.attachment = 4;
 		depthAttachmentRef.layout	  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		std::array<VkAttachmentReference, 3> colorAttachments = {
+		std::array<VkAttachmentReference, 4> colorAttachments = {
 			albedoAttachmentRef,
 			positionAttachmentRef,
-			normalAttachmentRef
+			normalAttachmentRef,
+			tangentAttachmentRef
 		};
 
 		VkSubpassDescription subpass{};
@@ -664,10 +683,11 @@ namespace en
 		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-		std::array<VkAttachmentDescription, 4> attachments = {
+		std::array<VkAttachmentDescription, 5> attachments = {
 			albedoAttachment,
 			positionAttachment,
 			normalAttachment,
+			tangentAttachment,
 			depthAttachment
 		};
 
@@ -744,7 +764,8 @@ namespace en
 		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		colorBlendAttachment.alphaBlendOp		 = VK_BLEND_OP_ADD;
 
-		std::array<VkPipelineColorBlendAttachmentState, 3> colorBlendAttachments = {
+		std::array<VkPipelineColorBlendAttachmentState, 4> colorBlendAttachments = {
+			colorBlendAttachment,
 			colorBlendAttachment,
 			colorBlendAttachment,
 			colorBlendAttachment
@@ -754,7 +775,7 @@ namespace en
 		colorBlending.sType			    = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable     = VK_FALSE;
 		colorBlending.logicOp		    = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount   = 3;
+		colorBlending.attachmentCount   = static_cast<uint32_t>(colorBlendAttachments.size());
 		colorBlending.pAttachments		= colorBlendAttachments.data();
 		colorBlending.blendConstants[0] = 0.0f;
 		colorBlending.blendConstants[1] = 0.0f;
@@ -820,16 +841,17 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorSetLayout()
 	{
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
+		std::array<VkDescriptorSetLayoutBinding, 5> bindings;
 		//0: Color Framebuffer
 		//1: Position Framebuffer (Alpha channel is specularity)
 		//2: Normal Framebuffer
-		//3: Lights Buffer
+		//3: Tangent Framebuffer
+		//4: Lights Buffer
 		
-		for (int i = 0; auto & binding : bindings)
+		for (uint32_t i = 0U; auto & binding : bindings)
 		{
-			binding.binding			   = static_cast<uint32_t>(i);
-			binding.descriptorCount	   = 1;
+			binding.binding			   = i;
+			binding.descriptorCount	   = 1U;
 			binding.descriptorType	   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			binding.pImmutableSamplers = nullptr;
 			binding.stageFlags		   = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -838,7 +860,7 @@ namespace en
 		}
 
 		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -851,7 +873,7 @@ namespace en
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool	 = m_LightingPipeline.descriptorPool;
-		allocInfo.descriptorSetCount = static_cast<uint32_t>(1);
+		allocInfo.descriptorSetCount = 1U;
 		allocInfo.pSetLayouts		 = &m_LightingPipeline.descriptorSetLayout;
 
 		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingPipeline.descriptorSet) != VK_SUCCESS)
@@ -859,29 +881,29 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorPool()
 	{
-		std::array<VkDescriptorPoolSize, 4> poolSizes{};
+		std::array<VkDescriptorPoolSize, 5> poolSizes{};
 
 		for (auto& poolSize : poolSizes)
 		{
 			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSize.descriptorCount = 1;
+			poolSize.descriptorCount = 1U;
 		}
 
 		// Lights buffer
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes	   = poolSizes.data();
-		poolInfo.maxSets	   = 1;
+		poolInfo.maxSets	   = 1U;
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_LightingPipeline.descriptorPool) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::LCreateDescriptorPool() - Failed to create descriptor pool!");
 	}
 	void VulkanRendererBackend::LCreateDescriptorSet()
 	{
-		std::array<VkDescriptorImageInfo, 3> imageInfos{};
+		std::array<VkDescriptorImageInfo, 4> imageInfos{};
 
 		// Albedo
 		imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -898,32 +920,37 @@ namespace en
 		imageInfos[2].imageView   = m_GBuffer.normal.imageView;
 		imageInfos[2].sampler	  = m_GBuffer.sampler;
 
+		// Tangent
+		imageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfos[3].imageView   = m_GBuffer.tangent.imageView;
+		imageInfos[3].sampler	  = m_GBuffer.sampler;
+
 		// Light Buffer
 		VkDescriptorBufferInfo lightBufferInfo{};
 		lightBufferInfo.buffer = m_Lights.buffer;
-		lightBufferInfo.offset = 0;
+		lightBufferInfo.offset = 0U;
 		lightBufferInfo.range  = sizeof(m_Lights.LBO);
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+		std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
 
-		for (int i = 0; auto & descriptorWrite : descriptorWrites)
+		for (uint32_t i = 0U; auto & descriptorWrite : descriptorWrites)
 		{
 			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrite.dstSet			= m_LightingPipeline.descriptorSet;
 			descriptorWrite.dstBinding		= i;
-			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.dstArrayElement = 0U;
 			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.descriptorCount = 1U;
 
-			if(i!=3)
+			if(i!=4U)
 				descriptorWrite.pImageInfo  = &imageInfos[i];
 
 			i++;
 		}
 
 		// Light Buffer
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[3].pBufferInfo    = &lightBufferInfo;
+		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[4].pBufferInfo    = &lightBufferInfo;
 
 		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
@@ -940,30 +967,30 @@ namespace en
 		colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
+		colorAttachmentRef.attachment = 0U;
 		colorAttachmentRef.layout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint	    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount    = 1;
+		subpass.colorAttachmentCount    = 1U;
 		subpass.pColorAttachments	    = &colorAttachmentRef;
 		subpass.pDepthStencilAttachment = nullptr;
 
 		VkSubpassDependency dependency{};
 		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass	 = 0;
-		dependency.srcAccessMask = 0;
+		dependency.dstSubpass	 = 0U;
+		dependency.srcAccessMask = 0U;
 		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
+		renderPassInfo.attachmentCount = 1U;
 		renderPassInfo.pAttachments	   = &colorAttachment;
-		renderPassInfo.subpassCount	   = 1;
+		renderPassInfo.subpassCount	   = 1U;
 		renderPassInfo.pSubpasses	   = &subpass;
-		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.dependencyCount = 1U;
 		renderPassInfo.pDependencies   = &dependency;
 
 		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_LightingPipeline.renderPass) != VK_SUCCESS)
@@ -978,8 +1005,8 @@ namespace en
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType							= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount	= 0;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.vertexBindingDescriptionCount	= 0U;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0U;
 		vertexInputInfo.pVertexBindingDescriptions		= nullptr;
 		vertexInputInfo.pVertexAttributeDescriptions	= nullptr;
 
@@ -1053,7 +1080,7 @@ namespace en
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.setLayoutCount = 1U;
 		pipelineLayoutInfo.pSetLayouts	  = &m_LightingPipeline.descriptorSetLayout;
 
 		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_LightingPipeline.layout) != VK_SUCCESS)
@@ -1061,7 +1088,7 @@ namespace en
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
+		pipelineInfo.stageCount = 2U;
 		pipelineInfo.pStages	= shaderStages;
 
 		pipelineInfo.pVertexInputState   = &vertexInputInfo;

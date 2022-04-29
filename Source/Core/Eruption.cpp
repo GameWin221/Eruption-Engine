@@ -32,35 +32,39 @@ void Eruption::Init()
 
 	m_AssetManager = new en::AssetManager;
 
-	m_AssetManager->LoadMesh("BackpackModel"  , "Models/Backpack/Backpack.obj");
-	m_AssetManager->LoadMesh("AdditionalModel", "Models/Skull/skull.obj"	  );
-	m_AssetManager->LoadMesh("FloorModel"     , "Models/Plane.obj"			  );
+	m_AssetManager->LoadMesh("BackpackModel", "Models/Backpack/Backpack.fbx");
+	m_AssetManager->LoadMesh("SkullModel"   , "Models/Skull/Skull.gltf"	    );
+	m_AssetManager->LoadMesh("FloorModel"   , "Models/Floor/Floor.obj"   	);
 
-	m_AssetManager->LoadTexture("BackpackTexture"  , "Models/Backpack/backpack_albedo.jpg");
-	m_AssetManager->LoadTexture("AdditionalTexture", "Models/Skull/skull_albedo.jpg"	  );
-	m_AssetManager->LoadTexture("FloorTexture"     , "Models/floor.png"					  );
+	m_AssetManager->LoadTexture("BackpackAlbedo", "Models/Backpack/BackpackAlbedo.jpg");
+	m_AssetManager->LoadTexture("SkullAlbedo"	, "Models/Skull/SkullAlbedo.jpg"	   );
+	m_AssetManager->LoadTexture("FloorAlbedo"   , "Models/Floor/FloorAlbedo.png"	   );
 
-	m_AssetManager->LoadTexture("BackpackSpecularTexture"  , "Models/Backpack/backpack_specular.jpg");
-	m_AssetManager->LoadTexture("AdditionalSpecularTexture", "Models/Skull/skull_specular.jpg"		);
-	m_AssetManager->LoadTexture("FloorSpecularTexture"     , "Models/floor_specular.png"			);
+	m_AssetManager->LoadTexture("BackpackSpecular", "Models/Backpack/BackpackSpecular.jpg");
+	m_AssetManager->LoadTexture("SkullSpecular"	  , "Models/Skull/SkullSpecular.jpg"	  );
+	m_AssetManager->LoadTexture("FloorSpecular"   , "Models/Floor/FloorSpecular.png"	  );
 
-	m_AssetManager->CreateMaterial("BackpackMaterial"  , glm::vec3(1.0f), 30.0f , m_AssetManager->GetTexture("BackpackTexture"  ), m_AssetManager->GetTexture("BackpackSpecularTexture"  ));
-	m_AssetManager->CreateMaterial("AdditionalMaterial", glm::vec3(1.0f), 100.0f , m_AssetManager->GetTexture("AdditionalTexture"), m_AssetManager->GetTexture("AdditionalSpecularTexture"));
-	m_AssetManager->CreateMaterial("FloorMaterial"	   , glm::vec3(1.0f), 75.0f, m_AssetManager->GetTexture("FloorTexture"     ), m_AssetManager->GetTexture("FloorSpecularTexture"     ));
+	m_AssetManager->LoadTexture("BackpackNormal", "Models/Backpack/BackpackNormal.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+	m_AssetManager->LoadTexture("SkullNormal"   , "Models/Skull/SkullNormal.jpg"      , VK_FORMAT_R8G8B8A8_UNORM);
+	m_AssetManager->LoadTexture("FloorNormal"   , "Models/Floor/FloorNormal.png"      , VK_FORMAT_R8G8B8A8_UNORM);
 
-	m_AssetManager->GetMesh("BackpackModel"  )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial"  );
-	m_AssetManager->GetMesh("AdditionalModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("AdditionalMaterial");
-	m_AssetManager->GetMesh("FloorModel"     )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"     );
+	m_AssetManager->CreateMaterial("BackpackMaterial", glm::vec3(1.0f), 50.0f , 0.3f, m_AssetManager->GetTexture("BackpackAlbedo"), m_AssetManager->GetTexture("BackpackSpecular"), m_AssetManager->GetTexture("BackpackNormal"));
+	m_AssetManager->CreateMaterial("SkullMaterial"   , glm::vec3(1.0f), 40.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"   ), m_AssetManager->GetTexture("SkullSpecular")   , m_AssetManager->GetTexture("SkullNormal")   );
+	m_AssetManager->CreateMaterial("FloorMaterial"	 , glm::vec3(1.0f), 200.0f , 1.0f, m_AssetManager->GetTexture("FloorAlbedo"   ), m_AssetManager->GetTexture("FloorSpecular")   , m_AssetManager->GetTexture("FloorNormal")   );
 
-	m_Skull = new en::SceneObject(m_AssetManager->GetMesh("AdditionalModel"));
+	m_AssetManager->GetMesh("BackpackModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial");
+	m_AssetManager->GetMesh("SkullModel"   )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial"   );
+	m_AssetManager->GetMesh("FloorModel"   )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"   );
+
+	m_Skull = new en::SceneObject(m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
-	m_Skull->m_Rotation = glm::vec3(-45.0f, 0.0f, 0.0f);
+	m_Skull->m_Rotation = glm::vec3(45.0f, 0.0f, 0.0f);
 
 	m_Backpack = new en::SceneObject(m_AssetManager->GetMesh("BackpackModel"));
-	m_Floor	   = new en::SceneObject(m_AssetManager->GetMesh("FloorModel"));
-
 	m_Backpack->m_Position = glm::vec3(2, 0.5f, 0);
 	m_Backpack->m_Scale = glm::vec3(0.2f);
+
+	m_Floor	   = new en::SceneObject(m_AssetManager->GetMesh("FloorModel"));
 
 	en::CameraInfo cameraInfo{};
 	cameraInfo.dynamicallyScaled = true;

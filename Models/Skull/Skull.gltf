@@ -1,0 +1,106 @@
+{
+    "asset" : {
+        "generator" : "Khronos glTF Blender I/O v1.8.19",
+        "version" : "2.0"
+    },
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                0
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "mesh" : 0,
+            "name" : "skull",
+            "rotation" : [
+                0.7071068286895752,
+                0,
+                0,
+                0.7071067094802856
+            ]
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "skull",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 0,
+                        "NORMAL" : 1,
+                        "TEXCOORD_0" : 2
+                    },
+                    "indices" : 3
+                }
+            ]
+        }
+    ],
+    "accessors" : [
+        {
+            "bufferView" : 0,
+            "componentType" : 5126,
+            "count" : 29348,
+            "max" : [
+                0.6671718955039978,
+                0.905709981918335,
+                1.0047016143798828
+            ],
+            "min" : [
+                -0.6671488881111145,
+                -0.8783867359161377,
+                -0.9912075400352478
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 1,
+            "componentType" : 5126,
+            "count" : 29348,
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 2,
+            "componentType" : 5126,
+            "count" : 29348,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 3,
+            "componentType" : 5123,
+            "count" : 167484,
+            "type" : "SCALAR"
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 352176,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 352176,
+            "byteOffset" : 352176
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 234784,
+            "byteOffset" : 704352
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 334968,
+            "byteOffset" : 939136
+        }
+    ],
+    "buffers" : [
+        {
+            "byteLength" : 1274104,
+            "uri" : "Skull.bin"
+        }
+    ]
+}

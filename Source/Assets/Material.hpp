@@ -10,15 +10,17 @@ namespace en
 	class Material
 	{
 	public:
-		Material(glm::vec3 color, float shininess, Texture* albedoTexture, Texture* specularTexture);
+		Material(glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture);
 		~Material();
 
 		glm::vec3 m_Color;
 
 		float m_Shininess;
+		float m_NormalStrength;
 
 		Texture* m_Albedo;
 		Texture* m_Specular;
+		Texture* m_Normal;
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
 		void Update();
@@ -38,8 +40,9 @@ namespace en
 
 		struct MatBuffer
 		{
-			alignas(4) glm::vec3 Color = glm::vec3(1.0f);
-			alignas(4) float Shininess = 32.0f;
+			alignas(4) glm::vec3 color = glm::vec3(1.0f);
+			alignas(4) float shininess = 32.0f;
+			alignas(4) float normalStrength = 0.5f;
 
 		} m_MatBuffer;
 	};

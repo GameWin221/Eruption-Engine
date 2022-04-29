@@ -96,22 +96,24 @@ namespace en
 
 		ImGui::Begin("Debug Menu");
 
-		if (ImGui::SliderInt("Debug View", &mode, 0, 7))
+		if (ImGui::SliderInt("Debug View", &mode, 0, 9))
 			m_Renderer->SetDebugMode(mode);
 
 		std::string modeName;
 
 		switch (mode)
 		{
-		case 0: modeName = "No Debug View"; break;
-		case 1: modeName = "Albedo";        break;
-		case 2: modeName = "Normals";       break;
-		case 3: modeName = "Position";      break;
-		case 4: modeName = "Specular Maps";	break;
-		case 5: modeName = "Shininess";	    break;
-		case 6: modeName = "Lights Only";   break;
-		case 7: modeName = "Depth";		    break;
-		default: modeName = "Unknown Mode"; break;
+			case 0: modeName = "No Debug View"; break;
+			case 1: modeName = "Albedo";        break;
+			case 2: modeName = "Normals";       break;
+			case 3: modeName = "Position";      break;
+			case 4: modeName = "Specular Maps";	break;
+			case 5: modeName = "Shininess";	    break;
+			case 6: modeName = "Lights Only";   break;
+			case 7: modeName = "Depth";		    break;
+			case 8: modeName = "Tangent";	    break;
+			case 9: modeName = "Bitangent";	    break;
+			default: modeName = "Unknown Mode"; break;
 		}
 
 		ImGui::Text(modeName.c_str());

@@ -5,18 +5,12 @@ namespace en
 {
 	Mesh* g_DefaultMesh;
 
+
 	Mesh::Mesh(std::string objPath)
 	{
 		m_FilePath = objPath;
 
-		if (objPath.substr(objPath.length() - 4, 4) == ".obj")
-			LoadOBJMesh();
-
-		else if (objPath.substr(objPath.length() - 5, 5) == ".gltf")
-			LoadGLTFMesh();
-
-		else
-			EN_ERROR("Failed to load \"" + objPath + "\" - Unknown file format! Use .obj or .gltf.\n");
+		LoadMesh();
 	}
 
 	Mesh* Mesh::GetDefaultMesh()
@@ -27,12 +21,76 @@ namespace en
 		return g_DefaultMesh;
 	}
 
+	void Mesh::LoadMesh()
+	{
+		Assimp::Importer importer;
+		const aiScene* loadedScene = importer.ReadFile(m_FilePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
+		
+		if (!loadedScene || loadedScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !loadedScene->mRootNode)
+			EN_ERROR("Mesh::LoadMesh() - " + std::string(importer.GetErrorString()));
+
+		std::string directory = m_FilePath.substr(0, m_FilePath.find_last_of('/'));
+
+		ProcessNode(loadedScene->mRootNode, loadedScene);
+	}
+	void Mesh::ProcessNode(aiNode* node, const aiScene* scene)
+	{
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+
+			std::vector<Vertex> vertices;
+			std::vector<uint32_t> indices;
+
+			GetVertices(mesh, vertices, scene);
+			GetIndices(mesh, indices, scene);
+
+			m_SubMeshes.emplace_back(vertices, indices, Material::GetDefaultMaterial());
+		}
+
+		for (unsigned int i = 0; i < node->mNumChildren; i++)
+			ProcessNode(node->mChildren[i], scene);
+		
+	}
+	void Mesh::GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices, const aiScene* scene)
+	{
+		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+			vertices.emplace_back(
+				glm::vec3(mesh->mVertices[i].x        , mesh->mVertices[i].y , mesh->mVertices[i].z),
+				glm::vec3(mesh->mNormals[i].x         , mesh->mNormals[i].y  , mesh->mNormals[i].z ),
+				glm::vec3(mesh->mTangents[i].x        , mesh->mTangents[i].y , mesh->mTangents[i].z),
+				glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+			);
+	}
+	void Mesh::GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices, const aiScene* scene)
+	{
+		for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+		{
+			aiFace face = mesh->mFaces[i];
+
+			for (unsigned int j = 0; j < face.mNumIndices; j++)
+				indices.emplace_back(face.mIndices[j]);
+		}
+	}
+	//void Mesh::GetMaterials(aiMesh* mesh, std::vector<SubMesh>& submeshes, const aiScene* scene)
+	//{
+		/*
+		if (mesh->mMaterialIndex >= 0)
+		{
+			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+			vector<Texture> diffuseMaps = loadMaterialTextures(material,
+				aiTextureType_DIFFUSE, "texture_diffuse");
+			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+			vector<Texture> specularMaps = loadMaterialTextures(material,
+				aiTextureType_SPECULAR, "texture_specular");
+			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+		}
+		*/
+	//}
+	/*
 	void Mesh::LoadOBJMesh()
 	{
-		tinyobj::attrib_t attrib;
-		std::vector<tinyobj::shape_t> shapes;
-		std::vector<tinyobj::material_t> materials;
-		std::string warn, err;
 		
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, m_FilePath.c_str()))
 		{
@@ -54,6 +112,9 @@ namespace en
 		}
 
 		Vertex vertex{};
+		Vertex* lastVertex = nullptr;
+		Vertex* lastLastVertex = nullptr;;
+
 		for (const auto& shape : shapes)
 		{
 			std::vector<Vertex> vertices;
@@ -61,7 +122,7 @@ namespace en
 
 			std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
-			for (const auto& index : shape.mesh.indices)
+			for (int v = 0, i = 0; const auto& index : shape.mesh.indices)
 			{
 				vertex.pos = {
 					attrib.vertices[3 * index.vertex_index + 0],
@@ -69,19 +130,35 @@ namespace en
 					attrib.vertices[3 * index.vertex_index + 2]
 				};
 
-				if (attrib.normals.size() > 0)
 				vertex.normal = {
 					attrib.normals[3 * index.normal_index + 0],
 					attrib.normals[3 * index.normal_index + 1],
 					attrib.normals[3 * index.normal_index + 2]
 				};
-				else
-					vertex.normal = {1.0f, 1.0f, 1.0f };
 
 				vertex.texcoord = {
 					attrib.texcoords[2 * index.texcoord_index + 0],
 					attrib.texcoords[2 * index.texcoord_index + 1]
 				};
+
+				if (v >= 2)
+				{
+					Vertex& v0 = vertices[i - 2];
+					Vertex& v1 = vertices[i - 1];
+					Vertex& v2 = vertex;
+
+					glm::vec3 tangent = glm::normalize(CalculateTangent(v0, v1, v2));
+
+					v0.tangent = tangent;
+					v1.tangent = tangent;
+					v2.tangent = tangent;
+
+					v = 0;
+				}
+				else
+					v++;
+
+				i++;
 
 				if (!uniqueVertices.contains(vertex))
 				{
@@ -90,6 +167,9 @@ namespace en
 				}
 
 				indices.emplace_back(uniqueVertices[vertex]);
+
+				lastLastVertex = lastVertex;
+				lastVertex = &uniqueVertices.at(vertex).first;
 			}
 
 			m_SubMeshes.emplace_back(vertices, indices, Material::GetDefaultMaterial());
@@ -100,7 +180,7 @@ namespace en
 	void Mesh::LoadGLTFMesh()
 	{
 		EN_ERROR("There's no gltf loader yet!");
-		/*
+		
 		tinygltf::Model model;
 		tinygltf::TinyGLTF gltf;
 		std::string warn, err;
@@ -113,7 +193,8 @@ namespace en
 			LoadOBJModel();
 			return;
 		}
-		*/
+		
 		//EN_SUCCESS("Loaded a mesh from \"" + m_FilePath + "\"");
 	}
+	*/
 }

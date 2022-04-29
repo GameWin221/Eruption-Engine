@@ -11,13 +11,16 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(glm::vec3 color, float shininess, Texture* albedoTexture, Texture* specularTexture) : m_Color(color), m_Shininess(shininess)
+	Material::Material(glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) : m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength)
 	{
 		if (!albedoTexture) m_Albedo = Texture::GetWhiteTexture();
 		else m_Albedo = albedoTexture;
 
 		if (!specularTexture) m_Specular = Texture::GetWhiteTexture();
 		else m_Specular = specularTexture;
+
+		if (!normalTexture) m_Normal = Texture::GetNormalTexture();
+		else m_Normal = normalTexture;
 
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
@@ -35,14 +38,15 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material(glm::vec3(1.0f), 32.0f, nullptr, nullptr);
+			g_DefaultMaterial = new Material(glm::vec3(1.0f), 32.0f, 0.5f, nullptr, nullptr, nullptr);
 
 		return g_DefaultMaterial;
 	}
 	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
-		m_MatBuffer.Color = m_Color;
-		m_MatBuffer.Shininess = m_Shininess;
+		m_MatBuffer.color = m_Color;
+		m_MatBuffer.shininess = m_Shininess;
+		m_MatBuffer.normalStrength = m_NormalStrength;
 
 		en::Helpers::MapBuffer(m_BufferMemory, &m_MatBuffer, g_MatBufferSize);
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &m_DescriptorSet, 0, nullptr);
@@ -66,7 +70,12 @@ namespace en
 		specularImageInfo.imageView = m_Specular->m_ImageView;
 		specularImageInfo.sampler = m_Specular->m_ImageSampler;
 
-		std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+		VkDescriptorImageInfo normalImageInfo{};
+		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		normalImageInfo.imageView = m_Normal->m_ImageView;
+		normalImageInfo.sampler = m_Normal->m_ImageSampler;
+
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = m_DescriptorSet;
 		descriptorWrites[0].dstBinding = 1;
@@ -91,6 +100,14 @@ namespace en
 		descriptorWrites[2].descriptorCount = 1;
 		descriptorWrites[2].pImageInfo = &specularImageInfo;
 
+		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[3].dstSet = m_DescriptorSet;
+		descriptorWrites[3].dstBinding = 4;
+		descriptorWrites[3].dstArrayElement = 0;
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[3].descriptorCount = 1;
+		descriptorWrites[3].pImageInfo = &normalImageInfo;
+
 		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 	VkDescriptorSetLayout& Material::GetMatDescriptorLayout()
@@ -105,11 +122,11 @@ namespace en
 	{
 		UseContext();
 
-		VkDescriptorSetLayoutBinding matLayoutBinding{};
-		matLayoutBinding.binding = 1;
-		matLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		matLayoutBinding.descriptorCount = 1;
-		matLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding matBufferLayoutBinding{};
+		matBufferLayoutBinding.binding = 1;
+		matBufferLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		matBufferLayoutBinding.descriptorCount = 1;
+		matBufferLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		VkDescriptorSetLayoutBinding albedoSamplerLayoutBinding{};
 		albedoSamplerLayoutBinding.binding = 2;
@@ -125,11 +142,19 @@ namespace en
 		specularSamplerLayoutBinding.pImmutableSamplers = nullptr;
 		specularSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		std::array<VkDescriptorSetLayoutBinding, 3> bindings =
+		VkDescriptorSetLayoutBinding normalSamplerLayoutBinding{};
+		normalSamplerLayoutBinding.binding = 4;
+		normalSamplerLayoutBinding.descriptorCount = 1;
+		normalSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		normalSamplerLayoutBinding.pImmutableSamplers = nullptr;
+		normalSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::array<VkDescriptorSetLayoutBinding, 4> bindings =
 		{
-			matLayoutBinding,
+			matBufferLayoutBinding,
 			albedoSamplerLayoutBinding,
-			specularSamplerLayoutBinding
+			specularSamplerLayoutBinding,
+			normalSamplerLayoutBinding
 		};
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -140,13 +165,15 @@ namespace en
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &g_MatDescriptorSetLayout) != VK_SUCCESS)
 			EN_ERROR("Material::CreateDescriptorSet() - Failed to create descriptor set layout!");
 
-		std::array<VkDescriptorPoolSize, 3> poolSizes{};
+		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = static_cast<uint32_t>(1);
+		poolSizes[0].descriptorCount = 1U;
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = static_cast<uint32_t>(1);
+		poolSizes[1].descriptorCount = 1U;
 		poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[2].descriptorCount = static_cast<uint32_t>(1);
+		poolSizes[2].descriptorCount = 1U;
+		poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[3].descriptorCount = 1U;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -165,7 +192,7 @@ namespace en
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool	 = g_MatDescriptorPool;
-		allocInfo.descriptorSetCount = static_cast<uint32_t>(1);
+		allocInfo.descriptorSetCount = 1U;
 		allocInfo.pSetLayouts		 = &g_MatDescriptorSetLayout;
 
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)

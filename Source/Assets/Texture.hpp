@@ -14,16 +14,18 @@ namespace en
 	class Texture
 	{
 	public:
-		Texture(std::string texturePath, bool flipTexture = true);
-		Texture(stbi_uc* pixelData, glm::uvec2 size);
+		Texture(std::string texturePath, VkFormat format, bool flipTexture = true);
+		Texture(stbi_uc* pixelData, VkFormat format, glm::uvec2 size);
 		~Texture();
 
 		VkImage		m_Image;
 		VkImageView m_ImageView;
 		VkSampler   m_ImageSampler;
+		VkFormat    m_ImageFormat;
 		VkDeviceMemory m_ImageMemory;
 
 		static Texture* GetWhiteTexture();
+		static Texture* GetNormalTexture();
 		static Texture* GetBlackTexture();
 
 		const glm::ivec2& GetSize()     const { return this->m_Size; };

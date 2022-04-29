@@ -3,8 +3,9 @@
 #ifndef EN_MESH_HPP
 #define EN_MESH_HPP
 
-#include <tiny_obj_loader.h>
-//#include <tiny_gltf.h>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <Renderer/Buffers/UniformBuffer.hpp>
 
@@ -24,8 +25,11 @@ namespace en
 	private:
 		std::string m_FilePath;
 
-		void LoadOBJMesh();
-		void LoadGLTFMesh();
+		void LoadMesh();
+		void ProcessNode(aiNode* node, const aiScene* scene);
+		void GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices, const aiScene* scene);
+		void GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices, const aiScene* scene);
+		//void GetMaterials(aiMesh* mesh, std::vector<SubMesh>& submeshes, const aiScene* scene);
 	};
 }
 

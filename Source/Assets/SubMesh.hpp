@@ -3,8 +3,6 @@
 #ifndef EN_SUBMESH_HPP
 #define EN_SUBMESH_HPP
 
-#include <tiny_obj_loader.h>
-
 #include <Renderer/Buffers/VertexBuffer.hpp>
 #include <Renderer/Buffers/IndexBuffer.hpp>
 #include <Renderer/Buffers/UniformBuffer.hpp>

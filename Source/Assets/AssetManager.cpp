@@ -17,7 +17,7 @@ namespace en
 
         m_Meshes[nameID] = std::make_unique<Mesh>(path);
     }
-    void AssetManager::LoadTexture(std::string nameID, std::string path, bool loadFlipped)
+    void AssetManager::LoadTexture(std::string nameID, std::string path, VkFormat format, bool loadFlipped)
     {
         if (m_Textures.contains(nameID))
         {
@@ -25,7 +25,7 @@ namespace en
             return;
         }
 
-        m_Textures[nameID] = std::make_unique<Texture>(path, loadFlipped);
+        m_Textures[nameID] = std::make_unique<Texture>(path, format, loadFlipped);
     }
 
     void AssetManager::UnloadMesh(std::string nameID)
@@ -39,7 +39,7 @@ namespace en
         EN_LOG("Unloaded the \"" + nameID + "\" texture");
     }
 
-    void AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, Texture* albedoTexture, Texture* specularTexture)
+    void AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -47,14 +47,16 @@ namespace en
             return;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(color, shininess, albedoTexture, specularTexture);
+        m_Materials[nameID] = std::make_unique<Material>(color, shininess, normalStrength, albedoTexture, specularTexture, normalTexture);
 
         EN_LOG("Created a material (Name: \"" + nameID + "\", Color: " + std::to_string(color.x) + ", " +
                                                                          std::to_string(color.y) + ", " +
                                                                          std::to_string(color.z) + 
                                                        ", Shininess: " + std::to_string(shininess) + 
+                                                       ", Normal Strength: "+ std::to_string(normalStrength) + 
                                                        ", Albedo: "    + std::to_string((uint64_t)albedoTexture  ) +
-                                                       ", Specular: "  + std::to_string((uint64_t)specularTexture));
+                                                       ", Specular: "  + std::to_string((uint64_t)specularTexture) +
+                                                       ", Normal: "    + std::to_string((uint64_t)normalTexture));
     }
     void AssetManager::DeleteMaterial(std::string nameID)
     {

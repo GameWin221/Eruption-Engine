@@ -4,21 +4,24 @@
 namespace en
 {
 	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
+	std::array<unsigned char, 4> g_NormalTexturePixels = { 127, 127, 255, 255 };
 	std::array<unsigned char, 4> g_BlackTexturePixels = {   0,   0,   0, 255 };
 
 	Texture* g_WhiteTexture;
+	Texture* g_NormalTexture;
 	Texture* g_BlackTexture;
 
-	Texture::Texture(std::string texturePath, bool flipTexture)
+	Texture::Texture(std::string texturePath, VkFormat format, bool flipTexture)
 	{
 		bool shouldFreeImage = true;
 
 		m_FilePath = texturePath;
+		m_ImageFormat = format;
 		
 		VkBuffer       stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 
-		stbi_set_flip_vertically_on_load(flipTexture);
+		//stbi_set_flip_vertically_on_load(flipTexture);
 
 		stbi_uc* pixels = stbi_load(m_FilePath.c_str(), &m_Size.x, &m_Size.y, &m_Channels, 4);
 
@@ -39,14 +42,14 @@ namespace en
 
 		en::Helpers::MapBuffer(stagingBufferMemory, pixels, imageSize);
 
-		en::Helpers::CreateImage(m_Size.x, m_Size.y, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Image, m_ImageMemory);
-		en::Helpers::CreateImageView(m_Image, m_ImageView, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		en::Helpers::CreateImage(m_Size.x, m_Size.y, m_ImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Image, m_ImageMemory);
+		en::Helpers::CreateImageView(m_Image, m_ImageView, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
-		en::Helpers::TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		CopyBufferToImage(stagingBuffer);
 
-		en::Helpers::TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		CreateImageSampler();
 
@@ -58,11 +61,12 @@ namespace en
 
 		en::Helpers::DestroyBuffer(stagingBuffer, stagingBufferMemory);
 	}
-	Texture::Texture(stbi_uc* pixelData, glm::uvec2 size)
+	Texture::Texture(stbi_uc* pixelData, VkFormat format, glm::uvec2 size)
 	{
 		VkBuffer       stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 
+		m_ImageFormat = format;
 		m_Size = size;
 		VkDeviceSize imageSize = m_Size.x * m_Size.y * 4;
 
@@ -70,14 +74,14 @@ namespace en
 
 		en::Helpers::MapBuffer(stagingBufferMemory, pixelData, imageSize);
 
-		en::Helpers::CreateImage(m_Size.x, m_Size.y, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->m_Image, this->m_ImageMemory);
-		en::Helpers::CreateImageView(m_Image, m_ImageView, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		en::Helpers::CreateImage(m_Size.x, m_Size.y, m_ImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->m_Image, this->m_ImageMemory);
+		en::Helpers::CreateImageView(m_Image, m_ImageView, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
-		en::Helpers::TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		CopyBufferToImage(stagingBuffer);
 
-		en::Helpers::TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		CreateImageSampler();
 
@@ -96,14 +100,21 @@ namespace en
 	Texture* Texture::GetWhiteTexture()
 	{
 		if (!g_WhiteTexture)
-			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), glm::uvec2(1));
+			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
 
 		return g_WhiteTexture;
+	}
+	Texture* Texture::GetNormalTexture()
+	{
+		if (!g_NormalTexture)
+			g_NormalTexture = new Texture(g_NormalTexturePixels.data(), VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
+
+		return g_NormalTexture;
 	}
 	Texture* Texture::GetBlackTexture()
 	{
 		if (!g_BlackTexture)
-			g_BlackTexture = new Texture(g_BlackTexturePixels.data(), glm::uvec2(1));
+			g_BlackTexture = new Texture(g_BlackTexturePixels.data(), VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
 
 		return g_BlackTexture;
 	}
