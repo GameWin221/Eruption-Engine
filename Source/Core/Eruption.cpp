@@ -1,7 +1,7 @@
 #include <Core/EnPch.hpp>
 #include "Eruption.hpp"
 
-bool modelSpawned;
+bool modelSpawned = true;
 
 void Eruption::Init()
 {
