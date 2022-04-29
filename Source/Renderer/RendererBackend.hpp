@@ -103,7 +103,7 @@ namespace en
 
 		struct GBuffer
 		{
-			Attachment albedo, position, normal, tangent;
+			Attachment albedo, position, normal;
 			Attachment depth;
 
 			VkFramebuffer framebuffer;
@@ -114,7 +114,6 @@ namespace en
 				albedo.Destroy(device);
 				position.Destroy(device);
 				normal.Destroy(device);
-				tangent.Destroy(device);
 				depth.Destroy(device);
 
 				vkDestroySampler(device, sampler, nullptr);

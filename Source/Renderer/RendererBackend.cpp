@@ -126,13 +126,12 @@ namespace en
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = m_Swapchain.extent;
 
-			std::array<VkClearValue, 5> clearValues{};
+			std::array<VkClearValue, 4> clearValues{};
 			clearValues[0].color = m_RendererInfo.clearColor;
 			clearValues[1].color = m_RendererInfo.clearColor;
 			clearValues[2].color = m_RendererInfo.clearColor;
-			clearValues[3].color = m_RendererInfo.clearColor;
 
-			clearValues[4].depthStencil = { 1.0f, 0 };
+			clearValues[3].depthStencil = { 1.0f, 0 };
 
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
@@ -172,7 +171,6 @@ namespace en
 			Helpers::TransitionImageLayout(m_GBuffer.albedo.image   , m_GBuffer.albedo.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_GBuffer.normal.image   , m_GBuffer.normal.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_GBuffer.tangent.image  , m_GBuffer.tangent.format  , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 			Helpers::TransitionImageLayout(m_LightingHDRColorBuffer.image, m_LightingHDRColorBuffer.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
 
 			// Prepare lights
@@ -495,12 +493,11 @@ namespace en
 
 	void VulkanRendererBackend::CreateGBuffer()
 	{
-		std::array<VkImageView, 5> attachments = 
+		std::array<VkImageView, 4> attachments = 
 		{
 			m_GBuffer.albedo.imageView,
 			m_GBuffer.position.imageView,
 			m_GBuffer.normal.imageView,
-			m_GBuffer.tangent.imageView,
 			m_GBuffer.depth.imageView
 		};
 
@@ -541,7 +538,6 @@ namespace en
 	{
 		CreateAttachment(m_GBuffer.albedo  , m_Swapchain.imageFormat	  , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		CreateAttachment(m_GBuffer.position, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		CreateAttachment(m_GBuffer.tangent , VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		CreateAttachment(m_GBuffer.normal  , VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		
 		CreateAttachment(m_GBuffer.depth, FindDepthFormat(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -634,20 +630,6 @@ namespace en
 		normalAttachmentRef.attachment = 2;
 		normalAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		VkAttachmentDescription tangentAttachment{};
-		tangentAttachment.format		 = m_GBuffer.tangent.format;
-		tangentAttachment.samples		 = VK_SAMPLE_COUNT_1_BIT;
-		tangentAttachment.loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		tangentAttachment.storeOp		 = VK_ATTACHMENT_STORE_OP_STORE;
-		tangentAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		tangentAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		tangentAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		tangentAttachment.finalLayout	 = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference tangentAttachmentRef{};
-		tangentAttachmentRef.attachment = 3;
-		tangentAttachmentRef.layout	    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
 		VkAttachmentDescription depthAttachment{};
 		depthAttachment.format		   = m_GBuffer.depth.format;
 		depthAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
@@ -659,14 +641,13 @@ namespace en
 		depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference depthAttachmentRef{};
-		depthAttachmentRef.attachment = 4;
+		depthAttachmentRef.attachment = 3;
 		depthAttachmentRef.layout	  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		std::array<VkAttachmentReference, 4> colorAttachments = {
+		std::array<VkAttachmentReference, 3> colorAttachments = {
 			albedoAttachmentRef,
 			positionAttachmentRef,
-			normalAttachmentRef,
-			tangentAttachmentRef
+			normalAttachmentRef
 		};
 
 		VkSubpassDescription subpass{};
@@ -683,11 +664,10 @@ namespace en
 		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-		std::array<VkAttachmentDescription, 5> attachments = {
+		std::array<VkAttachmentDescription, 4> attachments = {
 			albedoAttachment,
 			positionAttachment,
 			normalAttachment,
-			tangentAttachment,
 			depthAttachment
 		};
 
@@ -764,8 +744,7 @@ namespace en
 		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		colorBlendAttachment.alphaBlendOp		 = VK_BLEND_OP_ADD;
 
-		std::array<VkPipelineColorBlendAttachmentState, 4> colorBlendAttachments = {
-			colorBlendAttachment,
+		std::array<VkPipelineColorBlendAttachmentState, 3> colorBlendAttachments = {
 			colorBlendAttachment,
 			colorBlendAttachment,
 			colorBlendAttachment
@@ -841,12 +820,11 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorSetLayout()
 	{
-		std::array<VkDescriptorSetLayoutBinding, 5> bindings;
+		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
 		//0: Color Framebuffer
 		//1: Position Framebuffer (Alpha channel is specularity)
 		//2: Normal Framebuffer
-		//3: Tangent Framebuffer
-		//4: Lights Buffer
+		//3: Lights Buffer
 		
 		for (uint32_t i = 0U; auto & binding : bindings)
 		{
@@ -860,7 +838,7 @@ namespace en
 		}
 
 		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-		bindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -881,7 +859,7 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorPool()
 	{
-		std::array<VkDescriptorPoolSize, 5> poolSizes{};
+		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 
 		for (auto& poolSize : poolSizes)
 		{
@@ -890,7 +868,7 @@ namespace en
 		}
 
 		// Lights buffer
-		poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -903,7 +881,7 @@ namespace en
 	}
 	void VulkanRendererBackend::LCreateDescriptorSet()
 	{
-		std::array<VkDescriptorImageInfo, 4> imageInfos{};
+		std::array<VkDescriptorImageInfo, 3> imageInfos{};
 
 		// Albedo
 		imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -920,18 +898,13 @@ namespace en
 		imageInfos[2].imageView   = m_GBuffer.normal.imageView;
 		imageInfos[2].sampler	  = m_GBuffer.sampler;
 
-		// Tangent
-		imageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[3].imageView   = m_GBuffer.tangent.imageView;
-		imageInfos[3].sampler	  = m_GBuffer.sampler;
-
 		// Light Buffer
 		VkDescriptorBufferInfo lightBufferInfo{};
 		lightBufferInfo.buffer = m_Lights.buffer;
 		lightBufferInfo.offset = 0U;
 		lightBufferInfo.range  = sizeof(m_Lights.LBO);
 
-		std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 
 		for (uint32_t i = 0U; auto & descriptorWrite : descriptorWrites)
 		{
@@ -942,15 +915,15 @@ namespace en
 			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrite.descriptorCount = 1U;
 
-			if(i!=4U)
+			if(i!=3U)
 				descriptorWrite.pImageInfo  = &imageInfos[i];
 
 			i++;
 		}
 
 		// Light Buffer
-		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[4].pBufferInfo    = &lightBufferInfo;
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[3].pBufferInfo    = &lightBufferInfo;
 
 		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}

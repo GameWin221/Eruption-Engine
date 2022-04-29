@@ -96,7 +96,7 @@ namespace en
 
 		ImGui::Begin("Debug Menu");
 
-		if (ImGui::SliderInt("Debug View", &mode, 0, 9))
+		if (ImGui::SliderInt("Debug View", &mode, 0, 7))
 			m_Renderer->SetDebugMode(mode);
 
 		std::string modeName;
