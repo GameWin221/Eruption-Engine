@@ -110,7 +110,7 @@ namespace en
 
 		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
-	VkDescriptorSetLayout& Material::GetMatDescriptorLayout()
+	VkDescriptorSetLayout& Material::GetLayout()
 	{
 		if (g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();

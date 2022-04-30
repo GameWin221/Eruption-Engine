@@ -15,8 +15,7 @@
 #include <Renderer/Context.hpp>
 #include <Renderer/Shader.hpp>
 #include <Renderer/Lights/PointLight.hpp>
-#include <Renderer/Camera.hpp>
-#include <Assets/Mesh.hpp>
+#include <Renderer/Camera/Camera.hpp>
 
 #include <Scene/SceneObject.hpp>
 
@@ -186,6 +185,8 @@ namespace en
 
 		std::vector<SceneObject*> m_RenderQueue;
 
+		CameraMatricesBuffer* m_CameraMatrices;
+
 		VkFramebuffer   m_LightingHDRFramebuffer;
 		Attachment      m_LightingHDRColorBuffer;
 		
@@ -238,11 +239,12 @@ namespace en
 
 		void CreateSyncObjects();
 
+		void CreateCameraMatricesBuffer();
+
 		void InitImGui();
 
 		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice& device);
 		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-		VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);

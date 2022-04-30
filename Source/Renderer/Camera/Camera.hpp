@@ -4,6 +4,8 @@
 #define EN_CAMERA_HPP
 
 #include <Renderer/Window.hpp>
+#include <Common/Helpers.hpp>
+#include <Renderer/Camera/CameraMatricesBuffer.hpp>
 
 namespace en
 {
@@ -45,6 +47,8 @@ namespace en
 
 		bool m_DynamicallyScaled;
 
+		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, CameraMatricesBuffer* cameraMatricesBuffer);
+
 		const glm::mat4& GetProjMatrix() { UpdateProjMatrix(); return m_Proj; };
 		const glm::mat4& GetViewMatrix() { UpdateViewMatrix(); return m_View; };
 
@@ -53,6 +57,7 @@ namespace en
 		const glm::vec3& GetRight() const { return m_Right; };
 
 	private:
+		// Camera
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 

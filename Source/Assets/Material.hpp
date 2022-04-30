@@ -27,7 +27,7 @@ namespace en
 
 		static Material* GetDefaultMaterial();
 
-		static VkDescriptorSetLayout& GetMatDescriptorLayout();
+		static VkDescriptorSetLayout& GetLayout();
 
 	private:
 		void CreateDescriptorSet();

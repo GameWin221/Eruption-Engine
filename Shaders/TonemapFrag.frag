@@ -5,7 +5,7 @@ layout(location = 0) out vec4 FragColor;
 
 layout(binding = 0) uniform sampler2D HDRImage;
 
-layout(push_constant) uniform exposurePushConstant
+layout(push_constant) uniform ExposurePushConstant
 {
 	float value;
 } exposure;

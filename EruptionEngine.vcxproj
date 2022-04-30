@@ -177,6 +177,7 @@ compile.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp" />
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -212,7 +213,6 @@ compile.bat</Command>
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
     <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Lights\PointLight.cpp" />
     <ClCompile Include="Source\Assets\AssetManager.cpp" />
@@ -229,7 +229,7 @@ compile.bat</Command>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">EnPch.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Renderer\Camera.cpp" />
+    <ClCompile Include="Source\Renderer\Camera\Camera.cpp" />
     <ClCompile Include="Source\Renderer\Context.cpp" />
     <ClCompile Include="Source\Assets\Mesh.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
@@ -242,6 +242,8 @@ compile.bat</Command>
     <ClCompile Include="Source\Core\UILayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Source\Renderer\Camera\CameraMatricesBuffer.hpp" />
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
@@ -251,9 +253,8 @@ compile.bat</Command>
     <ClInclude Include="Source\Core\EnPch.hpp" />
     <ClInclude Include="Source\Core\Eruption.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\UniformBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Camera.hpp" />
+    <ClInclude Include="Source\Renderer\Camera\Camera.hpp" />
     <ClInclude Include="Source\Renderer\Context.hpp" />
     <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Assets\SubMesh.hpp" />
@@ -288,6 +289,11 @@ compile.bat</Command>
       <FileType>Document</FileType>
     </None>
     <None Include="Shaders\TonemapFrag.frag" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="EruptionIcon.ico" />
+    <Image Include="EruptionIcon.png" />
+    <Image Include="icon1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

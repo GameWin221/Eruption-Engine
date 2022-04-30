@@ -12,22 +12,27 @@ layout(location = 3) out vec3 fTangent;
 layout(location = 4) out vec3 fBitangent;
 
 
-layout(set = 0, binding = 0) uniform UniformBufferObject {
-    mat4 model;
+layout(set = 0, binding = 0) uniform CameraMatricesBufferObject
+{
     mat4 view;
     mat4 proj;
-} ubo;
+} camera;
+
+layout(push_constant) uniform PerObjectData
+{
+	mat4 model;
+} object;
 
 void main() 
 {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(vPos, 1.0);
+    gl_Position = camera.proj * camera.view * object.model * vec4(vPos, 1.0);
 
     // Transform vertex positions to model space
-    fPosition = vec3(ubo.model * vec4(vPos, 1.0));
+    fPosition = vec3(object.model * vec4(vPos, 1.0));
 
     // Transform vertex normals and tangents to model space
-    fNormal  = normalize(vec3(ubo.model * vec4(vNormal , 0.0)));
-    fTangent = normalize(vec3(ubo.model * vec4(vTangent, 0.0)));
+    fNormal  = normalize(vec3(object.model * vec4(vNormal , 0.0)));
+    fTangent = normalize(vec3(object.model * vec4(vTangent, 0.0)));
 
     // Reorthogonalize vertex tangents relatively to normals
     fTangent = normalize(fTangent - dot(fTangent, fNormal) * fNormal); 

@@ -5,19 +5,27 @@ namespace en
 {
 	SceneObject::SceneObject(Mesh* mesh) : m_Mesh(mesh)
 	{
-		m_UniformBuffer = std::make_unique<UniformBuffer>();
+		
 	}
-	const glm::mat4& SceneObject::GetModelMatrix()
+	PerObjectData& SceneObject::GetObjectData()
 	{
-		m_ModelMatrix = glm::mat4(1.0f);
+		UpdateModelMatrix();
 
-		m_ModelMatrix = glm::translate(m_ModelMatrix, m_Position);
+		return m_Object;
+	}
+	void SceneObject::UpdateModelMatrix()
+	{
+		m_Object.model = glm::mat4(1.0f);
 
-		if (m_Rotation != glm::vec3(0.0f, 0.0f, 0.0f))
-			m_ModelMatrix = glm::rotate(m_ModelMatrix, glm::radians(45.0f), m_Rotation/180.0f);
+		m_Object.model = glm::translate(m_Object.model, m_Position);
 
-		m_ModelMatrix = glm::scale(m_ModelMatrix, m_Scale);
+		m_Object.model = glm::scale(m_Object.model, m_Scale);
 
-		return m_ModelMatrix;
+		if (m_Rotation != glm::vec3(0.0f))
+		{
+			m_Object.model = glm::rotate(m_Object.model, glm::radians(m_Rotation.x), glm::vec3(1, 0, 0));
+			m_Object.model = glm::rotate(m_Object.model, glm::radians(m_Rotation.y), glm::vec3(0, 1, 0));
+			m_Object.model = glm::rotate(m_Object.model, glm::radians(m_Rotation.z), glm::vec3(0, 0, 1));
+		}
 	}
 }

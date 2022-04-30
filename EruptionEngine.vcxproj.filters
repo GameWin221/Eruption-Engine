@@ -42,7 +42,7 @@
     <ClCompile Include="External\STB\stb_image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Camera.cpp">
+    <ClCompile Include="Source\Renderer\Camera\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Renderer.cpp">
@@ -90,9 +90,6 @@
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -106,6 +103,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -131,7 +131,7 @@
     <ClInclude Include="Source\Core\Eruption.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Camera.hpp">
+    <ClInclude Include="Source\Renderer\Camera\Camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Context.hpp">
@@ -164,9 +164,6 @@
     <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Buffers\UniformBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -185,6 +182,12 @@
     <ClInclude Include="Source\Core\Log.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\Camera\CameraMatricesBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -196,5 +199,16 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="EruptionIcon.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon1.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="EruptionIcon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

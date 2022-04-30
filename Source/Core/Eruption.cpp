@@ -8,7 +8,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.4.6";
+	windowInfo.title	  = "Eruption Engine v0.4.8";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -40,9 +40,9 @@ void Eruption::Init()
 	m_AssetManager->LoadTexture("SkullAlbedo"	, "Models/Skull/SkullAlbedo.jpg"	   );
 	m_AssetManager->LoadTexture("FloorAlbedo"   , "Models/Floor/FloorAlbedo.png"	   );
 
-	m_AssetManager->LoadTexture("BackpackSpecular", "Models/Backpack/BackpackSpecular.jpg");
-	m_AssetManager->LoadTexture("SkullSpecular"	  , "Models/Skull/SkullSpecular.jpg"	  );
-	m_AssetManager->LoadTexture("FloorSpecular"   , "Models/Floor/FloorSpecular.png"	  );
+	m_AssetManager->LoadTexture("BackpackSpecular", "Models/Backpack/BackpackSpecular.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+	m_AssetManager->LoadTexture("SkullSpecular"	  , "Models/Skull/SkullSpecular.jpg"	  , VK_FORMAT_R8G8B8A8_UNORM);
+	m_AssetManager->LoadTexture("FloorSpecular"   , "Models/Floor/FloorSpecular.png"	  , VK_FORMAT_R8G8B8A8_UNORM);
 
 	m_AssetManager->LoadTexture("BackpackNormal", "Models/Backpack/BackpackNormal.jpg", VK_FORMAT_R8G8B8A8_UNORM);
 	m_AssetManager->LoadTexture("SkullNormal"   , "Models/Skull/SkullNormal.jpg"      , VK_FORMAT_R8G8B8A8_UNORM);
@@ -79,10 +79,6 @@ void Eruption::Init()
 }
 void Eruption::Update()
 {
-	static int counter = 0;
-
-	const double m_TargetFrameTime = 1000000.0 / m_TargetFPS;
-
 	static std::chrono::high_resolution_clock::time_point lastFrame;
 
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - lastFrame);
@@ -90,7 +86,6 @@ void Eruption::Update()
 	lastFrame = std::chrono::high_resolution_clock::now();
 
 	m_DeltaTime = duration.count() / 1000000.0;
-	m_fDeltaTime = duration.count() / 1000000.0f;
 
 	m_Window->PollEvents();
 	m_Input->UpdateMouse();
@@ -111,22 +106,22 @@ void Eruption::Update()
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
 		if (m_Input->IsKey(en::Key::W))
-			m_Camera->m_Position += m_Camera->GetFront() * m_fDeltaTime;
+			m_Camera->m_Position += m_Camera->GetFront() * (float)m_DeltaTime;
 
 		else if (m_Input->IsKey(en::Key::S))
-			m_Camera->m_Position -= m_Camera->GetFront() * m_fDeltaTime;
+			m_Camera->m_Position -= m_Camera->GetFront() * (float)m_DeltaTime;
 
 		if (m_Input->IsKey(en::Key::A))
-			m_Camera->m_Position -= m_Camera->GetRight() * m_fDeltaTime;
+			m_Camera->m_Position -= m_Camera->GetRight() * (float)m_DeltaTime;
 
 		else if (m_Input->IsKey(en::Key::D))
-			m_Camera->m_Position += m_Camera->GetRight() * m_fDeltaTime;
+			m_Camera->m_Position += m_Camera->GetRight() * (float)m_DeltaTime;
 
 		if (m_Input->IsKey(en::Key::Space))
-			m_Camera->m_Position += m_Camera->GetUp() * m_fDeltaTime;
+			m_Camera->m_Position += m_Camera->GetUp() * (float)m_DeltaTime;
 
 		else if (m_Input->IsKey(en::Key::Ctrl))
-			m_Camera->m_Position -= m_Camera->GetUp() * m_fDeltaTime;
+			m_Camera->m_Position -= m_Camera->GetUp() * (float)m_DeltaTime;
 
 		m_Camera->m_Yaw   += m_Input->GetMouseVelocity().x;
 		m_Camera->m_Pitch -= m_Input->GetMouseVelocity().y;

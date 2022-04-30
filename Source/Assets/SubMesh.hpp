@@ -5,7 +5,6 @@
 
 #include <Renderer/Buffers/VertexBuffer.hpp>
 #include <Renderer/Buffers/IndexBuffer.hpp>
-#include <Renderer/Buffers/UniformBuffer.hpp>
 
 #include <Assets/Material.hpp>
 

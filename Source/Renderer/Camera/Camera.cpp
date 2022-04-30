@@ -3,6 +3,7 @@
 
 namespace en
 {
+	// Camera
 	Camera::Camera(CameraInfo& cameraInfo)
 	{
 		m_FarPlane  = cameraInfo.farPlane;
@@ -32,6 +33,13 @@ namespace en
 
 		m_Pitch = pitch;
 		m_Yaw   = yaw;
+	}
+
+	void Camera::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, CameraMatricesBuffer* cameraMatricesBuffer)
+	{
+		cameraMatricesBuffer->m_Matrices.proj = GetProjMatrix();
+		cameraMatricesBuffer->m_Matrices.view = GetViewMatrix();
+		cameraMatricesBuffer->Bind(cmd, layout);
 	}
 
 	void Camera::UpdateProjMatrix()

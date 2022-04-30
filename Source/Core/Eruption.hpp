@@ -33,10 +33,7 @@ private:
 	en::SceneObject* m_Floor;
 	en::SceneObject* m_Backpack;
 
-	double m_TargetFPS = 144.0;
-
 	double m_DeltaTime;
-	float  m_fDeltaTime;
 };
 
 #endif

@@ -40,6 +40,8 @@ namespace en
 		CreateSwapchainFramebuffers();
 
 		CreateSyncObjects();
+
+		CreateCameraMatricesBuffer();
 	
 		InitImGui();
 
@@ -87,7 +89,7 @@ namespace en
 
 	void VulkanRendererBackend::BeginRender()
 	{
-		vkWaitForFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence, VK_TRUE, UINT64_MAX);
+		vkWaitForFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence, VK_TRUE, UINT64_MAX);
 
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline.passFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
@@ -102,224 +104,220 @@ namespace en
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to acquire swap chain image!");
 
-		if (!m_SkipFrame)
-		{
-			vkResetFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence);
+		
+		vkResetFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence);
 
-			vkResetCommandBuffer(m_CommandBuffer, 0);
+		vkResetCommandBuffer(m_CommandBuffer, 0);
 
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-			if (vkBeginCommandBuffer(m_CommandBuffer, &beginInfo) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
-		}
+		if (vkBeginCommandBuffer(m_CommandBuffer, &beginInfo) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
 	}
 	void VulkanRendererBackend::GeometryPass()
 	{
-		if (!m_SkipFrame)
+		if (m_SkipFrame) return;
+		
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType	   = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass  = m_GeometryPipeline.renderPass;
+		renderPassInfo.framebuffer = m_GBuffer.framebuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = m_Swapchain.extent;
+
+		std::array<VkClearValue, 4> clearValues{};
+		clearValues[0].color = m_RendererInfo.clearColor;
+		clearValues[1].color = m_RendererInfo.clearColor;
+		clearValues[2].color = m_RendererInfo.clearColor;
+
+		clearValues[3].depthStencil = { 1.0f, 0 };
+
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.pipeline);
+
+		// Bind the m_MainCamera once per geometry pass
+		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.layout, m_CameraMatrices);
+
+		for (const auto& object : m_RenderQueue)
 		{
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType	   = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass  = m_GeometryPipeline.renderPass;
-			renderPassInfo.framebuffer = m_GBuffer.framebuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = m_Swapchain.extent;
+			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
+			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline.layout);
 
-			std::array<VkClearValue, 4> clearValues{};
-			clearValues[0].color = m_RendererInfo.clearColor;
-			clearValues[1].color = m_RendererInfo.clearColor;
-			clearValues[2].color = m_RendererInfo.clearColor;
-
-			clearValues[3].depthStencil = { 1.0f, 0 };
-
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
-
-			vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.pipeline);
-
-			for (int i = 0; const auto& sceneObject : m_RenderQueue)
+			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
-				UniformBuffer* uniformBuffer = sceneObject->m_UniformBuffer.get();
-				uniformBuffer->m_Model = sceneObject->GetModelMatrix();
-				uniformBuffer->m_Proj  = m_MainCamera->GetProjMatrix();
-				uniformBuffer->m_View  = m_MainCamera->GetViewMatrix();
-				uniformBuffer->Bind(m_CommandBuffer, m_GeometryPipeline.layout);
+				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
+				subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
+				subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
+				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline.layout);
 
-				for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
-				{
-					subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
-					subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
-					subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline.layout);
-
-					vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
-				}
-				
-				i++;
+				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
 			}
-			m_RenderQueue.clear();
-
-			vkCmdEndRenderPass(m_CommandBuffer);
 		}
+		m_RenderQueue.clear();
+
+		vkCmdEndRenderPass(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::LightingPass()
 	{
-		if (!m_SkipFrame)
+		if (m_SkipFrame) return;
+		
+		Helpers::TransitionImageLayout(m_GBuffer.albedo.image   , m_GBuffer.albedo.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_GBuffer.normal.image   , m_GBuffer.normal.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_LightingHDRColorBuffer.image, m_LightingHDRColorBuffer.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
+
+		// Prepare lights
+		for (int i = 0; i < MAX_LIGHTS; i++)
 		{
-			Helpers::TransitionImageLayout(m_GBuffer.albedo.image   , m_GBuffer.albedo.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_GBuffer.normal.image   , m_GBuffer.normal.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
-			Helpers::TransitionImageLayout(m_LightingHDRColorBuffer.image, m_LightingHDRColorBuffer.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
-
-			// Prepare lights
-			for (int i = 0; i < MAX_LIGHTS; i++)
-			{
-				m_Lights.LBO.lights[i].position = m_Lights.pointLights[i].m_Position;
-				m_Lights.LBO.lights[i].color    = m_Lights.pointLights[i].m_Color * (float)m_Lights.pointLights[i].m_Active * m_Lights.pointLights[i].m_Intensity;
-				m_Lights.LBO.lights[i].radius   = m_Lights.pointLights[i].m_Radius * (float)m_Lights.pointLights[i].m_Active;
-			}
-			m_Lights.LBO.viewPos = m_MainCamera->m_Position;
-			m_Lights.LBO.debugMode = m_DebugMode;
-
-			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
-
-			VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
-
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass		 = m_LightingPipeline.renderPass;
-			renderPassInfo.framebuffer		 = m_LightingHDRFramebuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = m_Swapchain.extent;
-			renderPassInfo.clearValueCount	 = 1;
-			renderPassInfo.pClearValues		 = &clearValue;
-
-			vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.pipeline);
-
-			vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0, 1, &m_LightingPipeline.descriptorSet, 0, nullptr);
-
-			vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
-
-			vkCmdEndRenderPass(m_CommandBuffer);
+			m_Lights.LBO.lights[i].position = m_Lights.pointLights[i].m_Position;
+			m_Lights.LBO.lights[i].color    = m_Lights.pointLights[i].m_Color * (float)m_Lights.pointLights[i].m_Active * m_Lights.pointLights[i].m_Intensity;
+			m_Lights.LBO.lights[i].radius   = m_Lights.pointLights[i].m_Radius * (float)m_Lights.pointLights[i].m_Active;
 		}
+		m_Lights.LBO.viewPos = m_MainCamera->m_Position;
+		m_Lights.LBO.debugMode = m_DebugMode;
+
+		en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
+
+		VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass		 = m_LightingPipeline.renderPass;
+		renderPassInfo.framebuffer		 = m_LightingHDRFramebuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = m_Swapchain.extent;
+		renderPassInfo.clearValueCount	 = 1;
+		renderPassInfo.pClearValues		 = &clearValue;
+
+		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.pipeline);
+
+		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0, 1, &m_LightingPipeline.descriptorSet, 0, nullptr);
+
+		vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
+
+		vkCmdEndRenderPass(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::PostProcessPass()
 	{
-		if (!m_SkipFrame)
-		{
-			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass		 = m_TonemappingPipeline.renderPass;
-			renderPassInfo.framebuffer		 = m_Swapchain.framebuffers[m_ImageIndex];
-			renderPassInfo.renderArea.offset = { 0U, 0U };
-			renderPassInfo.renderArea.extent = m_Swapchain.extent;
-			renderPassInfo.clearValueCount   = 1U;
-			renderPassInfo.pClearValues		 = &clearValue;
+		if (m_SkipFrame) return;
 		
-			vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-			vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.pipeline);
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass		 = m_TonemappingPipeline.renderPass;
+		renderPassInfo.framebuffer		 = m_Swapchain.framebuffers[m_ImageIndex];
+		renderPassInfo.renderArea.offset = { 0U, 0U };
+		renderPassInfo.renderArea.extent = m_Swapchain.extent;
+		renderPassInfo.clearValueCount   = 1U;
+		renderPassInfo.pClearValues		 = &clearValue;
+		
+		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			PostProcessingParams::Exposure exposure { m_MainCamera->m_Exposure };
+		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.pipeline);
 
-			vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessingParams::Exposure), &exposure);
+		PostProcessingParams::Exposure exposure { m_MainCamera->m_Exposure };
 
-			vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.layout, 0U, 1U, &m_TonemappingPipeline.descriptorSet, 0U, nullptr);
+		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessingParams::Exposure), &exposure);
 
-			vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
+		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.layout, 0U, 1U, &m_TonemappingPipeline.descriptorSet, 0U, nullptr);
 
-			vkCmdEndRenderPass(m_CommandBuffer);
-		}
+		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
+
+		vkCmdEndRenderPass(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::ImGuiPass()
 	{
-		if (!m_SkipFrame && m_ImGuiRenderCallback != nullptr)
-		{
-			ImGui_ImplVulkan_NewFrame();
-			ImGui_ImplGlfw_NewFrame();
-			ImGui::NewFrame();
+		if (m_SkipFrame || m_ImGuiRenderCallback == nullptr) return;
 
-			m_ImGuiRenderCallback();
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
-			ImGui::Render();
+		m_ImGuiRenderCallback();
 
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = m_ImGui.renderPass;
-			renderPassInfo.framebuffer = m_Swapchain.framebuffers[m_ImageIndex];
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = m_Swapchain.extent;
+		ImGui::Render();
 
-			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = m_ImGui.renderPass;
+		renderPassInfo.framebuffer = m_Swapchain.framebuffers[m_ImageIndex];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = m_Swapchain.extent;
 
-			renderPassInfo.clearValueCount = 1;
-			renderPassInfo.pClearValues = &clearValue;
+		VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			if (vkBeginCommandBuffer(m_ImGui.commandBuffers[m_ImageIndex], &beginInfo) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearValue;
 
-			vkCmdBeginRenderPass(m_ImGui.commandBuffers[m_ImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		if (vkBeginCommandBuffer(m_ImGui.commandBuffers[m_ImageIndex], &beginInfo) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
 
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGui.commandBuffers[m_ImageIndex]);
+		vkCmdBeginRenderPass(m_ImGui.commandBuffers[m_ImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdEndRenderPass(m_ImGui.commandBuffers[m_ImageIndex]);
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGui.commandBuffers[m_ImageIndex]);
 
-			if (vkEndCommandBuffer(m_ImGui.commandBuffers[m_ImageIndex]) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record ImGui command buffer!");
-		}
+		vkCmdEndRenderPass(m_ImGui.commandBuffers[m_ImageIndex]);
+
+		if (vkEndCommandBuffer(m_ImGui.commandBuffers[m_ImageIndex]) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record ImGui command buffer!");
 	}
 	void VulkanRendererBackend::EndRender()
 	{
-		if (!m_SkipFrame)
+		if (m_SkipFrame) return;
+		
+		if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record command buffer!");
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		submitInfo.waitSemaphoreCount = 1U;
+		submitInfo.pWaitSemaphores    = &m_GeometryPipeline.passFinished;
+		submitInfo.pWaitDstStageMask  = &waitStage;
+
+		VkCommandBuffer commandBuffers[] = {m_CommandBuffer, m_ImGui.commandBuffers[m_ImageIndex]};
+		submitInfo.commandBufferCount    = 2U;
+		submitInfo.pCommandBuffers       = commandBuffers;
+
+		if(m_ImGuiRenderCallback == nullptr)
 		{
-			if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record command buffer!");
-
-			VkSubmitInfo submitInfo{};
-			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-			VkSemaphore waitSemaphores[] = { m_GeometryPipeline.passFinished };
-			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-			submitInfo.waitSemaphoreCount = 1;
-			submitInfo.pWaitSemaphores = waitSemaphores;
-			submitInfo.pWaitDstStageMask = waitStages;
-
-			std::array<VkCommandBuffer, 2> submitCommandBuffers = { m_CommandBuffer, m_ImGui.commandBuffers[m_ImageIndex] };
-			submitInfo.commandBufferCount = 2;
-			submitInfo.pCommandBuffers	  = submitCommandBuffers.data();
-
-			VkSemaphore signalSemaphores[]  = { m_LightingPipeline.passFinished };
-			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores    = signalSemaphores;
-
-			if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1, &submitInfo, m_SubmitFence) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
-
-			VkPresentInfoKHR presentInfo{};
-			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores = signalSemaphores;
-
-			presentInfo.swapchainCount = 1;
-			presentInfo.pSwapchains = &m_Swapchain.swapchain;
-			presentInfo.pImageIndices = &m_ImageIndex;
-			presentInfo.pResults = nullptr;
-
-			VkResult result = vkQueuePresentKHR(m_Ctx->m_PresentQueue, &presentInfo);
-
-			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
-				RecreateFramebuffer();
-			else if (result != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::EndRender() - Failed to present swap chain image!");
+			submitInfo.commandBufferCount = 1U;
+			submitInfo.pCommandBuffers = &m_CommandBuffer;
 		}
+
+		submitInfo.signalSemaphoreCount = 1U;
+		submitInfo.pSignalSemaphores    = &m_LightingPipeline.passFinished;
+
+		if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_SubmitFence) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1U;
+		presentInfo.pWaitSemaphores	   = &m_LightingPipeline.passFinished;
+
+		presentInfo.swapchainCount = 1U;
+		presentInfo.pSwapchains    = &m_Swapchain.swapchain;
+		presentInfo.pImageIndices  = &m_ImageIndex;
+		presentInfo.pResults	   = nullptr;
+
+		VkResult result = vkQueuePresentKHR(m_Ctx->m_PresentQueue, &presentInfo);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
+			RecreateFramebuffer();
+		else if (result != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to present swap chain image!");
 	}
 
 	void VulkanRendererBackend::EnqueueSceneObject(SceneObject* sceneObject)
@@ -414,7 +412,7 @@ namespace en
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_Ctx->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode   = VK_PRESENT_MODE_FIFO_KHR;
+		VkPresentModeKHR   presentMode   = VSYNC ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
 		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -773,12 +771,19 @@ namespace en
 		depthStencil.front = {};
 		depthStencil.back  = {};
 
-		std::array<VkDescriptorSetLayout, 2> descriptorLayouts = { UniformBuffer::GetUniformDescriptorLayout(), Material::GetMatDescriptorLayout() };
+		std::array<VkDescriptorSetLayout, 2> descriptorLayouts = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
+		
+		VkPushConstantRange objectPushConstant;
+		objectPushConstant.offset = 0U;
+		objectPushConstant.size   = sizeof(PerObjectData);
+		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size());
 		pipelineLayoutInfo.pSetLayouts	  = descriptorLayouts.data();
+		pipelineLayoutInfo.pPushConstantRanges = &objectPushConstant;
+		pipelineLayoutInfo.pushConstantRangeCount = 1U;
 
 		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_GeometryPipeline.layout) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::GCreatePipeline() - Failed to create pipeline layout!");
@@ -1342,6 +1347,11 @@ namespace en
 		}
 	}
 
+	void VulkanRendererBackend::CreateCameraMatricesBuffer()
+	{
+		m_CameraMatrices = new CameraMatricesBuffer;
+	}
+
 	void ImGuiCheckResult(VkResult err)
 	{
 		if (err == 0) return;
@@ -1482,16 +1492,6 @@ namespace en
 		}
 
 		return availableFormats[0];
-	}
-	VkPresentModeKHR VulkanRendererBackend::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
-	{
-		for (const auto& availablePresentMode : availablePresentModes)
-		{
-			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-				return availablePresentMode;
-		}
-
-		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 	VkExtent2D VulkanRendererBackend::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 	{

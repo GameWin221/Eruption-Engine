@@ -7,7 +7,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include <Renderer/Buffers/UniformBuffer.hpp>
+//#include <Renderer/Buffers/UniformBuffer.hpp>
 
 #include <Assets/SubMesh.hpp>
 
