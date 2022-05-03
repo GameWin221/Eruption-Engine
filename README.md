@@ -1,12 +1,8 @@
-# Eruption Rendering Engine
+# Eruption Rendering Engine - dev branch
 
-![](https://forthebadge.com/images/badges/made-with-c-plus-plus.svg)
-
-My own rendering engine made with Vulkan.
+This branch exists mainly for me (the developer) to consistently save and backup my project. **I do not guarantee that this branch will even compile**.
 
 [Eruption Engine Milanote Board](https://app.milanote.com/1NmtuU1jo13IbQ?p=vUC5d3l4PKq)
-
-The engine is in a really early stage of development.
 
 # Dependencies
 - Visual Studio 2022
