@@ -11,12 +11,12 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) : m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength)
+	Material::Material(std::string name, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) : m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength)
 	{
-		if (!albedoTexture) m_Albedo = Texture::GetWhiteTexture();
+		if (!albedoTexture) m_Albedo = Texture::GetWhiteSRGBTexture();
 		else m_Albedo = albedoTexture;
 
-		if (!specularTexture) m_Specular = Texture::GetWhiteTexture();
+		if (!specularTexture) m_Specular = Texture::GetGreyNonSRGBTexture();
 		else m_Specular = specularTexture;
 
 		if (!normalTexture) m_Normal = Texture::GetNormalTexture();
@@ -24,6 +24,8 @@ namespace en
 
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
+
+		m_Name = name;
 
 		CreateMatBuffer();
 		CreateDescriptorSet();
@@ -38,7 +40,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material(glm::vec3(1.0f), 32.0f, 0.5f, nullptr, nullptr, nullptr);
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 0.5f, nullptr, nullptr, nullptr);
 
 		return g_DefaultMaterial;
 	}

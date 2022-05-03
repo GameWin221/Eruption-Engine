@@ -88,17 +88,4 @@ namespace en
     };
 }
 
-namespace std {
-    template<> struct hash<en::Vertex> {
-        size_t operator()(en::Vertex const& vertex) const {
-            return (
-                (
-                     hash<glm::vec3>()(vertex.pos) ^
-                    (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-                    /*(hash<glm::vec3>()(vertex.tangent) << 1) >> 1 ^*/
-                    (hash<glm::vec2>()(vertex.texcoord) << 1
-                );
-        }
-    };
-}
 #endif

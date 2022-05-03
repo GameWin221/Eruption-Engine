@@ -148,9 +148,13 @@ namespace en
 			struct LightsBufferObject
 			{
 				PointLight::Buffer lights[MAX_LIGHTS];
+			} LBO;
+
+			struct LightsCameraInfo
+			{
 				glm::vec3 viewPos;
 				int debugMode;
-			} LBO;
+			} camera;
 
 			std::array<PointLight, MAX_LIGHTS> pointLights;
 
@@ -193,6 +197,8 @@ namespace en
 		VkCommandBuffer m_CommandBuffer;
 		
 		VkFence	m_SubmitFence;
+
+		const VkClearValue m_BlackClearValue{0, 0, 0, 1.0};
 
 		RendererInfo m_RendererInfo;
 

@@ -8,7 +8,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.4.8";
+	windowInfo.title	  = "Eruption Engine v0.4.9";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -24,47 +24,29 @@ void Eruption::Init()
 
 	m_Renderer = new en::Renderer(rendererInfo);
 
-	m_UILayer = new en::UILayer;
-	m_UILayer->AttachTo(m_Renderer, &m_DeltaTime);
-
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;
 
 	m_AssetManager = new en::AssetManager;
 
-	m_AssetManager->LoadMesh("BackpackModel", "Models/Backpack/Backpack.fbx");
-	m_AssetManager->LoadMesh("SkullModel"   , "Models/Skull/Skull.gltf"	    );
-	m_AssetManager->LoadMesh("FloorModel"   , "Models/Floor/Floor.obj"   	);
-
-	m_AssetManager->LoadTexture("BackpackAlbedo", "Models/Backpack/BackpackAlbedo.jpg");
-	m_AssetManager->LoadTexture("SkullAlbedo"	, "Models/Skull/SkullAlbedo.jpg"	   );
-	m_AssetManager->LoadTexture("FloorAlbedo"   , "Models/Floor/FloorAlbedo.png"	   );
-
-	m_AssetManager->LoadTexture("BackpackSpecular", "Models/Backpack/BackpackSpecular.jpg", VK_FORMAT_R8G8B8A8_UNORM);
-	m_AssetManager->LoadTexture("SkullSpecular"	  , "Models/Skull/SkullSpecular.jpg"	  , VK_FORMAT_R8G8B8A8_UNORM);
-	m_AssetManager->LoadTexture("FloorSpecular"   , "Models/Floor/FloorSpecular.png"	  , VK_FORMAT_R8G8B8A8_UNORM);
-
-	m_AssetManager->LoadTexture("BackpackNormal", "Models/Backpack/BackpackNormal.jpg", VK_FORMAT_R8G8B8A8_UNORM);
-	m_AssetManager->LoadTexture("SkullNormal"   , "Models/Skull/SkullNormal.jpg"      , VK_FORMAT_R8G8B8A8_UNORM);
-	m_AssetManager->LoadTexture("FloorNormal"   , "Models/Floor/FloorNormal.png"      , VK_FORMAT_R8G8B8A8_UNORM);
-
-	m_AssetManager->CreateMaterial("BackpackMaterial", glm::vec3(1.0f), 50.0f , 0.3f, m_AssetManager->GetTexture("BackpackAlbedo"), m_AssetManager->GetTexture("BackpackSpecular"), m_AssetManager->GetTexture("BackpackNormal"));
-	m_AssetManager->CreateMaterial("SkullMaterial"   , glm::vec3(1.0f), 40.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"   ), m_AssetManager->GetTexture("SkullSpecular")   , m_AssetManager->GetTexture("SkullNormal")   );
-	m_AssetManager->CreateMaterial("FloorMaterial"	 , glm::vec3(1.0f), 200.0f , 1.0f, m_AssetManager->GetTexture("FloorAlbedo"   ), m_AssetManager->GetTexture("FloorSpecular")   , m_AssetManager->GetTexture("FloorNormal")   );
-
-	m_AssetManager->GetMesh("BackpackModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("BackpackMaterial");
-	m_AssetManager->GetMesh("SkullModel"   )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial"   );
-	m_AssetManager->GetMesh("FloorModel"   )->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("FloorMaterial"   );
-
+	m_AssetManager->LoadMesh   ("SkullModel"   , "Models/Skull/Skull.gltf"     );
+	m_AssetManager->LoadTexture("SkullAlbedo"  , "Models/Skull/SkullAlbedo.jpg");
+	m_AssetManager->LoadTexture("SkullSpecular", "Models/Skull/SkullSpecular.jpg", { en::TextureFormat::NonColor });
+	m_AssetManager->LoadTexture("SkullNormal"  , "Models/Skull/SkullNormal.jpg"  , { en::TextureFormat::NonColor });	
+	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"   ), m_AssetManager->GetTexture("SkullSpecular")   , m_AssetManager->GetTexture("SkullNormal")   );
+	
+	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial"   );
+	
 	m_Skull = new en::SceneObject(m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
 	m_Skull->m_Rotation = glm::vec3(45.0f, 0.0f, 0.0f);
 
-	m_Backpack = new en::SceneObject(m_AssetManager->GetMesh("BackpackModel"));
-	m_Backpack->m_Position = glm::vec3(2, 0.5f, 0);
-	m_Backpack->m_Scale = glm::vec3(0.2f);
+	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
+	m_Sponza = new en::SceneObject(m_AssetManager->GetMesh("Sponza"));
+	m_Sponza->m_Scale = glm::vec3(0.01f);
 
-	m_Floor	   = new en::SceneObject(m_AssetManager->GetMesh("FloorModel"));
+	m_Editor = new en::EditorLayer;
+	m_Editor->AttachTo(m_Renderer, m_AssetManager, &m_DeltaTime);
 
 	en::CameraInfo cameraInfo{};
 	cameraInfo.dynamicallyScaled = true;
@@ -134,8 +116,7 @@ void Eruption::Render()
 	if (modelSpawned)
 		m_Renderer->EnqueueSceneObject(m_Skull);
 
-	m_Renderer->EnqueueSceneObject(m_Backpack);
-	m_Renderer->EnqueueSceneObject(m_Floor);
+	m_Renderer->EnqueueSceneObject(m_Sponza);
 
 	m_Renderer->Render();
 }

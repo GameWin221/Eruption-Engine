@@ -126,10 +126,10 @@ namespace en
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_Swapchain.extent;
 
-		std::array<VkClearValue, 4> clearValues{};
+		std::array<VkClearValue, 4> clearValues;
 		clearValues[0].color = m_RendererInfo.clearColor;
-		clearValues[1].color = m_RendererInfo.clearColor;
-		clearValues[2].color = m_RendererInfo.clearColor;
+		clearValues[1].color = m_BlackClearValue.color;
+		clearValues[2].color = m_BlackClearValue.color;
 
 		clearValues[3].depthStencil = { 1.0f, 0 };
 
@@ -170,45 +170,57 @@ namespace en
 		Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer.normal.image   , m_GBuffer.normal.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_LightingHDRColorBuffer.image, m_LightingHDRColorBuffer.format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
+		
+		bool lightsChanged = false;
 
-		// Prepare lights
+		// Prepare lights and check if at least one value was changed. If so, update the buffer on the GPU
 		for (int i = 0; i < MAX_LIGHTS; i++)
 		{
-			m_Lights.LBO.lights[i].position = m_Lights.pointLights[i].m_Position;
-			m_Lights.LBO.lights[i].color    = m_Lights.pointLights[i].m_Color * (float)m_Lights.pointLights[i].m_Active * m_Lights.pointLights[i].m_Intensity;
-			m_Lights.LBO.lights[i].radius   = m_Lights.pointLights[i].m_Radius * (float)m_Lights.pointLights[i].m_Active;
+			PointLight::Buffer& lightBuffer = m_Lights.LBO.lights[i];
+			PointLight& light = m_Lights.pointLights[i];
+
+			const glm::vec3& lightPos = light.m_Position;
+			const glm::vec3  lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+			const float      lightRad = light.m_Radius * (float)light.m_Active;
+
+			if (lightBuffer.position != lightPos || lightBuffer.color != lightCol || lightBuffer.radius != lightRad)
+				lightsChanged = true;
+
+			lightBuffer.position = lightPos;
+			lightBuffer.color    = lightCol;
+			lightBuffer.radius   = lightRad;
 		}
-		m_Lights.LBO.viewPos = m_MainCamera->m_Position;
-		m_Lights.LBO.debugMode = m_DebugMode;
 
-		en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
-
-		VkClearValue clearValue = { 0.0f,0.0f, 0.0f, 1.0f };
+		m_Lights.camera.viewPos   = m_MainCamera->m_Position;
+		m_Lights.camera.debugMode = m_DebugMode;
+		
+		if (lightsChanged)
+			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass		 = m_LightingPipeline.renderPass;
 		renderPassInfo.framebuffer		 = m_LightingHDRFramebuffer;
-		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.offset = { 0U, 0U };
 		renderPassInfo.renderArea.extent = m_Swapchain.extent;
-		renderPassInfo.clearValueCount	 = 1;
-		renderPassInfo.pClearValues		 = &clearValue;
+		renderPassInfo.clearValueCount	 = 1U;
+		renderPassInfo.pClearValues		 = &m_BlackClearValue;
 
 		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.pipeline);
 
-		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0, 1, &m_LightingPipeline.descriptorSet, 0, nullptr);
+		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
+		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0U, 1U, &m_LightingPipeline.descriptorSet, 0U, nullptr);
+
+		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
 		vkCmdEndRenderPass(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::PostProcessPass()
 	{
 		if (m_SkipFrame) return;
-		
-		VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -217,13 +229,13 @@ namespace en
 		renderPassInfo.renderArea.offset = { 0U, 0U };
 		renderPassInfo.renderArea.extent = m_Swapchain.extent;
 		renderPassInfo.clearValueCount   = 1U;
-		renderPassInfo.pClearValues		 = &clearValue;
+		renderPassInfo.pClearValues		 = &m_BlackClearValue;
 		
 		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.pipeline);
 
-		PostProcessingParams::Exposure exposure { m_MainCamera->m_Exposure };
+		static PostProcessingParams::Exposure exposure { m_MainCamera->m_Exposure };
 
 		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessingParams::Exposure), &exposure);
 
@@ -237,25 +249,16 @@ namespace en
 	{
 		if (m_SkipFrame || m_ImGuiRenderCallback == nullptr) return;
 
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
 		m_ImGuiRenderCallback();
 
-		ImGui::Render();
-
 		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = m_ImGui.renderPass;
-		renderPassInfo.framebuffer = m_Swapchain.framebuffers[m_ImageIndex];
-		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass		 = m_ImGui.renderPass;
+		renderPassInfo.framebuffer		 = m_Swapchain.framebuffers[m_ImageIndex];
+		renderPassInfo.renderArea.offset = { 0U, 0U };
 		renderPassInfo.renderArea.extent = m_Swapchain.extent;
-
-		VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearValue;
+		renderPassInfo.clearValueCount   = 1U;
+		renderPassInfo.pClearValues		 = &m_BlackClearValue;
 
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1056,10 +1059,17 @@ namespace en
 		depthStencil.front = {};
 		depthStencil.back  = {};
 
+		VkPushConstantRange lightsCameraInfoRange{};
+		lightsCameraInfoRange.offset = 0U;
+		lightsCameraInfoRange.size = sizeof(Lights::LightsCameraInfo);
+		lightsCameraInfoRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1U;
 		pipelineLayoutInfo.pSetLayouts	  = &m_LightingPipeline.descriptorSetLayout;
+		pipelineLayoutInfo.pushConstantRangeCount = 1U;
+		pipelineLayoutInfo.pPushConstantRanges    = &lightsCameraInfoRange;
 
 		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_LightingPipeline.layout) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline layout!");

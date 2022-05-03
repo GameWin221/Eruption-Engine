@@ -96,7 +96,7 @@
     <ClCompile Include="Source\Assets\Material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\UILayer.cpp">
+    <ClCompile Include="Source\Core\EditorLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\SceneObject.cpp">
@@ -173,7 +173,7 @@
     <ClInclude Include="Source\Assets\Material.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\UILayer.hpp">
+    <ClInclude Include="Source\Core\EditorLayer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\SceneObject.hpp">
@@ -185,7 +185,28 @@
     <ClInclude Include="Source\Renderer\Camera\CameraMatricesBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
+    <ClInclude Include="External\ImGui\imgui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imconfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imgui_impl_glfw.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imgui_impl_vulkan.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imgui_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imstb_rectpack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imstb_textedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="External\ImGui\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -199,16 +220,5 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="EruptionIcon.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="icon1.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="EruptionIcon.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
 </Project>

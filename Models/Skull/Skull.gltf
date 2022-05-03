@@ -43,63 +43,63 @@
         {
             "bufferView" : 0,
             "componentType" : 5126,
-            "count" : 29348,
+            "count" : 15351,
             "max" : [
-                0.6671718955039978,
-                0.905709981918335,
-                1.0047016143798828
+                0.6671309471130371,
+                0.9058840870857239,
+                1.0047305822372437
             ],
             "min" : [
-                -0.6671488881111145,
-                -0.8783867359161377,
-                -0.9912075400352478
+                -0.6670279502868652,
+                -0.8785642385482788,
+                -0.9911536574363708
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 29348,
+            "count" : 15351,
             "type" : "VEC3"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 29348,
+            "count" : 15351,
             "type" : "VEC2"
         },
         {
             "bufferView" : 3,
             "componentType" : 5123,
-            "count" : 167484,
+            "count" : 83727,
             "type" : "SCALAR"
         }
     ],
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 352176,
+            "byteLength" : 184212,
             "byteOffset" : 0
         },
         {
             "buffer" : 0,
-            "byteLength" : 352176,
-            "byteOffset" : 352176
+            "byteLength" : 184212,
+            "byteOffset" : 184212
         },
         {
             "buffer" : 0,
-            "byteLength" : 234784,
-            "byteOffset" : 704352
+            "byteLength" : 122808,
+            "byteOffset" : 368424
         },
         {
             "buffer" : 0,
-            "byteLength" : 334968,
-            "byteOffset" : 939136
+            "byteLength" : 167454,
+            "byteOffset" : 491232
         }
     ],
     "buffers" : [
         {
-            "byteLength" : 1274104,
+            "byteLength" : 658688,
             "uri" : "Skull.bin"
         }
     ]

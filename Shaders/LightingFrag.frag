@@ -22,9 +22,15 @@ struct PointLight
 layout(binding = 3) uniform UBO 
 {
     PointLight lights[MAX_LIGHTS];
-    vec3 viewPos;
-    int debugMode;
+
 } lightsBuffer;
+
+layout(push_constant) uniform LightsCameraInfo
+{
+	vec3 viewPos;
+    int debugMode;
+} camera;
+
 
 
 float WhenNotEqual(float x, float y) {
@@ -36,7 +42,7 @@ vec3 CalculateLight(int lightIndex, vec3 color, float specularity, float shinine
     vec3  lPos = lightsBuffer.lights[lightIndex].position;
     vec3  lCol = lightsBuffer.lights[lightIndex].color; 
     float lRad = lightsBuffer.lights[lightIndex].radius; 
-    vec3  viewPos = lightsBuffer.viewPos;
+    vec3  viewPos = camera.viewPos;
 
     // Attenuation Calculation
     float attenuation = max(1.0 - dist*dist/(lRad*lRad), 0.0); 
@@ -67,7 +73,7 @@ void main()
     vec3  position  = texture(gPosition, fTexcoord).rgb;
     float shininess = texture(gPosition, fTexcoord).a;
     float specular  = texture(gColor   , fTexcoord).a;
-    float depth     = length(lightsBuffer.viewPos-position)/30.0;
+    float depth     = length(camera.viewPos-position)/30.0;
 
     vec3 ambient = color * ambientLight;
     vec3 lighting = vec3(0);
@@ -85,7 +91,7 @@ void main()
 
     vec3 result = vec3(0);
     
-    switch(lightsBuffer.debugMode)
+    switch(camera.debugMode)
     {
         case 0:
             result = ambient + lighting;

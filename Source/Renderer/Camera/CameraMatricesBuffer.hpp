@@ -2,6 +2,9 @@
 
 #include <Common/Helpers.hpp>
 
+#ifndef EN_CAMERAMATRICESBUFFER_HPP
+#define EN_CAMERAMATRICESBUFFER_HPP
+
 namespace en
 {
 	class CameraMatricesBuffer
@@ -29,3 +32,4 @@ namespace en
 		VkDeviceMemory m_BufferMemory;
 	};
 }
+#endif

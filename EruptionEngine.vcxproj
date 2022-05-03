@@ -86,6 +86,11 @@
     <IntDir>$(SolutionDir)Build\$(Platform)\$(Configuration)\Intermediates\</IntDir>
     <OutDir>$(SolutionDir)Build\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+    <VcpkgManifestInstall>false</VcpkgManifestInstall>
+    <VcpkgAutoLink>false</VcpkgAutoLink>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -122,7 +127,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -153,7 +158,7 @@ compile.bat</Command>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -239,10 +244,17 @@ compile.bat</Command>
     <ClCompile Include="Source\Common\Helpers.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
-    <ClCompile Include="Source\Core\UILayer.cpp" />
+    <ClCompile Include="Source\Core\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="External\ImGui\imconfig.h" />
+    <ClInclude Include="External\ImGui\imgui.h" />
+    <ClInclude Include="External\ImGui\imgui_impl_glfw.h" />
+    <ClInclude Include="External\ImGui\imgui_impl_vulkan.h" />
+    <ClInclude Include="External\ImGui\imgui_internal.h" />
+    <ClInclude Include="External\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="External\ImGui\imstb_textedit.h" />
+    <ClInclude Include="External\ImGui\imstb_truetype.h" />
     <ClInclude Include="Source\Renderer\Camera\CameraMatricesBuffer.hpp" />
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
@@ -267,7 +279,7 @@ compile.bat</Command>
     <ClInclude Include="Source\Assets\AssetManager.hpp" />
     <ClInclude Include="Source\Common\Helpers.hpp" />
     <ClInclude Include="Source\Input\InputManager.hpp" />
-    <ClInclude Include="Source\Core\UILayer.hpp" />
+    <ClInclude Include="Source\Core\EditorLayer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -289,11 +301,6 @@ compile.bat</Command>
       <FileType>Document</FileType>
     </None>
     <None Include="Shaders\TonemapFrag.frag" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="EruptionIcon.ico" />
-    <Image Include="EruptionIcon.png" />
-    <Image Include="icon1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

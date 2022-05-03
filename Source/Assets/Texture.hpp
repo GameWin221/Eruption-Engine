@@ -14,7 +14,7 @@ namespace en
 	class Texture
 	{
 	public:
-		Texture(std::string texturePath, VkFormat format, bool flipTexture = true);
+		Texture(std::string texturePath, VkFormat format, bool flipTexture = false);
 		Texture(stbi_uc* pixelData, VkFormat format, glm::uvec2 size);
 		~Texture();
 
@@ -24,12 +24,12 @@ namespace en
 		VkFormat    m_ImageFormat;
 		VkDeviceMemory m_ImageMemory;
 
-		static Texture* GetWhiteTexture();
+		static Texture* GetWhiteSRGBTexture();
+		static Texture* GetGreyNonSRGBTexture();
 		static Texture* GetNormalTexture();
-		static Texture* GetBlackTexture();
 
-		const glm::ivec2& GetSize()     const { return this->m_Size; };
-		const std::string& GetFilePath() const { return this->m_FilePath; };
+		const glm::ivec2& GetSize()      const { return m_Size; };
+		const std::string& GetFilePath() const { return m_FilePath; };
 
 	private:
 		void CreateImageSampler();

@@ -10,7 +10,7 @@ namespace en
 	class Material
 	{
 	public:
-		Material(glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture);
+		Material(std::string name, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture);
 		~Material();
 
 		glm::vec3 m_Color;
@@ -21,6 +21,8 @@ namespace en
 		Texture* m_Albedo;
 		Texture* m_Specular;
 		Texture* m_Normal;
+
+		std::string m_Name;
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
 		void Update();
