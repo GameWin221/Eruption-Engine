@@ -21,7 +21,7 @@ namespace en
             return false;
         }
 
-        m_Meshes[nameID] = LoadMeshFromFile(path, properties.importMaterials);
+        m_Meshes[nameID] = LoadMeshFromFile(path, nameID, properties.importMaterials);
         return true;
     }
     bool AssetManager::LoadTexture(std::string nameID, std::string path, TextureImportProperties properties)
@@ -34,7 +34,7 @@ namespace en
             return false;
         }
 
-        m_Textures[nameID] = std::make_unique<Texture>(path, static_cast<VkFormat>(properties.format), properties.flipped);
+        m_Textures[nameID] = std::make_unique<Texture>(path, nameID, static_cast<VkFormat>(properties.format), properties.flipped);
         return true;
     }
 
@@ -74,6 +74,60 @@ namespace en
     {
         m_Materials.erase(nameID);
         EN_LOG("Deleted the \"" + nameID + "\" material");
+    }
+
+    void AssetManager::RenameMesh(std::string oldNameID, std::string newNameID)
+    {
+        if (m_Meshes.contains(newNameID))
+            EN_WARN("Failed to rename " + oldNameID + " because a mesh with a name " + newNameID + " already exists.")
+        else
+        {
+            if (m_Meshes.contains(oldNameID))
+            {
+                m_Meshes[newNameID].swap(m_Meshes.at(oldNameID));
+                m_Meshes.at(newNameID)->m_Name = newNameID;
+                m_Meshes.erase(oldNameID);
+            }
+            else
+                EN_WARN("Failed to rename " + oldNameID + " because a mesh with that name doesn't exist.")
+        }
+    }
+    void AssetManager::RenameTexture(std::string oldNameID, std::string newNameID)
+    {
+        if (m_Textures.contains(newNameID))
+            EN_WARN("Failed to rename " + oldNameID + " because a texture with a name " + newNameID + " already exists.")
+        else
+        {
+            if (m_Textures.contains(oldNameID))
+            {
+                m_Textures[newNameID].swap(m_Textures.at(oldNameID));
+                m_Textures.at(newNameID)->m_Name = newNameID;
+                m_Textures.erase(oldNameID);
+            }
+            else
+                EN_WARN("Failed to rename " + oldNameID + " because a texture with that name doesn't exist.")
+        }
+    }
+    void AssetManager::RenameMaterial(std::string oldNameID, std::string newNameID)
+    {
+        if (m_Materials.contains(newNameID))
+            EN_WARN("Failed to rename " + oldNameID + " because a material with a name " + newNameID + " already exists.")
+        else
+        {
+            if (m_Materials.contains(oldNameID))
+            {
+                m_Materials[newNameID].swap(m_Materials.at(oldNameID));
+                m_Materials.at(newNameID)->m_Name = newNameID;
+                m_Materials.erase(oldNameID);
+            }
+            else
+                EN_WARN("Failed to rename " + oldNameID + " because a material with that name doesn't exist.")
+        }
+    }
+
+    void AssetManager::UpdateAssets()
+    {
+        UpdateMaterials();
     }
 
     Mesh* AssetManager::GetMesh(std::string nameID)
@@ -145,10 +199,17 @@ namespace en
         return materials;
     }
 
-    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, bool& importMaterial)
+    void AssetManager::UpdateMaterials()
+    {
+        for (auto& material : m_Materials)
+            material.second->UpdateDescriptorSet();
+    }
+
+    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial)
     {
         std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
         mesh->m_FilePath = filePath;
+        mesh->m_Name = name;
         
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);

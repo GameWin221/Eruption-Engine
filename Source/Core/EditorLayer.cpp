@@ -44,6 +44,8 @@ namespace en
 
 		DrawDockspace();
 
+		// UI Panels
+
 		if(m_ShowLightsMenu)
 			DrawLightsMenu();
 
@@ -58,14 +60,19 @@ namespace en
 		if (m_ShowDebugMenu)
 			DrawDebugMenu();
 
-		if (m_ChosenMaterial)
-			EditMaterial();
+		
+		// Asset Editors
+		if (m_ChosenMaterial && m_ShowAssetEditor)
+			EditMaterial(&m_ShowAssetEditor);
+		
+		else if (m_ChosenMesh && m_ShowAssetEditor)
+			EditMesh(&m_ShowAssetEditor);
 
-		if (m_ChosenMesh)
-			EditMesh();
+		else if (m_ChosenTexture && m_ShowAssetEditor)
+			EditTexture(&m_ShowAssetEditor);
 
-		if (m_ChosenTexture)
-			EditTexture();
+		if (m_ChosenMaterial && m_IsCreatingMaterial)
+			CreateMaterial();
 
 		EndRender();
 	}
@@ -238,7 +245,7 @@ namespace en
 
 		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true);
 
-		if (ImGui::Button("Import Mesh", buttonSize))
+		if (ImGui::Button("Import Mesh", buttonSize) && !m_IsCreatingMaterial)
 		{
 			auto file = pfd::open_file("Choose meshes to import...", DEFAULT_ASSET_PATH, { "Supported Mesh Formats", "*.gltf *.fbx *.obj" }, pfd::opt::multiselect);
 
@@ -252,7 +259,9 @@ namespace en
 			}
 		}
 
-		if (ImGui::Button("Import Texture", buttonSize))
+		ImGui::SameLine();
+
+		if (ImGui::Button("Import Texture", buttonSize) && !m_IsCreatingMaterial)
 		{
 			auto file = pfd::open_file("Choose textures to import...", DEFAULT_ASSET_PATH, { "Supported Texture Formats", "*.png *.jpg *.jpeg" }, pfd::opt::multiselect);
 
@@ -264,6 +273,24 @@ namespace en
 
 				m_AssetManager->LoadTexture(fileName, path);
 			}
+		}
+
+		static int matCounter = 0;
+
+		if (ImGui::Button("Create Material", buttonSize) && !m_IsCreatingMaterial)
+		{
+			m_IsCreatingMaterial = true;
+
+			std::string newName{ "New Material" };
+
+			if (matCounter > 0)
+				newName.append("[" + std::to_string(matCounter) + "]");
+
+			m_AssetManager->CreateMaterial(newName);
+
+			m_ChosenMaterial = m_AssetManager->GetMaterial(newName);
+
+			matCounter++;
 		}
 
 		ImGui::EndChild();
@@ -303,11 +330,13 @@ namespace en
 					Mesh* mesh = CastTo<Mesh*>(asset.ptr);
 					std::string name = TrimToTitle(mesh->m_FilePath);
 
-					if (ImGui::Button(name.c_str(), assetSize))
+					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
 						m_ChosenTexture = nullptr;
 						m_ChosenMesh = mesh;
+						m_ShowAssetEditor = true;
+						m_AssetEditorInit = true;
 					}
 				}
 				else if (asset.type == AssetType::TypeTexture)
@@ -316,23 +345,27 @@ namespace en
 					std::string path = texture->GetFilePath();
 					std::string name = TrimToTitle(path);
 
-					if (ImGui::Button(name.c_str(), assetSize))
+					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
 						m_ChosenTexture = texture;
 						m_ChosenMesh = nullptr;
+						m_ShowAssetEditor = true;
+						m_AssetEditorInit = true;
 					}
 				}
 				else if (asset.type == AssetType::TypeMaterial)
 				{
 					Material* material = CastTo<Material*>(asset.ptr);
-					std::string name = material->m_Name;
+					std::string name = material->GetName();
 
-					if (ImGui::Button(name.c_str(), assetSize))
+					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = material;
 						m_ChosenTexture = nullptr;
 						m_ChosenMesh = nullptr;
+						m_ShowAssetEditor = true;
+						m_AssetEditorInit = true;
 					}
 				}
 			
@@ -431,49 +464,330 @@ namespace en
 		ImGui::Render();
 	}
 
-	void EditorLayer::EditMaterial()
+	void EditorLayer::EditMaterial(bool* open)
 	{
-		std::string title("Material editor - \"");
-		title += m_ChosenMaterial->m_Name + "\"";
-
 		ImGui::SetNextWindowSizeConstraints({500, 300}, {1920, 1080});
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
 
-		ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoDocking);
+		if (ImGui::Begin(("Material editor - \"" + m_ChosenMaterial->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
+			static float col[3] = { m_ChosenMaterial->m_Color.r, m_ChosenMaterial->m_Color.y, m_ChosenMaterial->m_Color.z};
+
+			static char name[86];
+
+			if (m_AssetEditorInit)
+			{
+				strcpy_s(name, sizeof(char) * 86, m_ChosenMaterial->GetName().c_str());
+				m_AssetEditorInit = false;
+			}
+
+			ImGui::InputText("Name: ", name, 86);
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Save Name"))
+				m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
+
+			if (ImGui::ColorEdit3("Color: ", col))
+			{
+				m_ChosenMaterial->m_Color.r = col[0];
+				m_ChosenMaterial->m_Color.y = col[1];
+				m_ChosenMaterial->m_Color.z = col[2];
+			}
+			else
+			{
+				col[0] = m_ChosenMaterial->m_Color.r;
+				col[1] = m_ChosenMaterial->m_Color.y;
+				col[2] = m_ChosenMaterial->m_Color.z;
+			}
+
+
+			ImGui::DragFloat("Shininess: ", &m_ChosenMaterial->m_Shininess, 0.5f, 1.0f, 512.0f);
+			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
+
+			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
+
+			std::vector<const char*> textureNames(allTextures.size() + 1);
+			textureNames[0] = "No texture";
+
+			for (int i = 1; i < textureNames.size(); i++)
+				textureNames[i] = allTextures[i - 1]->GetName().c_str();
+
+			SPACE();
+
+			// Albedo texture
+			{ 
+				ImGui::PushID("Albedo");
+				ImGui::Text(("Albedo Texture: " + m_ChosenMaterial->GetAlbedoTexture()->GetFilePath()).c_str());
+				ImGui::Text("Choose new albedo texture: ");
+
+				static int chosenAlbedoIndex = 0;
+				ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size());
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Update Texture"))
+				{
+					if (chosenAlbedoIndex == 0)
+						m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
+					else
+						m_ChosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
+				}
+				ImGui::PopID();
+			}
+
+			SPACE();
+
+			// Specular texture
+			{ 
+				ImGui::PushID("Specular");
+				ImGui::Text(("Specular Texture: " + m_ChosenMaterial->GetSpecularTexture()->GetFilePath()).c_str());
+				ImGui::Text("Choose new specular texture: ");
+
+				static int chosenSpecularIndex = 0;
+				ImGui::Combo("Textures", &chosenSpecularIndex, textureNames.data(), textureNames.size());
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Update Texture"))
+				{
+					if (chosenSpecularIndex == 0)
+						m_ChosenMaterial->SetSpecularTexture(Texture::GetGreyNonSRGBTexture());
+					else
+						m_ChosenMaterial->SetSpecularTexture(m_AssetManager->GetTexture(allTextures[chosenSpecularIndex - 1]->GetName()));
+				}
+				ImGui::PopID();
+			}
+			
+			SPACE();
+
+			// Normal texture
+			{
+				ImGui::PushID("Normal");
+				ImGui::Text(("Normal Texture: " + m_ChosenMaterial->GetNormalTexture()->GetFilePath()).c_str());
+				ImGui::Text("Choose new normal texture: ");
+
+				static int chosenNormalIndex = 0;
+				ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size());
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Update Texture"))
+				{
+					if (chosenNormalIndex == 0)
+						m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
+					else
+						m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
+				}
+				ImGui::PopID();
+			}
+		}
 
 		ImGui::End();
+
+
 		ImGui::PopStyleColor();
 	}
-	void EditorLayer::EditMesh()
+	void EditorLayer::EditMesh(bool* open)
 	{
 		std::string assetName = m_ChosenMesh->m_FilePath;
 		assetName = TrimToTitle(assetName);
 
 		std::string title("Mesh editor - \"");
-		title +=  + "\"";
-
-		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
-
-		ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoDocking);
-
-		ImGui::End();
-		ImGui::PopStyleColor();
-	}
-	void EditorLayer::EditTexture()
-	{
-		std::string assetName = m_ChosenTexture->GetFilePath();
-		assetName = TrimToTitle(assetName);
-
-		std::string title("Texture editor - \"");
 		title += assetName + "\"";
 
 		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
 
-		ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoDocking);
+		if (ImGui::Begin(title.c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
+			static char name[86];
+
+			if (m_AssetEditorInit)
+			{
+				strcpy_s(name, sizeof(char) * 86, m_ChosenMesh->GetName().c_str());
+				m_AssetEditorInit = false;
+			}
+
+			ImGui::InputText("Name: ", name, 86);
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Save Name"))
+				m_AssetManager->RenameMesh(m_ChosenMesh->GetName(), name);
+
+			ImGui::Text(("Path: " + m_ChosenMesh->m_FilePath).c_str());
+
+			for (int id = 0; auto& subMesh : m_ChosenMesh->m_SubMeshes)
+			{
+				ImGui::PushID(id);
+
+				if (ImGui::CollapsingHeader(("Submesh [" + std::to_string(id) + "]").c_str()))
+				{
+					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->GetSize())).c_str());
+					ImGui::Text(("Material: " + subMesh.m_Material->GetName()).c_str());
+
+					ImGui::Spacing();
+
+					ImGui::Text("Choose new material: ");
+					const std::vector<Material*>& allMaterials = m_AssetManager->GetAllMaterials();
+
+					std::vector<const char*> materialNames(allMaterials.size()+1);
+
+					materialNames[0] = "No material";
+
+					for (int i = 1; i < materialNames.size(); i++)
+						materialNames[i] = allMaterials[i-1]->GetName().c_str();
+					
+					static int chosenMaterialIndex = 0;
+					ImGui::Combo("Materials", &chosenMaterialIndex, materialNames.data(), materialNames.size());
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Update Material"))
+					{
+						if (chosenMaterialIndex == 0)
+							subMesh.m_Material = Material::GetDefaultMaterial();
+						else
+							subMesh.m_Material = m_AssetManager->GetMaterial(allMaterials[chosenMaterialIndex-1]->GetName());
+					}
+
+					SPACE();
+				}
+			
+				ImGui::PopID();
+
+				id++;
+			}
+		}
 
 		ImGui::End();
+		ImGui::PopStyleColor();
+	}
+	void EditorLayer::EditTexture(bool* open)
+	{
+		std::string assetName = m_ChosenTexture->GetFilePath();
+		assetName = TrimToTitle(assetName);
+
+		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
+
+		if (ImGui::Begin(("Texture editor - \"" + assetName + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
+			ImGui::Text(("Name: " + assetName).c_str());
+			ImGui::Text(("Path: " + m_ChosenTexture->GetFilePath()).c_str());
+			// More editing
+		}
+
+		ImGui::End();
+		ImGui::PopStyleColor();
+	}
+	void EditorLayer::CreateMaterial()
+	{
+		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
+
+		if (ImGui::Begin("Creating a new material", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
+			static float col[3] = { m_ChosenMaterial->m_Color.r, m_ChosenMaterial->m_Color.y, m_ChosenMaterial->m_Color.z };
+
+			static char name[86];
+
+			ImGui::InputText("Name: ", name, 86);
+
+			if (ImGui::ColorEdit3("Color: ", col))
+			{
+				m_ChosenMaterial->m_Color.r = col[0];
+				m_ChosenMaterial->m_Color.y = col[1];
+				m_ChosenMaterial->m_Color.z = col[2];
+			}
+			else
+			{
+				col[0] = m_ChosenMaterial->m_Color.r;
+				col[1] = m_ChosenMaterial->m_Color.y;
+				col[2] = m_ChosenMaterial->m_Color.z;
+			}
+
+
+			ImGui::DragFloat("Shininess: ", &m_ChosenMaterial->m_Shininess, 0.5f, 1.0f, 512.0f);
+			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
+
+			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
+
+			std::vector<const char*> textureNames(allTextures.size() + 1);
+			textureNames[0] = "No texture";
+
+			for (int i = 1; i < textureNames.size(); i++)
+				textureNames[i] = allTextures[i - 1]->GetName().c_str();
+
+			SPACE();
+
+			// Albedo texture
+			ImGui::PushID("Albedo");
+			ImGui::Text(("Albedo Texture: " + m_ChosenMaterial->GetAlbedoTexture()->GetFilePath()).c_str());
+			ImGui::Text("Choose new albedo texture: ");
+
+			static int chosenAlbedoIndex = 0;
+			ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size());
+			ImGui::PopID();
+			
+
+			SPACE();
+
+			// Specular texture
+			ImGui::PushID("Specular");
+			ImGui::Text(("Specular Texture: " + m_ChosenMaterial->GetSpecularTexture()->GetFilePath()).c_str());
+			ImGui::Text("Choose new specular texture: ");
+
+			static int chosenSpecularIndex = 0;
+			ImGui::Combo("Textures", &chosenSpecularIndex, textureNames.data(), textureNames.size());
+			ImGui::PopID();
+
+			SPACE();
+
+			// Normal texture
+			ImGui::PushID("Normal");
+			ImGui::Text(("Normal Texture: " + m_ChosenMaterial->GetNormalTexture()->GetFilePath()).c_str());
+			ImGui::Text("Choose new normal texture: ");
+
+			static int chosenNormalIndex = 0;
+			ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size());
+			ImGui::PopID();
+			
+
+			if (ImGui::Button("Save", { 100, 100 }))
+			{
+				std::string nameStr(name);
+
+				if (nameStr.length() <= 0 || m_AssetManager->ContainsMaterial(nameStr))
+					EN_WARN("Enter a valid material name!")
+				else
+				{
+					m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
+
+					if (chosenAlbedoIndex == 0)
+						m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
+					else
+						m_ChosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
+
+					if (chosenSpecularIndex == 0)
+						m_ChosenMaterial->SetSpecularTexture(Texture::GetGreyNonSRGBTexture());
+					else
+						m_ChosenMaterial->SetSpecularTexture(m_AssetManager->GetTexture(allTextures[chosenSpecularIndex - 1]->GetName()));
+
+					if (chosenNormalIndex == 0)
+						m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
+					else
+						m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
+
+					m_IsCreatingMaterial = false;
+				}
+			}
+		}
+
+		ImGui::End();
+
+
 		ImGui::PopStyleColor();
 	}
 

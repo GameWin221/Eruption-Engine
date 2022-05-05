@@ -77,13 +77,18 @@ namespace en
 		Texture* m_ChosenTexture = nullptr;
 		Mesh* m_ChosenMesh = nullptr;
 
+		bool m_ShowAssetEditor = false;
+		bool m_AssetEditorInit = false;
+		bool m_IsCreatingMaterial = false;
+
 		//bool m_MaterialEditorOpen = false;
 		//bool m_TextureEditorOpen = false;
 		//bool m_MeshEditorOpen = false;
 
-		void EditMaterial();
-		void EditMesh();
-		void EditTexture();
+		void EditMaterial(bool* open);
+		void EditMesh(bool* open);
+		void EditTexture(bool* open);
+		void CreateMaterial();
 
 		std::string TrimToTitle(std::string& path);
 	};

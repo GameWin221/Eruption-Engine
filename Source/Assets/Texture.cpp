@@ -11,12 +11,9 @@ namespace en
 	Texture* g_NormalTexture;
 	Texture* g_GreyTexture;
 
-	Texture::Texture(std::string texturePath, VkFormat format, bool flipTexture)
+	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture) : m_Name(name), m_FilePath(texturePath), m_ImageFormat(format)
 	{
 		bool shouldFreeImage = true;
-
-		m_FilePath = texturePath;
-		m_ImageFormat = format;
 		
 		VkBuffer       stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
@@ -61,14 +58,11 @@ namespace en
 
 		en::Helpers::DestroyBuffer(stagingBuffer, stagingBufferMemory);
 	}
-	Texture::Texture(stbi_uc* pixelData, VkFormat format, glm::uvec2 size)
+	Texture::Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size): m_Name(name), m_Size(size), m_ImageFormat(format)
 	{
 		VkBuffer       stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
-
-		m_ImageFormat = format;
-		m_Size = size;
-		VkDeviceSize imageSize = m_Size.x * m_Size.y * 4;
+		VkDeviceSize   imageSize = m_Size.x * m_Size.y * 4;
 
 		en::Helpers::CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
@@ -100,21 +94,21 @@ namespace en
 	Texture* Texture::GetWhiteSRGBTexture()
 	{
 		if (!g_WhiteTexture)
-			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
+			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), "DefaultWhite", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
 
 		return g_WhiteTexture;
 	}
 	Texture* Texture::GetGreyNonSRGBTexture()
 	{
 		if (!g_GreyTexture)
-			g_GreyTexture = new Texture(g_GreyTexturePixels.data(), VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
+			g_GreyTexture = new Texture(g_GreyTexturePixels.data(), "DefaultGrey", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
 
 		return g_GreyTexture;
 	}
 	Texture* Texture::GetNormalTexture()
 	{
 		if (!g_NormalTexture)
-			g_NormalTexture = new Texture(g_NormalTexturePixels.data(), VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
+			g_NormalTexture = new Texture(g_NormalTexturePixels.data(), "DefaultNormal", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
 
 		return g_NormalTexture;
 	}

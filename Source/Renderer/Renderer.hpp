@@ -15,6 +15,7 @@ namespace en
 
 		void EnqueueSceneObject(SceneObject* sceneObject);
 		
+		void WaitForGPUIdle();
 		void Render();
 
 		void SetMainCamera(Camera* camera);

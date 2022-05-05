@@ -13,9 +13,11 @@ namespace en
 {
 	class Texture
 	{
+		friend class AssetManager;
+
 	public:
-		Texture(std::string texturePath, VkFormat format, bool flipTexture = false);
-		Texture(stbi_uc* pixelData, VkFormat format, glm::uvec2 size);
+		Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture = false);
+		Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size);
 		~Texture();
 
 		VkImage		m_Image;
@@ -30,10 +32,13 @@ namespace en
 
 		const glm::ivec2& GetSize()      const { return m_Size; };
 		const std::string& GetFilePath() const { return m_FilePath; };
+		const std::string& GetName() const { return m_Name; };
 
 	private:
 		void CreateImageSampler();
 		void CopyBufferToImage(const VkBuffer& srcBuffer);
+
+		std::string m_Name;
 
 		glm::ivec2  m_Size;
 		std::string m_FilePath;

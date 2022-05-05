@@ -110,6 +110,10 @@ void Eruption::Update()
 	}
 
 	m_Input->UpdateInput();
+
+	m_Renderer->WaitForGPUIdle();
+
+	m_AssetManager->UpdateAssets();
 }
 void Eruption::Render()
 {

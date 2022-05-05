@@ -20,6 +20,11 @@ namespace en
 		m_Backend.EnqueueSceneObject(sceneObject);
 	}
 
+	void Renderer::WaitForGPUIdle()
+	{
+		m_Backend.WaitForGPUIdle();
+	}
+
 	void Renderer::Render()
 	{
 		m_Backend.BeginRender();

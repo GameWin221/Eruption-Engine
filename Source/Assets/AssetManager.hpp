@@ -46,6 +46,12 @@ namespace en
 		bool ContainsTexture (std::string nameID) { return m_Textures .contains(nameID); };
 		bool ContainsMaterial(std::string nameID) { return m_Materials.contains(nameID); };
 
+		void RenameMesh    (std::string oldNameID, std::string newNameID);
+		void RenameTexture (std::string oldNameID, std::string newNameID);
+		void RenameMaterial(std::string oldNameID, std::string newNameID);
+
+		void UpdateAssets();
+
 		Mesh*     GetMesh    (std::string nameID);
 		Texture*  GetTexture (std::string nameID);
 		Material* GetMaterial(std::string nameID);
@@ -55,11 +61,13 @@ namespace en
 		std::vector<Material*> GetAllMaterials();
 
 	private:
+		void UpdateMaterials();
+
 		std::unordered_map<std::string, std::unique_ptr<Mesh    >> m_Meshes;
 		std::unordered_map<std::string, std::unique_ptr<Texture >> m_Textures;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
 
-		std::unique_ptr<Mesh> LoadMeshFromFile(std::string& filePath, bool& importMaterial);
+		std::unique_ptr<Mesh> LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial);
 		void ProcessNode(aiNode* node, const aiScene* scene, std::vector<Material*> materials, Mesh* mesh);
 		void GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices);
 		void GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices);

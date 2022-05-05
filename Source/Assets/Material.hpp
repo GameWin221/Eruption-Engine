@@ -9,6 +9,8 @@ namespace en
 {
 	class Material
 	{
+		friend class AssetManager;
+
 	public:
 		Material(std::string name, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture);
 		~Material();
@@ -18,27 +20,39 @@ namespace en
 		float m_Shininess;
 		float m_NormalStrength;
 
-		Texture* m_Albedo;
-		Texture* m_Specular;
-		Texture* m_Normal;
-
-		std::string m_Name;
-
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
-		void Update();
+		void UpdateDescriptorSet();
 
 		static Material* GetDefaultMaterial();
 
 		static VkDescriptorSetLayout& GetLayout();
 
+		void SetAlbedoTexture(Texture* texture);
+		void SetSpecularTexture(Texture* texture);
+		void SetNormalTexture(Texture* texture);
+
+		const Texture* GetAlbedoTexture()   const { return m_Albedo;   };
+		const Texture* GetSpecularTexture() const { return m_Specular; };
+		const Texture* GetNormalTexture()   const { return m_Normal;   };
+
+		const std::string& GetName() const { return m_Name; };
+
 	private:
 		void CreateDescriptorSet();
 		void CreateMatBuffer();
+
+		Texture* m_Albedo;
+		Texture* m_Specular;
+		Texture* m_Normal;
 
 		VkDescriptorSet m_DescriptorSet;
 
 		VkBuffer m_Buffer;
 		VkDeviceMemory m_BufferMemory;
+
+		bool m_UpdateQueued = false;
+
+		std::string m_Name;
 
 		struct MatBuffer
 		{

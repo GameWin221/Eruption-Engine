@@ -44,6 +44,23 @@ namespace en
 
 		return g_DefaultMaterial;
 	}
+
+	void Material::SetAlbedoTexture(Texture* texture)
+	{
+		m_Albedo = texture;
+		m_UpdateQueued = true;
+	}
+	void Material::SetSpecularTexture(Texture* texture)
+	{
+		m_Specular = texture;
+		m_UpdateQueued = true;
+	}
+	void Material::SetNormalTexture(Texture* texture)
+	{
+		m_Normal = texture;
+		m_UpdateQueued = true;
+	}
+
 	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
 		m_MatBuffer.color = m_Color;
@@ -53,65 +70,71 @@ namespace en
 		en::Helpers::MapBuffer(m_BufferMemory, &m_MatBuffer, g_MatBufferSize);
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &m_DescriptorSet, 0, nullptr);
 	}
-	void Material::Update()
+	void Material::UpdateDescriptorSet()
 	{
-		UseContext();
+		if (m_UpdateQueued)
+		{
+			UseContext();
 
-		VkDescriptorBufferInfo matInfo{};
-		matInfo.buffer = m_Buffer;
-		matInfo.offset = 0;
-		matInfo.range = sizeof(MatBuffer);
+			VkDescriptorBufferInfo matInfo{};
+			matInfo.buffer = m_Buffer;
+			matInfo.offset = 0;
+			matInfo.range = sizeof(MatBuffer);
 
-		VkDescriptorImageInfo albedoImageInfo{};
-		albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		albedoImageInfo.imageView = m_Albedo->m_ImageView;
-		albedoImageInfo.sampler = m_Albedo->m_ImageSampler;
+			VkDescriptorImageInfo albedoImageInfo{};
+			albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			albedoImageInfo.imageView = m_Albedo->m_ImageView;
+			albedoImageInfo.sampler = m_Albedo->m_ImageSampler;
 
-		VkDescriptorImageInfo specularImageInfo{};
-		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		specularImageInfo.imageView = m_Specular->m_ImageView;
-		specularImageInfo.sampler = m_Specular->m_ImageSampler;
+			VkDescriptorImageInfo specularImageInfo{};
+			specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			specularImageInfo.imageView = m_Specular->m_ImageView;
+			specularImageInfo.sampler = m_Specular->m_ImageSampler;
 
-		VkDescriptorImageInfo normalImageInfo{};
-		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		normalImageInfo.imageView = m_Normal->m_ImageView;
-		normalImageInfo.sampler = m_Normal->m_ImageSampler;
+			VkDescriptorImageInfo normalImageInfo{};
+			normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			normalImageInfo.imageView = m_Normal->m_ImageView;
+			normalImageInfo.sampler = m_Normal->m_ImageSampler;
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = m_DescriptorSet;
-		descriptorWrites[0].dstBinding = 1;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &matInfo;
+			std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = m_DescriptorSet;
+			descriptorWrites[0].dstBinding = 1;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = &matInfo;
 
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = m_DescriptorSet;
-		descriptorWrites[1].dstBinding = 2;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &albedoImageInfo;
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = m_DescriptorSet;
+			descriptorWrites[1].dstBinding = 2;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[1].descriptorCount = 1;
+			descriptorWrites[1].pImageInfo = &albedoImageInfo;
 
-		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[2].dstSet = m_DescriptorSet;
-		descriptorWrites[2].dstBinding = 3;
-		descriptorWrites[2].dstArrayElement = 0;
-		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[2].descriptorCount = 1;
-		descriptorWrites[2].pImageInfo = &specularImageInfo;
+			descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[2].dstSet = m_DescriptorSet;
+			descriptorWrites[2].dstBinding = 3;
+			descriptorWrites[2].dstArrayElement = 0;
+			descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[2].descriptorCount = 1;
+			descriptorWrites[2].pImageInfo = &specularImageInfo;
 
-		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[3].dstSet = m_DescriptorSet;
-		descriptorWrites[3].dstBinding = 4;
-		descriptorWrites[3].dstArrayElement = 0;
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[3].descriptorCount = 1;
-		descriptorWrites[3].pImageInfo = &normalImageInfo;
+			descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[3].dstSet = m_DescriptorSet;
+			descriptorWrites[3].dstBinding = 4;
+			descriptorWrites[3].dstArrayElement = 0;
+			descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[3].descriptorCount = 1;
+			descriptorWrites[3].pImageInfo = &normalImageInfo;
 
-		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+
+			m_UpdateQueued = false;
+		}
 	}
+
 	VkDescriptorSetLayout& Material::GetLayout()
 	{
 		if (g_MatDescriptorPool == VK_NULL_HANDLE)
@@ -200,7 +223,8 @@ namespace en
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("Material::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
-		Update();
+		m_UpdateQueued = true;
+		UpdateDescriptorSet();
 	}
 	void Material::CreateMatBuffer()
 	{

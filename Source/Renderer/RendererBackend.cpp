@@ -87,10 +87,12 @@ namespace en
 		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_ImGui.descriptorPool, nullptr);
 	}
 
-	void VulkanRendererBackend::BeginRender()
+	void VulkanRendererBackend::WaitForGPUIdle()
 	{
 		vkWaitForFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence, VK_TRUE, UINT64_MAX);
-
+	}
+	void VulkanRendererBackend::BeginRender()
+	{
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline.passFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
 		m_SkipFrame = false;

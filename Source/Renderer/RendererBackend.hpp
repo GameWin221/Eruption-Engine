@@ -40,6 +40,8 @@ namespace en
 
 		void EnqueueSceneObject(SceneObject* sceneObject);
 
+		void WaitForGPUIdle();
+
 		void BeginRender();
 
 		void GeometryPass();
