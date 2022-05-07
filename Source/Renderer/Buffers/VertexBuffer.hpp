@@ -62,6 +62,7 @@ namespace en
             normal   = other.normal;
             tangent  = other.tangent;
             texcoord = other.texcoord;
+            return *this;
         }
 
         bool operator==(const Vertex& other) const 

@@ -90,7 +90,7 @@ namespace en
 		float m_MouseSensitivity = 1.0f;
 
 		const glm::vec2   GetMousePosition() const;
-		const glm::vec2&  GetMouseVelocity() const { return m_MouseVel * m_MouseSensitivity; };
+		const glm::vec2   GetMouseVelocity() const { return m_MouseVel * m_MouseSensitivity; };
 		const CursorMode& GetCursorMode()    const { return m_CursorMode; };
 
 	private:

@@ -37,8 +37,12 @@ namespace en
 			glfwWindowHint(GLFW_RESIZABLE, m_WindowInfo.resizable);
 			m_GLFWWindow = glfwCreateWindow(m_WindowInfo.size.x, m_WindowInfo.size.y, m_WindowInfo.title.c_str(), nullptr, nullptr);
 		}
-		
-		EN_SUCCESS("Successfully created a window");
+
+        if(!m_GLFWWindow)
+            EN_ERROR("Window::Window() - Failed to create m_GLFWWindow!")
+        else
+		    EN_SUCCESS("Successfully created a window")
+
 	}
 	Window::~Window()
 	{

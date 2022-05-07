@@ -2,21 +2,22 @@
 #include <Core/Eruption.hpp>
 
 // If compiled in Debug mode or not on Windows, show console
-#if defined(_DEBUG) || not defined(_WIN32)
+#if not defined(NDEBUG) || not defined(_WIN32)
 int main()
 
 // If compiled in Release mode on Windows, don't show the console
 #else
-	int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+#include <windows.h>
+	int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
 #endif
 {
 	Eruption engine;
 	
-	try 
-	{ 
-		engine.Run(); 
+	try
+	{
+		engine.Run();
 	}
-	catch (const std::exception& e) 
+	catch (const std::exception& e)
 	{
 		return EXIT_FAILURE;
 	}

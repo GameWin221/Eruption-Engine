@@ -25,24 +25,44 @@ namespace en
 
 		glfwSetFramebufferSizeCallback(m_Window->m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
 
+        EN_SUCCESS("Init began!")
+
 		CreateSwapchain();
+
+        EN_SUCCESS("Created swapchain!")
 
 		CreateGBufferAttachments();
 
+        EN_SUCCESS("Created GBuffer attachments!")
+
 		InitGeometryPipeline();
-	
+
+        EN_SUCCESS("Created geometry pipeline!")
+
 		CreateGBuffer();
 
+        EN_SUCCESS("Created GBuffer!")
+
 		InitLightingPipeline();
-	
+
+        EN_SUCCESS("Created lighting pipeline!")
+
 		InitPostProcessPipeline();
+
+        EN_SUCCESS("Created PP pipeline!")
 
 		CreateSwapchainFramebuffers();
 
+        EN_SUCCESS("Created swapchain framebuffers!")
+
 		CreateSyncObjects();
 
+        EN_SUCCESS("Created sync objects!")
+
 		CreateCameraMatricesBuffer();
-	
+
+        EN_SUCCESS("Created camera matrices buffer!")
+
 		InitImGui();
 
 		EN_SUCCESS("Successfully created the renderer Vulkan backend");

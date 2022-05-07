@@ -31,7 +31,7 @@ namespace en
 		static Window&     GetMainWindow();
 		const  WindowInfo& GetInfo() const { return m_WindowInfo; };
 
-		const bool& IsOpen() const { return !glfwWindowShouldClose(m_GLFWWindow); };
+		const bool IsOpen() const { return !glfwWindowShouldClose(m_GLFWWindow); };
 
 		Window(const Window&) = delete;
 		Window& operator=(const Window&) = delete;

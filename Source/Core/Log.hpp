@@ -5,7 +5,7 @@
 
 #include <ColorfulLogging.h>
 
-	#ifdef _DEBUG
+	#if not defined(DEBUG)
 	
 		#define EN_LOG(message)     { cl::Log(message, cl::Level::Info   ); std::cout << '\n';								 }
 		#define EN_WARN(message)    { cl::Log(message, cl::Level::Warning); std::cout << '\n';								 }
