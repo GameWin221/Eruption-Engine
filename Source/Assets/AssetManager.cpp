@@ -35,8 +35,6 @@ namespace en
     }
     bool AssetManager::LoadTexture(std::string nameID, std::string path, TextureImportProperties properties)
     {
-        if (properties.overwrite) m_Textures.erase(nameID);
-
         if (m_Textures.contains(nameID))
         {
             EN_WARN("AssetManager::LoadTexture() - Failed to load a texture with name \"" + nameID + "\" from \"" + path + "\" because a texture with that name already exists!");
@@ -49,17 +47,11 @@ namespace en
 
     void AssetManager::DeleteMesh(std::string nameID)
     {
-        if(m_Meshes.contains(nameID))
-            m_Meshes.at(nameID)->m_WillBeDeleted = true;
-        else
-            EN_WARN("AssetManager::DeleteMesh() - Failed to delete a mesh with name \"" + nameID + "\" because a mesh with that name doesn't exists!");
+        EN_WARN("AssetManager::DeleteMesh() - This feature is disabled for now!");
     }
     void AssetManager::DeleteTexture(std::string nameID)
     {
-        if (m_Textures.contains(nameID))
-            m_Textures.at(nameID)->m_WillBeDeleted = true;
-        else
-            EN_WARN("AssetManager::DeleteTexture() - Failed to delete a texture with name \"" + nameID + "\" because a texture with that name doesn't exists!");
+        EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
     bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
@@ -84,10 +76,7 @@ namespace en
     }
     void AssetManager::DeleteMaterial(std::string nameID)
     {
-        if (m_Materials.contains(nameID))
-            m_Materials.at(nameID)->m_WillBeDeleted = true;
-        else
-            EN_WARN("AssetManager::DeleteMaterial() - Failed to delete a material with name \"" + nameID + "\" because a material with that name doesn't exists!");
+        EN_WARN("AssetManager::DeleteMaterial() - This feature is disabled for now!");
     }
 
     void AssetManager::RenameMesh(std::string oldNameID, std::string newNameID)
@@ -141,9 +130,7 @@ namespace en
 
     void AssetManager::UpdateAssets()
     {
-        UpdateTextures();
         UpdateMaterials();
-        UpdateMeshes();
     }
 
     Mesh* AssetManager::GetMesh(std::string nameID)
@@ -211,45 +198,8 @@ namespace en
 
     void AssetManager::UpdateMaterials()
     {
-        for (auto it = m_Materials.begin(); it != m_Materials.end();)
-        {
-            if (it->second->m_WillBeDeleted)
-            {
-                EN_LOG("Deleted the \"" + it->first + "\" material");
-                it = m_Materials.erase(it);
-            }
-            else
-            {
-                it->second->UpdateDescriptorSet();
-                ++it;
-            }
-        }
-    }
-    void AssetManager::UpdateMeshes()
-    {
-        for (auto it = m_Meshes.begin(); it != m_Meshes.end();)
-        {
-            if (it->second->m_WillBeDeleted)
-            {
-                EN_LOG("Deleted the \"" + it->first + "\" mesh");
-                it = m_Meshes.erase(it);
-            }
-            else
-                ++it;
-        }
-    }
-    void AssetManager::UpdateTextures()
-    {
-        for (auto it = m_Textures.begin(); it != m_Textures.end();)
-        {
-            if (it->second->m_WillBeDeleted)
-            {
-                EN_LOG("Deleted the \"" + it->first + "\" texture");
-                m_Textures.erase(it->first);
-            }
-            else
-                ++it;
-        }
+        for (auto& material : m_Materials)
+            material.second->UpdateDescriptorSet();
     }
 
     std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial)
@@ -331,7 +281,7 @@ namespace en
         {
             aiMesh* assimpMesh = scene->mMeshes[node->mMeshes[i]];
             Material* material = (materials.size() > 0) ? materials[assimpMesh->mMaterialIndex] : Material::GetDefaultMaterial();
-
+            
             std::vector<Vertex> vertices;
             std::vector<uint32_t> indices;
 

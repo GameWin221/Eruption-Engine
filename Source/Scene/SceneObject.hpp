@@ -29,12 +29,11 @@ namespace en
 
 		PerObjectData& GetObjectData();
 
-		void SetMesh(Mesh* newMesh);
-		const Mesh* GetMesh();
-
-	private:
 		Mesh* m_Mesh;
 
+		bool m_Active = true;
+
+	private:
 		PerObjectData m_Object;
 
 		void UpdateModelMatrix();

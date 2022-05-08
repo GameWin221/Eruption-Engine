@@ -21,7 +21,6 @@ namespace en
 	struct TextureImportProperties
 	{
 		TextureFormat format = TextureFormat::Color;
-		bool overwrite = false;
 		bool flipped = false;
 	};
 	
@@ -41,7 +40,7 @@ namespace en
 		void DeleteMesh   (std::string nameID);
 		void DeleteTexture(std::string nameID);
 
-		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 48.0f, float normalStrength = 0.5f, Texture* albedoTexture = nullptr, Texture* specularTexture = nullptr, Texture* normalTexture = nullptr);
+		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 48.0f, float normalStrength = 0.5f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* specularTexture = Texture::GetGreyNonSRGBTexture(), Texture* normalTexture = Texture::GetNormalTexture());
 		void DeleteMaterial(std::string nameID);
 
 		bool ContainsMesh    (std::string nameID) { return m_Meshes   .contains(nameID); };
@@ -58,17 +57,16 @@ namespace en
 		Texture*  GetTexture (std::string nameID);
 		Material* GetMaterial(std::string nameID);
 
-		std::vector<Mesh*    >     GetAllMeshes();
+		std::vector<Mesh*>     GetAllMeshes();
 		std::vector<Texture* >  GetAllTextures();
 		std::vector<Material*> GetAllMaterials();
 
 	private:
 		void UpdateMaterials();
-		void UpdateMeshes();
-		void UpdateTextures();
 
-		std::unordered_map<std::string, std::unique_ptr<Mesh    >> m_Meshes;
-		std::unordered_map<std::string, std::unique_ptr<Texture >> m_Textures;
+
+		std::unordered_map<std::string, std::unique_ptr<Mesh>>     m_Meshes;
+		std::unordered_map<std::string, std::unique_ptr<Texture>>  m_Textures;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
 
 		std::unique_ptr<Mesh> LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial);
@@ -77,6 +75,5 @@ namespace en
 		void GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices);
 	};
 }
-
 
 #endif

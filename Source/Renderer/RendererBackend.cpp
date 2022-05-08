@@ -164,14 +164,18 @@ namespace en
 
 		// Bind the m_MainCamera once per geometry pass
 		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.layout, m_CameraMatrices);
-		
+
 		for (const auto& object : m_RenderQueue)
 		{
+			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
+
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
 			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline.layout);
 
-			for (const auto& subMesh : object->GetMesh()->m_SubMeshes)
+			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
+				if (!subMesh.m_Active) continue;
+
 				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
 				subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
 				subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);

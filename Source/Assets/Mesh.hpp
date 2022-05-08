@@ -18,16 +18,16 @@ namespace en
 	public:
 		std::vector<SubMesh> m_SubMeshes;
 
-		std::string m_FilePath;
-
-		const std::string& GetName() const { return m_Name; };
+		const std::string& GetName()	 const { return m_Name;     };
+		const std::string& GetFilePath() const { return m_FilePath; };
 
 		static Mesh* GetEmptyMesh();
 
+		bool m_Active = true;
+
 	private:
 		std::string m_Name;
-
-		bool m_WillBeDeleted = false;
+		std::string m_FilePath;
 	};
 }
 

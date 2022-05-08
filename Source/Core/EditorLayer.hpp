@@ -38,6 +38,8 @@ namespace en
 		ImGuiWindowFlags m_CommonFlags;
 		ImColor m_DockedWindowBG;
 		ImColor m_FreeWindowBG;
+		ImVec2  m_FreeWindowMinSize;
+		ImVec2  m_FreeWindowMaxSize;
 
 		bool m_ShowLightsMenu = true;
 		bool m_ShowAssetMenu = true;
@@ -60,18 +62,16 @@ namespace en
 		bool m_AssetEditorInit = false;
 		bool m_IsCreatingMaterial = false;
 
-		void EditMaterial(bool* open);
-		void EditMesh(bool* open);
-		void EditTexture(bool* open);
-		void CreateMaterial();
-
-		std::string TrimToTitle(std::string& path);
+		void EditingMaterial(bool* open);
+		void EditingMesh(bool* open);
+		void EditingTexture(bool* open);
+		void CreatingMaterial();
 
 		enum struct AssetType
 		{
-			TypeMesh,
-			TypeTexture,
-			TypeMaterial
+			Mesh,
+			Texture,
+			Material
 		};
 
 		class AssetRef
@@ -82,7 +82,7 @@ namespace en
 			void* ptr;
 
 			AssetType type;
-
+			
 			// I know it's unsafe...
 			template <typename T>
 			T CastTo() { return reinterpret_cast<T>(ptr); };

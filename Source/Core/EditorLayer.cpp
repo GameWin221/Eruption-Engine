@@ -25,8 +25,10 @@ namespace en
 		m_Renderer->SetUIRenderCallback(std::bind(&EditorLayer::OnUIDraw, this));
 
 		m_CommonFlags = ImGuiWindowFlags_None | ImGuiWindowFlags_NoCollapse;
-		m_DockedWindowBG = ImColor(40, 40, 40, 100);
-		m_FreeWindowBG = ImColor(40, 40, 40, 255);
+		m_DockedWindowBG	= ImColor(40, 40, 40, 100);
+		m_FreeWindowBG		= ImColor(40, 40, 40, 255);
+		m_FreeWindowMinSize = ImVec2 (500 , 250);
+		m_FreeWindowMaxSize = ImVec2 (1920, 1080);
 
 		m_Viewport = ImGui::GetMainViewport();
 
@@ -51,8 +53,6 @@ namespace en
 		if(m_ShowCameraMenu)
 			DrawCameraMenu();
 
-		ImGui::ShowDemoWindow();
-
 		if (m_ShowAssetMenu)
 			DrawAssetMenu();
 
@@ -61,16 +61,16 @@ namespace en
 
 		// Asset Editors
 		if (m_ChosenMaterial && m_ShowAssetEditor)
-			EditMaterial(&m_ShowAssetEditor);
+			EditingMaterial(&m_ShowAssetEditor);
 		
 		else if (m_ChosenMesh && m_ShowAssetEditor)
-			EditMesh(&m_ShowAssetEditor);
+			EditingMesh(&m_ShowAssetEditor);
 
 		else if (m_ChosenTexture && m_ShowAssetEditor)
-			EditTexture(&m_ShowAssetEditor);
+			EditingTexture(&m_ShowAssetEditor);
 
 		if (m_ChosenMaterial && m_IsCreatingMaterial)
-			CreateMaterial();
+			CreatingMaterial();
 
 		EndRender();
 	}
@@ -304,13 +304,13 @@ namespace en
 		std::vector<AssetRef> assets;
 
 		for (const auto& mesh : meshes)
-			assets.emplace_back(mesh, AssetType::TypeMesh);
+			assets.emplace_back(mesh, AssetType::Mesh);
 
 		for (const auto& texture : textures)
-			assets.emplace_back(texture, AssetType::TypeTexture);
+			assets.emplace_back(texture, AssetType::Texture);
 
 		for (const auto& material : materials)
-			assets.emplace_back(material, AssetType::TypeMaterial);
+			assets.emplace_back(material, AssetType::Material);
 		
 
 		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x+10.0f));
@@ -323,10 +323,10 @@ namespace en
 			{
 				AssetRef& asset = assets[i + j];
 
-				if (asset.type == AssetType::TypeMesh)
+				if (asset.type == AssetType::Mesh)
 				{
 					Mesh* mesh = asset.CastTo<Mesh*>();
-					std::string name = TrimToTitle(mesh->m_FilePath);
+					std::string name = mesh->GetName();
 
 					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
@@ -337,11 +337,10 @@ namespace en
 						m_AssetEditorInit = true;
 					}
 				}
-				else if (asset.type == AssetType::TypeTexture)
+				else if (asset.type == AssetType::Texture)
 				{
 					Texture* texture = asset.CastTo<Texture*>();
-					std::string path = texture->GetFilePath();
-					std::string name = TrimToTitle(path);
+					std::string name = texture->GetName();
 
 					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
@@ -352,7 +351,7 @@ namespace en
 						m_AssetEditorInit = true;
 					}
 				}
-				else if (asset.type == AssetType::TypeMaterial)
+				else if (asset.type == AssetType::Material)
 				{
 					Material* material = asset.CastTo<Material*>();
 					std::string name = material->GetName();
@@ -463,9 +462,9 @@ namespace en
 		ImGui::Render();
 	}
 
-	void EditorLayer::EditMaterial(bool* open)
+	void EditorLayer::EditingMaterial(bool* open)
 	{
-		ImGui::SetNextWindowSizeConstraints({500, 300}, {1920, 1080});
+		ImGui::SetNextWindowSizeConstraints(m_FreeWindowMinSize, m_FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
 
 		if (ImGui::Begin(("Material editor - \"" + m_ChosenMaterial->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
@@ -486,34 +485,6 @@ namespace en
 
 			if (ImGui::Button("Save Name"))
 				m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
-
-			SPACE();
-
-			if (ImGui::Button("Delete Material"))
-				ImGui::OpenPopup("DeleteConfirmation");
-
-			if (ImGui::BeginPopup("DeleteConfirmation"))
-			{
-				ImGui::Text("Are you sure you want to delete this material?");
-				ImGui::Text("Some SubMeshes might still use this material!");
-
-				if (ImGui::Selectable("Yes"))
-				{
-					m_AssetManager->DeleteMaterial(m_ChosenMaterial->GetName());
-					m_ChosenMaterial = nullptr;
-					m_ShowAssetEditor = false;
-					ImGui::EndPopup();
-					ImGui::End();
-					ImGui::PopStyleColor();
-					return;
-				}
-				else if (ImGui::Selectable("No"))
-					ImGui::CloseCurrentPopup();
-
-				ImGui::EndPopup();
-			}
-
-			SPACE();
 
 			if (ImGui::ColorEdit3("Color: ", col))
 			{
@@ -545,7 +516,7 @@ namespace en
 			// Albedo texture
 			{ 
 				ImGui::PushID("Albedo");
-				ImGui::Text(("Albedo Texture: " + m_ChosenMaterial->GetAlbedoTexture()->GetFilePath()).c_str());
+				ImGui::Text(("Albedo Texture Name: " + m_ChosenMaterial->GetAlbedoTexture()->GetName()).c_str());
 				ImGui::Text("Choose new albedo texture: ");
 
 				static int chosenAlbedoIndex = 0;
@@ -568,7 +539,7 @@ namespace en
 			// Specular texture
 			{ 
 				ImGui::PushID("Specular");
-				ImGui::Text(("Specular Texture: " + m_ChosenMaterial->GetSpecularTexture()->GetFilePath()).c_str());
+				ImGui::Text(("Specular Texture Name: " + m_ChosenMaterial->GetSpecularTexture()->GetName()).c_str());
 				ImGui::Text("Choose new specular texture: ");
 
 				static int chosenSpecularIndex = 0;
@@ -591,7 +562,7 @@ namespace en
 			// Normal texture
 			{
 				ImGui::PushID("Normal");
-				ImGui::Text(("Normal Texture: " + m_ChosenMaterial->GetNormalTexture()->GetFilePath()).c_str());
+				ImGui::Text(("Normal Texture Name: " + m_ChosenMaterial->GetNormalTexture()->GetName()).c_str());
 				ImGui::Text("Choose new normal texture: ");
 
 				static int chosenNormalIndex = 0;
@@ -615,18 +586,12 @@ namespace en
 
 		ImGui::PopStyleColor();
 	}
-	void EditorLayer::EditMesh(bool* open)
+	void EditorLayer::EditingMesh(bool* open)
 	{
-		std::string assetName = m_ChosenMesh->m_FilePath;
-		assetName = TrimToTitle(assetName);
-
-		std::string title("Mesh editor - \"");
-		title += assetName + "\"";
-
-		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
+		ImGui::SetNextWindowSizeConstraints(m_FreeWindowMinSize, m_FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
 
-		if (ImGui::Begin(title.c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		if (ImGui::Begin(("Mesh editor - \"" + m_ChosenMesh->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
 			static char name[86];
 
@@ -635,7 +600,7 @@ namespace en
 				strcpy_s(name, sizeof(char) * 86, m_ChosenMesh->GetName().c_str());
 				m_AssetEditorInit = false;
 			}
-
+			
 			ImGui::InputText("Name: ", name, 86);
 
 			ImGui::SameLine();
@@ -643,33 +608,11 @@ namespace en
 			if (ImGui::Button("Save Name"))
 				m_AssetManager->RenameMesh(m_ChosenMesh->GetName(), name);
 
-			ImGui::Text(("Path: " + m_ChosenMesh->m_FilePath).c_str());
+			ImGui::Text(("Path: " + m_ChosenMesh->GetFilePath()).c_str());
 
 			SPACE();
 
-			if (ImGui::Button("Delete Mesh"))
-				ImGui::OpenPopup("DeleteConfirmation");
-
-			if (ImGui::BeginPopup("DeleteConfirmation"))
-			{
-				ImGui::Text("Are you sure you want to delete this mesh?");
-				ImGui::Text("Some SceneObjects might still use this mesh!");
-
-				if (ImGui::Selectable("Yes"))
-				{
-					m_AssetManager->DeleteMesh(m_ChosenMesh->GetName());
-					m_ChosenMesh = nullptr;
-					m_ShowAssetEditor = false;
-					ImGui::EndPopup();
-					ImGui::End();
-					ImGui::PopStyleColor();
-					return;
-				}
-				else if (ImGui::Selectable("No"))
-					ImGui::CloseCurrentPopup();
-
-				ImGui::EndPopup();
-			}
+			ImGui::Checkbox("Is Active", &m_ChosenMesh->m_Active);
 
 			SPACE();
 
@@ -681,6 +624,12 @@ namespace en
 				{
 					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->GetSize())).c_str());
 					ImGui::Text(("Material: " + subMesh.m_Material->GetName()).c_str());
+
+					SPACE();
+
+					ImGui::Checkbox("Is Active", &subMesh.m_Active);
+
+					SPACE();
 
 					ImGui::Spacing();
 
@@ -719,66 +668,48 @@ namespace en
 		ImGui::End();
 		ImGui::PopStyleColor();
 	}
-	void EditorLayer::EditTexture(bool* open)
+	void EditorLayer::EditingTexture(bool* open)
 	{
-		std::string assetName = m_ChosenTexture->GetFilePath();
-		assetName = TrimToTitle(assetName);
-
-		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
+		ImGui::SetNextWindowSizeConstraints(m_FreeWindowMinSize, m_FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
 
-		if (ImGui::Begin(("Texture editor - \"" + assetName + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		if (ImGui::Begin(("Texture editor - \"" + m_ChosenTexture->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
-			ImGui::Text(("Name: " + assetName).c_str());
-			ImGui::Text(("Path: " + m_ChosenTexture->GetFilePath()).c_str());
+			static char name[86];
 
-			SPACE();
-
-			if (ImGui::Button("Delete Texture"))
-				ImGui::OpenPopup("DeleteConfirmation");
-
-			if (ImGui::BeginPopup("DeleteConfirmation"))
+			if (m_AssetEditorInit)
 			{
-				ImGui::Text("Are you sure you want to delete this texture?");
-				ImGui::Text("Some Materials might still use this texture!");
-
-				if (ImGui::Selectable("Yes"))
-				{
-					m_AssetManager->DeleteTexture(m_ChosenTexture->GetName());
-					m_ChosenTexture = nullptr;
-					m_ShowAssetEditor = false;
-					ImGui::EndPopup();
-					ImGui::End();
-					ImGui::PopStyleColor();
-					return;
-				}
-				else if (ImGui::Selectable("No"))
-					ImGui::CloseCurrentPopup();
-
-				ImGui::EndPopup();
+				strcpy_s(name, sizeof(char) * 86, m_ChosenTexture->GetName().c_str());
+				m_AssetEditorInit = false;
 			}
 
-			SPACE();
+			ImGui::InputText("Name: ", name, 86);
 
-			// More editing
+			ImGui::SameLine();
+
+			if (ImGui::Button("Save Name"))
+				m_AssetManager->RenameTexture(m_ChosenTexture->GetName(), name);
+
+			ImGui::Text(("Path: " + m_ChosenTexture->GetFilePath()).c_str());
 		}
 
 		ImGui::End();
 		ImGui::PopStyleColor();
 	}
-	void EditorLayer::CreateMaterial()
+	void EditorLayer::CreatingMaterial()
 	{
-		ImGui::SetNextWindowSizeConstraints({ 500, 300 }, { 1920, 1080 });
+		ImGui::SetNextWindowSizeConstraints(m_FreeWindowMinSize, m_FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_FreeWindowBG.Value);
 
 		if (ImGui::Begin("Creating a new material", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
+			
 			static float col[3] = { m_ChosenMaterial->m_Color.r, m_ChosenMaterial->m_Color.y, m_ChosenMaterial->m_Color.z };
 
 			static char name[86];
 
 			ImGui::InputText("Name: ", name, 86);
-
+			
 			if (ImGui::ColorEdit3("Color: ", col))
 			{
 				m_ChosenMaterial->m_Color.r = col[0];
@@ -808,7 +739,6 @@ namespace en
 
 			// Albedo texture
 			ImGui::PushID("Albedo");
-			ImGui::Text(("Albedo Texture: " + m_ChosenMaterial->GetAlbedoTexture()->GetFilePath()).c_str());
 			ImGui::Text("Choose new albedo texture: ");
 
 			static int chosenAlbedoIndex = 0;
@@ -820,7 +750,6 @@ namespace en
 
 			// Specular texture
 			ImGui::PushID("Specular");
-			ImGui::Text(("Specular Texture: " + m_ChosenMaterial->GetSpecularTexture()->GetFilePath()).c_str());
 			ImGui::Text("Choose new specular texture: ");
 
 			static int chosenSpecularIndex = 0;
@@ -831,7 +760,6 @@ namespace en
 
 			// Normal texture
 			ImGui::PushID("Normal");
-			ImGui::Text(("Normal Texture: " + m_ChosenMaterial->GetNormalTexture()->GetFilePath()).c_str());
 			ImGui::Text("Choose new normal texture: ");
 
 			static int chosenNormalIndex = 0;
@@ -867,23 +795,12 @@ namespace en
 					m_IsCreatingMaterial = false;
 				}
 			}
+			
 		}
-
+		
 		ImGui::End();
 
 
 		ImGui::PopStyleColor();
-	}
-
-	std::string EditorLayer::TrimToTitle(std::string& path)
-	{
-		std::string name;
-
-		if(path.find('/')>0)
-			name = path.substr(path.find_last_of('/' ) + 1, path.size());
-		else if(path.find('\\') > 0)
-			name = path.substr(path.find_last_of('\\') + 1, path.size());
-
-		return name;
 	}
 }

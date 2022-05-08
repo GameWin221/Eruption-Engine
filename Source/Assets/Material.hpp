@@ -61,8 +61,6 @@ namespace en
 			alignas(4) float normalStrength = 0.5f;
 
 		} m_MatBuffer;
-
-		bool m_WillBeDeleted = false;
 	};
 }
 

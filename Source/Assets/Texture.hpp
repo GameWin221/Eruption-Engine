@@ -30,9 +30,9 @@ namespace en
 		static Texture* GetGreyNonSRGBTexture();
 		static Texture* GetNormalTexture();
 
-		const glm::ivec2& GetSize()      const { return m_Size; };
+		const glm::ivec2&  GetSize()     const { return m_Size;     };
 		const std::string& GetFilePath() const { return m_FilePath; };
-		const std::string& GetName() const { return m_Name; };
+		const std::string& GetName()     const { return m_Name;	    };
 
 	private:
 		void CreateImageSampler();
@@ -43,8 +43,6 @@ namespace en
 		glm::ivec2  m_Size;
 		std::string m_FilePath;
 		int		    m_Channels;
-
-		bool m_WillBeDeleted = false;
 	};
 }
 
