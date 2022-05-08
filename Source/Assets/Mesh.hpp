@@ -22,8 +22,12 @@ namespace en
 
 		const std::string& GetName() const { return m_Name; };
 
+		static Mesh* GetEmptyMesh();
+
 	private:
 		std::string m_Name;
+
+		bool m_WillBeDeleted = false;
 	};
 }
 

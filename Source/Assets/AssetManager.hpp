@@ -33,11 +33,13 @@ namespace en
 	public:
 		AssetManager();
 
+		static AssetManager* GetInstance();
+
 		bool LoadMesh	(std::string nameID, std::string path, MeshImportProperties properties    = g_DefaultMeshImportSettings   );
 		bool LoadTexture(std::string nameID, std::string path, TextureImportProperties properties = g_DefaultTextureImportSettings);
 
-		void UnloadMesh   (std::string nameID);
-		void UnloadTexture(std::string nameID);
+		void DeleteMesh   (std::string nameID);
+		void DeleteTexture(std::string nameID);
 
 		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 48.0f, float normalStrength = 0.5f, Texture* albedoTexture = nullptr, Texture* specularTexture = nullptr, Texture* normalTexture = nullptr);
 		void DeleteMaterial(std::string nameID);
@@ -56,12 +58,14 @@ namespace en
 		Texture*  GetTexture (std::string nameID);
 		Material* GetMaterial(std::string nameID);
 
-		std::vector<Mesh*>     GetAllMeshes();
-		std::vector<Texture*>  GetAllTextures();
+		std::vector<Mesh*    >     GetAllMeshes();
+		std::vector<Texture* >  GetAllTextures();
 		std::vector<Material*> GetAllMaterials();
 
 	private:
 		void UpdateMaterials();
+		void UpdateMeshes();
+		void UpdateTextures();
 
 		std::unordered_map<std::string, std::unique_ptr<Mesh    >> m_Meshes;
 		std::unordered_map<std::string, std::unique_ptr<Texture >> m_Textures;

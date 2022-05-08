@@ -43,6 +43,8 @@ namespace en
 		glm::ivec2  m_Size;
 		std::string m_FilePath;
 		int		    m_Channels;
+
+		bool m_WillBeDeleted = false;
 	};
 }
 

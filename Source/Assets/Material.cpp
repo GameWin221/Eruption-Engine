@@ -13,14 +13,9 @@ namespace en
 
 	Material::Material(std::string name, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) : m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength)
 	{
-		if (!albedoTexture) m_Albedo = Texture::GetWhiteSRGBTexture();
-		else m_Albedo = albedoTexture;
-
-		if (!specularTexture) m_Specular = Texture::GetGreyNonSRGBTexture();
-		else m_Specular = specularTexture;
-
-		if (!normalTexture) m_Normal = Texture::GetNormalTexture();
-		else m_Normal = normalTexture;
+		m_Albedo = albedoTexture;
+		m_Specular = specularTexture;
+		m_Normal = normalTexture;
 
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();

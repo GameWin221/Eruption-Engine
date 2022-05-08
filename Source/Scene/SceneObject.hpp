@@ -4,6 +4,7 @@
 #define EN_SCENEOBJECT_HPP
 
 #include <Assets/Mesh.hpp>
+#include <Assets/AssetManager.hpp>
 
 namespace en
 {
@@ -21,8 +22,6 @@ namespace en
 	{
 	public:
 		SceneObject(Mesh* mesh);
-		
-		Mesh* m_Mesh;
 
 		glm::vec3 m_Position = glm::vec3(0.0);
 		glm::vec3 m_Rotation = glm::vec3(0.0);
@@ -30,7 +29,12 @@ namespace en
 
 		PerObjectData& GetObjectData();
 
+		void SetMesh(Mesh* newMesh);
+		const Mesh* GetMesh();
+
 	private:
+		Mesh* m_Mesh;
+
 		PerObjectData m_Object;
 
 		void UpdateModelMatrix();

@@ -19,6 +19,11 @@ namespace en
 
 		std::unique_ptr<VertexBuffer> m_VertexBuffer;
 		std::unique_ptr<IndexBuffer>  m_IndexBuffer;
+
+		const glm::vec3& GetCenter() const { return m_Center; }
+
+	private:
+		glm::vec3 m_Center;
 	};
 }
 

@@ -5,12 +5,21 @@ namespace en
 {
     uint32_t g_MatIndex = 0U;
 
-    Mesh* g_EmptyMesh = nullptr;
+    AssetManager* g_AssetManagerInstance;
 
     AssetManager::AssetManager()
     {
+        if (g_AssetManagerInstance)
+            EN_ERROR("Failed to create asset manager because there already is one created!");
+
         EN_SUCCESS("Successfully created the asset manager");
+        g_AssetManagerInstance = this;
     }
+    AssetManager* AssetManager::GetInstance()
+    {
+        return g_AssetManagerInstance;
+    }
+
     bool AssetManager::LoadMesh(std::string nameID, std::string path, MeshImportProperties properties)
     {
         if (properties.overwrite) m_Meshes.erase(nameID);
@@ -38,15 +47,19 @@ namespace en
         return true;
     }
 
-    void AssetManager::UnloadMesh(std::string nameID)
+    void AssetManager::DeleteMesh(std::string nameID)
     {
-        m_Meshes.erase(nameID);
-        EN_LOG("Unloaded the \"" + nameID + "\" mesh");
+        if(m_Meshes.contains(nameID))
+            m_Meshes.at(nameID)->m_WillBeDeleted = true;
+        else
+            EN_WARN("AssetManager::DeleteMesh() - Failed to delete a mesh with name \"" + nameID + "\" because a mesh with that name doesn't exists!");
     }
-    void AssetManager::UnloadTexture(std::string nameID)
+    void AssetManager::DeleteTexture(std::string nameID)
     {
-        m_Textures.erase(nameID);
-        EN_LOG("Unloaded the \"" + nameID + "\" texture");
+        if (m_Textures.contains(nameID))
+            m_Textures.at(nameID)->m_WillBeDeleted = true;
+        else
+            EN_WARN("AssetManager::DeleteTexture() - Failed to delete a texture with name \"" + nameID + "\" because a texture with that name doesn't exists!");
     }
 
     bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
@@ -64,16 +77,17 @@ namespace en
                                                                          std::to_string(color.z) + 
                                                        ", Shininess: " + std::to_string(shininess) + 
                                                        ", Normal Strength: "+ std::to_string(normalStrength) + 
-                                                       ", Albedo: "    + std::to_string((uint64_t)albedoTexture  ) +
-                                                       ", Specular: "  + std::to_string((uint64_t)specularTexture) +
-                                                       ", Normal: "    + std::to_string((uint64_t)normalTexture));
-
+                                                       ", Albedo: "    + ((albedoTexture)   ? albedoTexture   ->m_Name : "No Texture") +
+                                                       ", Specular: "  + ((specularTexture) ?  specularTexture->m_Name : "No Texture") +
+                                                       ", Normal: "    + ((normalTexture)   ?  normalTexture  ->m_Name : "No Texture"));
         return true;
     }
     void AssetManager::DeleteMaterial(std::string nameID)
     {
-        m_Materials.erase(nameID);
-        EN_LOG("Deleted the \"" + nameID + "\" material");
+        if (m_Materials.contains(nameID))
+            m_Materials.at(nameID)->m_WillBeDeleted = true;
+        else
+            EN_WARN("AssetManager::DeleteMaterial() - Failed to delete a material with name \"" + nameID + "\" because a material with that name doesn't exists!");
     }
 
     void AssetManager::RenameMesh(std::string oldNameID, std::string newNameID)
@@ -127,7 +141,9 @@ namespace en
 
     void AssetManager::UpdateAssets()
     {
+        UpdateTextures();
         UpdateMaterials();
+        UpdateMeshes();
     }
 
     Mesh* AssetManager::GetMesh(std::string nameID)
@@ -137,13 +153,7 @@ namespace en
         {
             EN_WARN("AssetManager::GetModel() - There's currently no loaded mesh named \"" + nameID + "\"!");
 
-            if (!g_EmptyMesh)
-            {
-                g_EmptyMesh = new Mesh;
-                g_EmptyMesh->m_FilePath = "No File!";
-            }
-
-            return g_EmptyMesh;
+            return Mesh::GetEmptyMesh();
         }
 
         return m_Meshes.at(nameID).get();
@@ -173,36 +183,73 @@ namespace en
 
     std::vector<Mesh*> AssetManager::GetAllMeshes()
     {
-        std::vector<Mesh*> meshes;
+        std::vector< Mesh*> meshes(m_Meshes.size());
 
-        for (const auto& meshPair : m_Meshes)
-            meshes.emplace_back(meshPair.second.get());
-
+        for (int i = 0; const auto & meshPair : m_Meshes)
+            meshes[i++] = meshPair.second.get();
+        
         return meshes;
     }
     std::vector<Texture*> AssetManager::GetAllTextures()
     {
-        std::vector<Texture*> textures;
+        std::vector< Texture*> textures(m_Textures.size());
 
-        for (const auto& texturePair : m_Textures)
-            textures.emplace_back(texturePair.second.get());
+        for (int i = 0; const auto& texturePair : m_Textures)
+            textures[i++] = texturePair.second.get();
 
         return textures;
     }
     std::vector<Material*> AssetManager::GetAllMaterials()
     {
-        std::vector<Material*> materials;
+        std::vector< Material*> materials(m_Materials.size());
 
-        for (const auto& materialPair : m_Materials)
-            materials.emplace_back(materialPair.second.get());
+        for (int i = 0; const auto& materialPair : m_Materials)
+            materials[i++] = materialPair.second.get();
 
         return materials;
     }
 
     void AssetManager::UpdateMaterials()
     {
-        for (auto& material : m_Materials)
-            material.second->UpdateDescriptorSet();
+        for (auto it = m_Materials.begin(); it != m_Materials.end();)
+        {
+            if (it->second->m_WillBeDeleted)
+            {
+                EN_LOG("Deleted the \"" + it->first + "\" material");
+                it = m_Materials.erase(it);
+            }
+            else
+            {
+                it->second->UpdateDescriptorSet();
+                ++it;
+            }
+        }
+    }
+    void AssetManager::UpdateMeshes()
+    {
+        for (auto it = m_Meshes.begin(); it != m_Meshes.end();)
+        {
+            if (it->second->m_WillBeDeleted)
+            {
+                EN_LOG("Deleted the \"" + it->first + "\" mesh");
+                it = m_Meshes.erase(it);
+            }
+            else
+                ++it;
+        }
+    }
+    void AssetManager::UpdateTextures()
+    {
+        for (auto it = m_Textures.begin(); it != m_Textures.end();)
+        {
+            if (it->second->m_WillBeDeleted)
+            {
+                EN_LOG("Deleted the \"" + it->first + "\" texture");
+                m_Textures.erase(it->first);
+            }
+            else
+                ++it;
+        }
     }
 
     std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial)
@@ -263,9 +310,9 @@ namespace en
             if(hasSpecularTex) LoadTexture(directory + std::string(specularPath.C_Str()), directory + std::string(specularPath.C_Str()), { TextureFormat::NonColor });
             if(hasNormalTex  ) LoadTexture(directory + std::string(normalPath  .C_Str()), directory + std::string(normalPath  .C_Str()), { TextureFormat::NonColor });
 
-            Texture* diffuseTexture  = hasDiffuseTex  ? GetTexture(directory + std::string(diffusePath .C_Str())) : nullptr;
-            Texture* specularTexture = hasSpecularTex ? GetTexture(directory + std::string(specularPath.C_Str())) : nullptr;
-            Texture* normalTexture   = hasNormalTex   ? GetTexture(directory + std::string(normalPath  .C_Str())) : nullptr;
+            Texture* diffuseTexture  = (hasDiffuseTex ) ? GetTexture(directory + std::string(diffusePath.C_Str())) : Texture::GetWhiteSRGBTexture();
+            Texture* specularTexture = (hasSpecularTex) ? GetTexture(directory + std::string(specularPath.C_Str())): Texture::GetGreyNonSRGBTexture();
+            Texture* normalTexture   = (hasNormalTex  ) ? GetTexture(directory + std::string(normalPath.C_Str()))  : Texture::GetNormalTexture();
 
             CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, diffuseTexture, specularTexture, normalTexture);
 

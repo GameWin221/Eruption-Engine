@@ -81,9 +81,11 @@ void Eruption::Update()
 	// Spawning / Despawning the additional model
 	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed))
 		modelSpawned = true;
-
 	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed))
 		modelSpawned = false;
+
+	if (m_Input->IsKey(en::Key::X, en::InputState::Pressed))
+		m_AssetManager->DeleteMesh("SkullModel");
 	
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{

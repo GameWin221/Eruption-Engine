@@ -21,7 +21,6 @@ namespace en
 		float m_NormalStrength;
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
-		void UpdateDescriptorSet();
 
 		static Material* GetDefaultMaterial();
 
@@ -38,6 +37,7 @@ namespace en
 		const std::string& GetName() const { return m_Name; };
 
 	private:
+		void UpdateDescriptorSet();
 		void CreateDescriptorSet();
 		void CreateMatBuffer();
 
@@ -61,6 +61,8 @@ namespace en
 			alignas(4) float normalStrength = 0.5f;
 
 		} m_MatBuffer;
+
+		bool m_WillBeDeleted = false;
 	};
 }
 

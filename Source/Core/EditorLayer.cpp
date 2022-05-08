@@ -45,7 +45,6 @@ namespace en
 		DrawDockspace();
 
 		// UI Panels
-
 		if(m_ShowLightsMenu)
 			DrawLightsMenu();
 
@@ -60,7 +59,6 @@ namespace en
 		if (m_ShowDebugMenu)
 			DrawDebugMenu();
 
-		
 		// Asset Editors
 		if (m_ChosenMaterial && m_ShowAssetEditor)
 			EditMaterial(&m_ShowAssetEditor);
@@ -244,7 +242,7 @@ namespace en
 		ImGui::Begin("Asset Manager", nullptr, m_CommonFlags);
 
 		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true);
-
+		
 		if (ImGui::Button("Import Mesh", buttonSize) && !m_IsCreatingMaterial)
 		{
 			auto file = pfd::open_file("Choose meshes to import...", DEFAULT_ASSET_PATH, { "Supported Mesh Formats", "*.gltf *.fbx *.obj" }, pfd::opt::multiselect);
@@ -292,17 +290,17 @@ namespace en
 
 			matCounter++;
 		}
-
+		
 		ImGui::EndChild();
 
 		ImGui::SameLine();
 
 		ImGui::BeginChild("AssetPreviewer", ImVec2(ImGui::GetWindowSize().x * (assetsCoverage-0.015f), ImGui::GetWindowSize().y*0.86f), true);
-
+		
 		std::vector<Mesh*>     meshes    = m_AssetManager->GetAllMeshes();
 		std::vector<Texture*>  textures  = m_AssetManager->GetAllTextures();
 		std::vector<Material*> materials = m_AssetManager->GetAllMaterials();
-
+		
 		std::vector<AssetRef> assets;
 
 		for (const auto& mesh : meshes)
@@ -327,28 +325,28 @@ namespace en
 
 				if (asset.type == AssetType::TypeMesh)
 				{
-					Mesh* mesh = CastTo<Mesh*>(asset.ptr);
+					Mesh* mesh = asset.CastTo<Mesh*>();
 					std::string name = TrimToTitle(mesh->m_FilePath);
 
 					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
 						m_ChosenTexture = nullptr;
-						m_ChosenMesh = mesh;
+						m_ChosenMesh=mesh;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
 				}
 				else if (asset.type == AssetType::TypeTexture)
 				{
-					Texture* texture = CastTo<Texture*>(asset.ptr);
+					Texture* texture = asset.CastTo<Texture*>();
 					std::string path = texture->GetFilePath();
 					std::string name = TrimToTitle(path);
 
 					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
-						m_ChosenTexture = texture;
+						m_ChosenTexture=texture;
 						m_ChosenMesh = nullptr;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
@@ -356,12 +354,12 @@ namespace en
 				}
 				else if (asset.type == AssetType::TypeMaterial)
 				{
-					Material* material = CastTo<Material*>(asset.ptr);
+					Material* material = asset.CastTo<Material*>();
 					std::string name = material->GetName();
 
 					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial = material;
+						m_ChosenMaterial=material;
 						m_ChosenTexture = nullptr;
 						m_ChosenMesh = nullptr;
 						m_ShowAssetEditor = true;
@@ -373,6 +371,7 @@ namespace en
 					ImGui::SameLine();
 			}
 		}
+		
 		ImGui::EndChild();
 
 		ImGui::End();
@@ -487,6 +486,34 @@ namespace en
 
 			if (ImGui::Button("Save Name"))
 				m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
+
+			SPACE();
+
+			if (ImGui::Button("Delete Material"))
+				ImGui::OpenPopup("DeleteConfirmation");
+
+			if (ImGui::BeginPopup("DeleteConfirmation"))
+			{
+				ImGui::Text("Are you sure you want to delete this material?");
+				ImGui::Text("Some SubMeshes might still use this material!");
+
+				if (ImGui::Selectable("Yes"))
+				{
+					m_AssetManager->DeleteMaterial(m_ChosenMaterial->GetName());
+					m_ChosenMaterial = nullptr;
+					m_ShowAssetEditor = false;
+					ImGui::EndPopup();
+					ImGui::End();
+					ImGui::PopStyleColor();
+					return;
+				}
+				else if (ImGui::Selectable("No"))
+					ImGui::CloseCurrentPopup();
+
+				ImGui::EndPopup();
+			}
+
+			SPACE();
 
 			if (ImGui::ColorEdit3("Color: ", col))
 			{
@@ -618,6 +645,34 @@ namespace en
 
 			ImGui::Text(("Path: " + m_ChosenMesh->m_FilePath).c_str());
 
+			SPACE();
+
+			if (ImGui::Button("Delete Mesh"))
+				ImGui::OpenPopup("DeleteConfirmation");
+
+			if (ImGui::BeginPopup("DeleteConfirmation"))
+			{
+				ImGui::Text("Are you sure you want to delete this mesh?");
+				ImGui::Text("Some SceneObjects might still use this mesh!");
+
+				if (ImGui::Selectable("Yes"))
+				{
+					m_AssetManager->DeleteMesh(m_ChosenMesh->GetName());
+					m_ChosenMesh = nullptr;
+					m_ShowAssetEditor = false;
+					ImGui::EndPopup();
+					ImGui::End();
+					ImGui::PopStyleColor();
+					return;
+				}
+				else if (ImGui::Selectable("No"))
+					ImGui::CloseCurrentPopup();
+
+				ImGui::EndPopup();
+			}
+
+			SPACE();
+
 			for (int id = 0; auto& subMesh : m_ChosenMesh->m_SubMeshes)
 			{
 				ImGui::PushID(id);
@@ -676,6 +731,35 @@ namespace en
 		{
 			ImGui::Text(("Name: " + assetName).c_str());
 			ImGui::Text(("Path: " + m_ChosenTexture->GetFilePath()).c_str());
+
+			SPACE();
+
+			if (ImGui::Button("Delete Texture"))
+				ImGui::OpenPopup("DeleteConfirmation");
+
+			if (ImGui::BeginPopup("DeleteConfirmation"))
+			{
+				ImGui::Text("Are you sure you want to delete this texture?");
+				ImGui::Text("Some Materials might still use this texture!");
+
+				if (ImGui::Selectable("Yes"))
+				{
+					m_AssetManager->DeleteTexture(m_ChosenTexture->GetName());
+					m_ChosenTexture = nullptr;
+					m_ShowAssetEditor = false;
+					ImGui::EndPopup();
+					ImGui::End();
+					ImGui::PopStyleColor();
+					return;
+				}
+				else if (ImGui::Selectable("No"))
+					ImGui::CloseCurrentPopup();
+
+				ImGui::EndPopup();
+			}
+
+			SPACE();
+
 			// More editing
 		}
 

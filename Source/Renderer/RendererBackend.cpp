@@ -164,13 +164,13 @@ namespace en
 
 		// Bind the m_MainCamera once per geometry pass
 		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.layout, m_CameraMatrices);
-
+		
 		for (const auto& object : m_RenderQueue)
 		{
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
 			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline.layout);
 
-			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
+			for (const auto& subMesh : object->GetMesh()->m_SubMeshes)
 			{
 				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
 				subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
@@ -180,6 +180,7 @@ namespace en
 				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
 			}
 		}
+		
 		m_RenderQueue.clear();
 
 		vkCmdEndRenderPass(m_CommandBuffer);

@@ -13,6 +13,19 @@ namespace en
 
 		return m_Object;
 	}
+	void SceneObject::SetMesh(Mesh* newMesh)
+	{
+		m_Mesh = newMesh;
+	}
+	const Mesh* SceneObject::GetMesh()
+	{
+		//This causes unexplained behaviour, the app sometimes crashes on resize sometimes. I have to change the way assets reference each other
+
+		//if (!m_Mesh)
+			//m_Mesh = Mesh::GetEmptyMesh();
+
+		return m_Mesh;
+	}
 	void SceneObject::UpdateModelMatrix()
 	{
 		m_Object.model = glm::mat4(1.0f);

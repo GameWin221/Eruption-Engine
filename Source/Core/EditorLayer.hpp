@@ -52,6 +52,21 @@ namespace en
 		void DrawDebugMenu();
 		void EndRender();
 
+		Material* m_ChosenMaterial = nullptr;
+		Texture* m_ChosenTexture = nullptr;
+		Mesh* m_ChosenMesh = nullptr;
+
+		bool m_ShowAssetEditor = false;
+		bool m_AssetEditorInit = false;
+		bool m_IsCreatingMaterial = false;
+
+		void EditMaterial(bool* open);
+		void EditMesh(bool* open);
+		void EditTexture(bool* open);
+		void CreateMaterial();
+
+		std::string TrimToTitle(std::string& path);
+
 		enum struct AssetType
 		{
 			TypeMesh,
@@ -67,30 +82,11 @@ namespace en
 			void* ptr;
 
 			AssetType type;
+
+			// I know it's unsafe...
+			template <typename T>
+			T CastTo() { return reinterpret_cast<T>(ptr); };
 		};
-
-		// I know it's unsafe...
-		template <typename T>
-		T CastTo(void* ptr) { return reinterpret_cast<T>(ptr); };
-
-		Material* m_ChosenMaterial = nullptr;
-		Texture* m_ChosenTexture = nullptr;
-		Mesh* m_ChosenMesh = nullptr;
-
-		bool m_ShowAssetEditor = false;
-		bool m_AssetEditorInit = false;
-		bool m_IsCreatingMaterial = false;
-
-		//bool m_MaterialEditorOpen = false;
-		//bool m_TextureEditorOpen = false;
-		//bool m_MeshEditorOpen = false;
-
-		void EditMaterial(bool* open);
-		void EditMesh(bool* open);
-		void EditTexture(bool* open);
-		void CreateMaterial();
-
-		std::string TrimToTitle(std::string& path);
 	};
 }
 
