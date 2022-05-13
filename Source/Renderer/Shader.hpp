@@ -20,8 +20,10 @@ namespace en
 		Shader(std::string shaderPath, const ShaderType& shaderType);
 		~Shader();
 
-		VkShaderModule m_ShaderModule{};
 		VkPipelineShaderStageCreateInfo m_ShaderInfo{};
+
+	private:
+		VkShaderModule m_ShaderModule{};
 
 		static std::vector<char> ReadShaderFile(std::string shaderPath);
 	};

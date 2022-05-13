@@ -79,6 +79,14 @@ namespace en
 		m_Lights.pointLights[2].m_Color    = glm::vec3(0.2, 0.2, 1.0);
 		m_Lights.pointLights[2].m_Active   = true;
 	}
+	void VulkanRendererBackend::BindScene(Scene* scene)
+	{
+		m_Scene = scene;
+	}
+	void VulkanRendererBackend::UnbindScene()
+	{
+		m_Scene = nullptr;
+	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
@@ -139,8 +147,8 @@ namespace en
 	}
 	void VulkanRendererBackend::GeometryPass()
 	{
-		if (m_SkipFrame) return;
-		
+		if (m_SkipFrame || !m_Scene) return;
+
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType	   = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass  = m_GeometryPipeline.renderPass;
@@ -148,8 +156,10 @@ namespace en
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_Swapchain.extent;
 
+		VkClearColorValue clearValue{ m_Scene->m_AmbientColor.r, m_Scene->m_AmbientColor.g, m_Scene->m_AmbientColor.b, 1.0f };
+
 		std::array<VkClearValue, 4> clearValues;
-		clearValues[0].color = m_RendererInfo.clearColor;
+		clearValues[0].color = clearValue;
 		clearValues[1].color = m_BlackClearValue.color;
 		clearValues[2].color = m_BlackClearValue.color;
 
@@ -163,10 +173,12 @@ namespace en
 		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.pipeline);
 
 		// Bind the m_MainCamera once per geometry pass
-		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.layout, m_CameraMatrices);
+		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.layout, m_CameraMatrices.get());
 
-		for (const auto& object : m_RenderQueue)
+		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
 		{
+			SceneObject* object = sceneObjectPair.second.get();
+
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
@@ -184,14 +196,12 @@ namespace en
 				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
 			}
 		}
-		
-		m_RenderQueue.clear();
 
 		vkCmdEndRenderPass(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::LightingPass()
 	{
-		if (m_SkipFrame) return;
+		if (m_SkipFrame || !m_Scene) return;
 		
 		Helpers::TransitionImageLayout(m_GBuffer.albedo.image   , m_GBuffer.albedo.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
@@ -201,6 +211,11 @@ namespace en
 		bool lightsChanged = false;
 
 		// Prepare lights and check if at least one value was changed. If so, update the buffer on the GPU
+		if (m_Lights.LBO.ambientLight != m_Scene->m_AmbientColor)
+			lightsChanged = true;
+
+		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
+
 		for (int i = 0; i < MAX_LIGHTS; i++)
 		{
 			PointLight::Buffer& lightBuffer = m_Lights.LBO.lights[i];
@@ -247,7 +262,7 @@ namespace en
 	}
 	void VulkanRendererBackend::PostProcessPass()
 	{
-		if (m_SkipFrame) return;
+		if (m_SkipFrame || !m_Scene) return;
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -262,9 +277,9 @@ namespace en
 
 		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.pipeline);
 
-		static PostProcessingParams::Exposure exposure { m_MainCamera->m_Exposure };
+		m_PostProcessParams.exposure.value = m_MainCamera->m_Exposure;
 
-		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PostProcessingParams::Exposure), &exposure);
+		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
 
 		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.layout, 0U, 1U, &m_TonemappingPipeline.descriptorSet, 0U, nullptr);
 
@@ -350,11 +365,6 @@ namespace en
 			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to present swap chain image!");
 	}
 
-	void VulkanRendererBackend::EnqueueSceneObject(SceneObject* sceneObject)
-	{
-		m_RenderQueue.emplace_back(sceneObject);
-	}
-
 	void VulkanRendererBackend::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		g_CurrentBackend->m_FramebufferResized = true;
@@ -371,20 +381,20 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
+		m_GBuffer  .Destroy(m_Ctx->m_LogicalDevice);
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
-		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.pipeline, nullptr);
+		vkDestroyPipeline	   (m_Ctx->m_LogicalDevice, m_TonemappingPipeline.pipeline, nullptr);
 		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.layout, nullptr);
-		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.renderPass, nullptr);
+		vkDestroyRenderPass	   (m_Ctx->m_LogicalDevice, m_TonemappingPipeline.renderPass, nullptr);
 
-		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_LightingPipeline.pipeline, nullptr);
+		vkDestroyPipeline	   (m_Ctx->m_LogicalDevice, m_LightingPipeline.pipeline, nullptr);
 		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_LightingPipeline.layout, nullptr);
-		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_LightingPipeline.renderPass, nullptr);
+		vkDestroyRenderPass	   (m_Ctx->m_LogicalDevice, m_LightingPipeline.renderPass, nullptr);
 
-		vkDestroyPipeline(m_Ctx->m_LogicalDevice, m_GeometryPipeline.pipeline, nullptr);
+		vkDestroyPipeline	   (m_Ctx->m_LogicalDevice, m_GeometryPipeline.pipeline, nullptr);
 		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_GeometryPipeline.layout, nullptr);
-		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_GeometryPipeline.renderPass, nullptr);
+		vkDestroyRenderPass	   (m_Ctx->m_LogicalDevice, m_GeometryPipeline.renderPass, nullptr);
 
 		m_LightingHDRColorBuffer.Destroy(m_Ctx->m_LogicalDevice);
 		vkDestroyFramebuffer(m_Ctx->m_LogicalDevice, m_LightingHDRFramebuffer, nullptr);
@@ -426,10 +436,6 @@ namespace en
 			m_MainCamera = camera;
 		else
 			m_MainCamera = g_DefaultCamera;
-	}
-	Camera* VulkanRendererBackend::GetMainCamera()
-	{
-		return m_MainCamera;
 	}
 
 	std::array<PointLight, MAX_LIGHTS>& VulkanRendererBackend::GetPointLights()
@@ -839,7 +845,7 @@ namespace en
 
 		pipelineInfo.layout		= m_GeometryPipeline.layout;
 		pipelineInfo.renderPass = m_GeometryPipeline.renderPass;
-		pipelineInfo.subpass	= 0;
+		pipelineInfo.subpass	= 0U;
 
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex  = -1;
@@ -1386,7 +1392,7 @@ namespace en
 
 	void VulkanRendererBackend::CreateCameraMatricesBuffer()
 	{
-		m_CameraMatrices = new CameraMatricesBuffer;
+		m_CameraMatrices = std::make_unique<CameraMatricesBuffer>();
 	}
 
 	void ImGuiCheckResult(VkResult err)

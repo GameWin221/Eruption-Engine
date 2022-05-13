@@ -182,6 +182,8 @@ compile.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Pipeline.cpp" />
+    <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp" />
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -215,6 +217,7 @@ compile.bat</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
     <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
@@ -244,9 +247,11 @@ compile.bat</Command>
     <ClCompile Include="Source\Common\Helpers.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
-    <ClCompile Include="Source\Core\EditorLayer.cpp" />
+    <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Pipeline.hpp" />
+    <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
     <ClInclude Include="External\ImGui\imconfig.h" />
     <ClInclude Include="External\ImGui\imgui.h" />
     <ClInclude Include="External\ImGui\imgui_impl_glfw.h" />
@@ -260,6 +265,7 @@ compile.bat</Command>
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
     <ClInclude Include="Source\Core\Log.hpp" />
+    <ClInclude Include="Source\Scene\Scene.hpp" />
     <ClInclude Include="Source\Scene\SceneObject.hpp" />
     <ClInclude Include="Source\Assets\Material.hpp" />
     <ClInclude Include="Source\Core\EnPch.hpp" />
@@ -279,7 +285,7 @@ compile.bat</Command>
     <ClInclude Include="Source\Assets\AssetManager.hpp" />
     <ClInclude Include="Source\Common\Helpers.hpp" />
     <ClInclude Include="Source\Input\InputManager.hpp" />
-    <ClInclude Include="Source\Core\EditorLayer.hpp" />
+    <ClInclude Include="Source\Editor\EditorLayer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />

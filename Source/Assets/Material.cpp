@@ -183,7 +183,7 @@ namespace en
 		layoutInfo.pBindings = bindings.data();
 
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &g_MatDescriptorSetLayout) != VK_SUCCESS)
-			EN_ERROR("Material::CreateDescriptorSet() - Failed to create descriptor set layout!");
+			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor set layout!");
 
 		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -203,7 +203,7 @@ namespace en
 		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &g_MatDescriptorPool) != VK_SUCCESS)
-			EN_ERROR("Material::CreateDescriptorSet() - Failed to create descriptor pool!");
+			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor pool!");
 	}
 	void Material::CreateDescriptorSet()
 	{

@@ -41,18 +41,18 @@ namespace en
 		void CreateDescriptorSet();
 		void CreateMatBuffer();
 
+		bool m_UpdateQueued = false;
+
+		std::string m_Name;
+
 		Texture* m_Albedo;
 		Texture* m_Specular;
 		Texture* m_Normal;
 
-		VkDescriptorSet m_DescriptorSet;
-
 		VkBuffer m_Buffer;
 		VkDeviceMemory m_BufferMemory;
 
-		bool m_UpdateQueued = false;
-
-		std::string m_Name;
+		VkDescriptorSet m_DescriptorSet;
 
 		struct MatBuffer
 		{

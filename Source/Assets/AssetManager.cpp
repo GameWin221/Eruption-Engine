@@ -227,7 +227,7 @@ namespace en
             if (name.length == 0)
             {
                 g_MatIndex++;
-                name = aiString("Material_" + std::to_string(g_MatIndex));
+                name = aiString("New Material (" + std::to_string(g_MatIndex) + ")");
             }
 
             if (ContainsMaterial(name.C_Str())) continue;
@@ -256,13 +256,13 @@ namespace en
             material->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
             bool hasNormalTex = (normalPath.length > 0);
 
-            if(hasDiffuseTex ) LoadTexture(directory + std::string(diffusePath .C_Str()), directory + std::string(diffusePath .C_Str()), { TextureFormat::Color    });
-            if(hasSpecularTex) LoadTexture(directory + std::string(specularPath.C_Str()), directory + std::string(specularPath.C_Str()), { TextureFormat::NonColor });
-            if(hasNormalTex  ) LoadTexture(directory + std::string(normalPath  .C_Str()), directory + std::string(normalPath  .C_Str()), { TextureFormat::NonColor });
+            if(hasDiffuseTex ) LoadTexture(std::string(diffusePath .C_Str()), directory + std::string(diffusePath .C_Str()), { TextureFormat::Color    });
+            if(hasSpecularTex) LoadTexture(std::string(specularPath.C_Str()), directory + std::string(specularPath.C_Str()), { TextureFormat::NonColor });
+            if(hasNormalTex  ) LoadTexture(std::string(normalPath  .C_Str()), directory + std::string(normalPath  .C_Str()), { TextureFormat::NonColor });
 
-            Texture* diffuseTexture  = (hasDiffuseTex ) ? GetTexture(directory + std::string(diffusePath.C_Str())) : Texture::GetWhiteSRGBTexture();
-            Texture* specularTexture = (hasSpecularTex) ? GetTexture(directory + std::string(specularPath.C_Str())): Texture::GetGreyNonSRGBTexture();
-            Texture* normalTexture   = (hasNormalTex  ) ? GetTexture(directory + std::string(normalPath.C_Str()))  : Texture::GetNormalTexture();
+            Texture* diffuseTexture  = (hasDiffuseTex ) ? GetTexture(std::string(diffusePath.C_Str())) : Texture::GetWhiteSRGBTexture();
+            Texture* specularTexture = (hasSpecularTex) ? GetTexture(std::string(specularPath.C_Str())): Texture::GetGreyNonSRGBTexture();
+            Texture* normalTexture   = (hasNormalTex  ) ? GetTexture(std::string(normalPath.C_Str()))  : Texture::GetNormalTexture();
 
             CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, diffuseTexture, specularTexture, normalTexture);
 

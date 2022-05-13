@@ -30,6 +30,7 @@ namespace en
 
 		VkBuffer       m_Buffer;
 		VkDeviceMemory m_BufferMemory;
+		VkDeviceSize   m_BufferSize;
 	};
 }
 #endif

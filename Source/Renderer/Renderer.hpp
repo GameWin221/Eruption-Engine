@@ -13,7 +13,10 @@ namespace en
 		Renderer(RendererInfo& rendererInfo);
 		~Renderer();
 
-		void EnqueueSceneObject(SceneObject* sceneObject);
+		void BindScene(Scene* scene);
+		void UnbindScene();
+
+		Scene* GetScene();
 		
 		void WaitForGPUIdle();
 		void Render();

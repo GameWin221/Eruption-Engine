@@ -5,6 +5,7 @@
 
 #include <Renderer/Renderer.hpp>
 #include <Assets/AssetManager.hpp>
+#include <Editor/EditorImageAtlas.hpp>
 
 #include <portable-file-dialogs.h>
 
@@ -21,6 +22,8 @@ namespace en
 	public:
 		void AttachTo(Renderer* renderer, AssetManager* assetManager, double* deltaTimeVar);
 
+		~EditorLayer();
+
 		void OnUIDraw();
 
 #if EN_BACKEND_API == VULKAN_BACKEND
@@ -30,11 +33,13 @@ namespace en
 #endif
 
 	private:
-		Renderer* m_Renderer;
-		AssetManager* m_AssetManager;
-		double* m_DeltaTime;
+		Renderer*	  m_Renderer = nullptr;
+		AssetManager* m_AssetManager = nullptr;
+		double*		  m_DeltaTime = nullptr;
 
-		ImGuiViewport* m_Viewport;
+		std::unique_ptr<EditorImageAtlas> m_Atlas;
+
+		ImGuiViewport*   m_Viewport;
 		ImGuiWindowFlags m_CommonFlags;
 		ImColor m_DockedWindowBG;
 		ImColor m_FreeWindowBG;
@@ -42,24 +47,40 @@ namespace en
 		ImVec2  m_FreeWindowMaxSize;
 
 		bool m_ShowLightsMenu = true;
-		bool m_ShowAssetMenu = true;
+		bool m_ShowAssetMenu  = true;
 		bool m_ShowCameraMenu = true;
-		bool m_ShowDebugMenu = false;
+		bool m_ShowDebugMenu  = false;
+
+		bool m_InspectorInit = false;
+		bool m_ShowSceneMenu = true;
+		bool m_ShowInspector = true;
+
+		void TextCentered(std::string text);
+
+		bool ShowImageButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos);
 
 		void BeginRender();
 		void DrawDockspace();
+
 		void DrawLightsMenu();
 		void DrawAssetMenu();
 		void DrawCameraMenu();
 		void DrawDebugMenu();
+
+		void DrawSceneMenu();
+		void DrawInspector();
+
 		void EndRender();
 
 		Material* m_ChosenMaterial = nullptr;
-		Texture* m_ChosenTexture = nullptr;
-		Mesh* m_ChosenMesh = nullptr;
+		Texture*  m_ChosenTexture = nullptr;
+		Mesh*     m_ChosenMesh = nullptr;
+
+		SceneObject* m_ChosenObject = nullptr;
 
 		bool m_ShowAssetEditor = false;
 		bool m_AssetEditorInit = false;
+
 		bool m_IsCreatingMaterial = false;
 
 		void EditingMaterial(bool* open);

@@ -17,13 +17,12 @@
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Camera/Camera.hpp>
 
-#include <Scene/SceneObject.hpp>
+#include <Scene/Scene.hpp>
 
 namespace en
 {
 	struct RendererInfo
 	{
-		VkClearColorValue clearColor  = { 0.0f, 0.0f, 0.0f, 1.0f };
 		VkPolygonMode     polygonMode = VK_POLYGON_MODE_FILL;
 		VkCullModeFlags   cullMode    = VK_CULL_MODE_BACK_BIT;
 	};
@@ -35,10 +34,10 @@ namespace en
 
 		void Init(RendererInfo& rendererInfo);
 
-		//void PrepareScene(Scene* scene);
-		//void RemoveScene(Scene* scene);
-
-		void EnqueueSceneObject(SceneObject* sceneObject);
+		void BindScene(Scene* scene);
+		void UnbindScene();
+		
+		//void EnqueueSceneObject(SceneObject* sceneObject);
 
 		void WaitForGPUIdle();
 
@@ -54,7 +53,9 @@ namespace en
 		void ReloadBackend();
 
 		void SetMainCamera(Camera* camera);
-		Camera* GetMainCamera();
+		Camera* GetMainCamera() { return m_MainCamera; };
+
+		Scene* GetScene() { return m_Scene; };
 
 		std::array<PointLight, MAX_LIGHTS>& GetPointLights();
 
@@ -150,6 +151,7 @@ namespace en
 			struct LightsBufferObject
 			{
 				PointLight::Buffer lights[MAX_LIGHTS];
+				glm::vec3 ambientLight;
 			} LBO;
 
 			struct LightsCameraInfo
@@ -170,9 +172,9 @@ namespace en
 		{
 			struct Exposure 
 			{ 
-				float value;
-			};
-		};
+				float value = 1.0f;
+			} exposure;
+		} m_PostProcessParams;
 		
 		struct ImGuiVK
 		{
@@ -185,13 +187,14 @@ namespace en
 
 		} m_ImGui;
 
+		Pipeline m_DepthPipeline;
 		Pipeline m_GeometryPipeline;
 		Pipeline m_LightingPipeline;
 		Pipeline m_TonemappingPipeline;
 
-		std::vector<SceneObject*> m_RenderQueue;
+		Scene* m_Scene = nullptr;
 
-		CameraMatricesBuffer* m_CameraMatrices;
+		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
 		VkFramebuffer   m_LightingHDRFramebuffer;
 		Attachment      m_LightingHDRColorBuffer;

@@ -22,6 +22,8 @@ namespace en
 		m_Renderer = renderer;
 		m_AssetManager = assetManager;
 
+		m_Atlas = std::make_unique<EditorImageAtlas>("Models/Atlas.png", 4, 1);
+
 		m_Renderer->SetUIRenderCallback(std::bind(&EditorLayer::OnUIDraw, this));
 
 		m_CommonFlags = ImGuiWindowFlags_None | ImGuiWindowFlags_NoCollapse;
@@ -59,6 +61,12 @@ namespace en
 		if (m_ShowDebugMenu)
 			DrawDebugMenu();
 
+		if (m_ShowSceneMenu)
+			DrawSceneMenu();
+
+		if (m_ShowInspector)
+			DrawInspector();
+
 		// Asset Editors
 		if (m_ChosenMaterial && m_ShowAssetEditor)
 			EditingMaterial(&m_ShowAssetEditor);
@@ -73,6 +81,32 @@ namespace en
 			CreatingMaterial();
 
 		EndRender();
+	}
+
+	void EditorLayer::TextCentered(std::string text)
+	{
+		float fontSize = ImGui::GetFontSize() * text.size() / 2;
+
+		ImGui::SameLine(ImGui::GetWindowSize().x / 2 - fontSize + (fontSize / 2));
+
+		ImGui::Text(text.c_str());
+	}
+
+	bool EditorLayer::ShowImageButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos)
+	{
+		bool pressed = false;
+
+		const ImageUVs UVs = m_Atlas->GetImageUVs(imagePos.x, imagePos.y);
+
+		ImGui::BeginChild("Material", ImVec2(size.x + 10.0f, size.y+10.0f), false, ImGuiWindowFlags_NoCollapse);
+
+		pressed = ImGui::ImageButton(m_Atlas->m_DescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
+
+		TextCentered(label);
+
+		ImGui::EndChild();
+
+		return pressed;
 	}
 
 	void EditorLayer::BeginRender()
@@ -159,10 +193,13 @@ namespace en
 
 		if (ImGui::BeginMenu("UI Panels"))
 		{
-			ImGui::MenuItem("Asset Menu", "", &m_ShowAssetMenu);
+			ImGui::MenuItem("Asset Menu" , "", &m_ShowAssetMenu);
 			ImGui::MenuItem("Camera Menu", "", &m_ShowCameraMenu);
 			ImGui::MenuItem("Lights Menu", "", &m_ShowLightsMenu);
-			ImGui::MenuItem("Debug Menu", "", &m_ShowDebugMenu);
+			ImGui::MenuItem("Debug Menu" , "", &m_ShowDebugMenu);
+
+			ImGui::MenuItem("Scene Menu", "", &m_ShowSceneMenu);
+			ImGui::MenuItem("Inspector" , "", &m_ShowInspector);
 		
 			ImGui::EndMenu();
 		}
@@ -176,7 +213,7 @@ namespace en
 	void EditorLayer::DrawLightsMenu()
 	{
 		ImGui::Begin("Lights Menu", nullptr, m_CommonFlags);
-
+		
 		std::array<PointLight, MAX_LIGHTS>& lights = m_Renderer->GetPointLights();
 
 		static bool posInit = false, colInit = false;
@@ -236,12 +273,12 @@ namespace en
 	void EditorLayer::DrawAssetMenu()
 	{
 		const ImVec2 buttonSize(100, 100);
-		const ImVec2 assetSize(100, 100);
+		const ImVec2 assetSize(110, 110);
 		const float assetsCoverage = 0.85f;
 		
-		ImGui::Begin("Asset Manager", nullptr, m_CommonFlags);
+		ImGui::Begin("Asset Manager", nullptr, m_CommonFlags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true);
+		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 		
 		if (ImGui::Button("Import Mesh", buttonSize) && !m_IsCreatingMaterial)
 		{
@@ -251,7 +288,8 @@ namespace en
 
 			for (const auto& path : filePaths)
 			{
-				std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
+				std::string fileName = path.substr(path.find_last_of('/') + 1 , path.length());
+				fileName = path.substr(path.find_last_of('\\') + 1, path.length());
 
 				m_AssetManager->LoadMesh(fileName, path);
 			}
@@ -268,6 +306,7 @@ namespace en
 			for (const auto& path : filePaths)
 			{
 				std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
+				fileName = path.substr(path.find_last_of('\\') + 1, path.length());
 
 				m_AssetManager->LoadTexture(fileName, path);
 			}
@@ -290,12 +329,14 @@ namespace en
 
 			matCounter++;
 		}
-		
+
 		ImGui::EndChild();
 
 		ImGui::SameLine();
 
-		ImGui::BeginChild("AssetPreviewer", ImVec2(ImGui::GetWindowSize().x * (assetsCoverage-0.015f), ImGui::GetWindowSize().y*0.86f), true);
+		const ImVec2 assetPreviewerSize(ImGui::GetWindowSize().x * (assetsCoverage - 0.015f), ImGui::GetWindowSize().y * 0.86f);
+
+		ImGui::BeginChild("AssetPreviewer", assetPreviewerSize, true);
 		
 		std::vector<Mesh*>     meshes    = m_AssetManager->GetAllMeshes();
 		std::vector<Texture*>  textures  = m_AssetManager->GetAllTextures();
@@ -312,8 +353,7 @@ namespace en
 		for (const auto& material : materials)
 			assets.emplace_back(material, AssetType::Material);
 		
-
-		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x+10.0f));
+		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x+20.0f));
 
 		if (sameLineAssets <= 0) sameLineAssets = 1;
 
@@ -328,7 +368,9 @@ namespace en
 					Mesh* mesh = asset.CastTo<Mesh*>();
 					std::string name = mesh->GetName();
 
-					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
+					ImGui::PushID((name + "Mesh").c_str());
+
+					if (ShowImageButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(2, 0)) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
 						m_ChosenTexture = nullptr;
@@ -336,34 +378,44 @@ namespace en
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
+
+					ImGui::PopID();
 				}
 				else if (asset.type == AssetType::Texture)
 				{
 					Texture* texture = asset.CastTo<Texture*>();
 					std::string name = texture->GetName();
 
-					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
+					ImGui::PushID((name + "Texture").c_str());
+
+					if (ShowImageButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(1, 0)) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
-						m_ChosenTexture=texture;
+						m_ChosenTexture = texture;
 						m_ChosenMesh = nullptr;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
+
+					ImGui::PopID();
 				}
 				else if (asset.type == AssetType::Material)
 				{
 					Material* material = asset.CastTo<Material*>();
 					std::string name = material->GetName();
 
-					if (ImGui::Button(name.c_str(), assetSize) && !m_IsCreatingMaterial)
+					ImGui::PushID((name + "Material").c_str());
+
+					if (ShowImageButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(0, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial=material;
+						m_ChosenMaterial = material;
 						m_ChosenTexture = nullptr;
 						m_ChosenMesh = nullptr;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
+
+					ImGui::PopID();
 				}
 			
 				if(j!=sameLineAssets-1)
@@ -372,6 +424,140 @@ namespace en
 		}
 		
 		ImGui::EndChild();
+
+		ImGui::End();
+	}
+	void EditorLayer::DrawSceneMenu()
+	{
+		ImGui::Begin("Scene Menu");
+
+		const std::vector<SceneObject*> sceneObjects = m_Renderer->GetScene()->GetAllSceneObjects();
+		const uint32_t sceneObjectCount = sceneObjects.size();
+
+		static float col[3];
+
+		col[0] = m_Renderer->GetScene()->m_AmbientColor.r;
+		col[1] = m_Renderer->GetScene()->m_AmbientColor.g;
+		col[2] = m_Renderer->GetScene()->m_AmbientColor.b;
+
+		if (ImGui::DragFloat3("Ambient Color", col, 0.05, 0.0, 1.0))
+			m_Renderer->GetScene()->m_AmbientColor = glm::vec3(col[0], col[1], col[2]);
+
+		SPACE();
+
+		if (ImGui::Button("Add a SceneObject"))
+			m_Renderer->GetScene()->CreateSceneObject("New SceneObject", Mesh::GetEmptyMesh());
+
+		SPACE();
+
+		for (int i = 0; const auto& object : sceneObjects)
+		{
+			if (ImGui::Selectable(object->GetName().c_str()))
+			{
+				EN_LOG("Selected " + object->GetName());
+				m_ChosenObject = m_Renderer->GetScene()->GetSceneObject(object->GetName());
+				m_InspectorInit = true;
+			}
+
+			if (i != sceneObjectCount)
+				ImGui::Spacing();
+
+			i++;
+		}
+
+		ImGui::End();
+	}
+	void EditorLayer::DrawInspector()
+	{
+		ImGui::Begin("Inspector");
+
+		if (m_ChosenObject)
+		{
+			if (ImGui::CollapsingHeader("Properties"))
+			{
+				static char name[86];
+
+				if (m_InspectorInit)
+					strcpy_s(name, sizeof(char) * 86, m_ChosenObject->GetName().c_str());
+
+				ImGui::InputText("Name: ", name, 86);
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Save Name"))
+					m_Renderer->GetScene()->RenameSceneObject(m_ChosenObject->GetName(), name);
+
+				SPACE();
+
+				if (ImGui::Button("Delete"))
+					m_Renderer->GetScene()->DeleteSceneObject(m_ChosenObject->GetName());
+
+				SPACE();
+
+				static float pos[3];
+				static float rot[3];
+				static float scl[3];
+
+				// Initialise positions and colors if aren't initialised yet
+				if (m_InspectorInit)
+				{
+					pos[0] = m_ChosenObject->m_Position.x;
+					pos[1] = m_ChosenObject->m_Position.y;
+					pos[2] = m_ChosenObject->m_Position.z;
+
+					rot[0] = m_ChosenObject->m_Rotation.x;
+					rot[1] = m_ChosenObject->m_Rotation.y;
+					rot[2] = m_ChosenObject->m_Rotation.z;
+
+					scl[0] = m_ChosenObject->m_Scale.x;
+					scl[1] = m_ChosenObject->m_Scale.y;
+					scl[2] = m_ChosenObject->m_Scale.z;
+
+					m_InspectorInit = false;
+				}
+
+				ImGui::DragFloat3("Position", pos, 0.1f);
+				ImGui::DragFloat3("Rotation", rot, 0.1f);
+				ImGui::DragFloat3("Scale", scl, 0.1f);
+				ImGui::Checkbox("Active", &m_ChosenObject->m_Active);
+
+
+				m_ChosenObject->m_Position = glm::vec3(pos[0], pos[1], pos[2]);
+				m_ChosenObject->m_Rotation = glm::vec3(rot[0], rot[1], rot[2]);
+				m_ChosenObject->m_Scale = glm::vec3(scl[0], scl[1], scl[2]);
+			}
+
+			SPACE();
+
+			if (ImGui::CollapsingHeader("Mesh"))
+			{
+				ImGui::Text("Choose new mesh: ");
+				const std::vector<Mesh*>& allMeshes = m_AssetManager->GetAllMeshes();
+
+				std::vector<const char*> meshNames(allMeshes.size() + 1);
+
+				meshNames[0] = "No mesh";
+
+				for (int i = 1; i < meshNames.size(); i++)
+					meshNames[i] = allMeshes[i - 1]->GetName().c_str();
+
+				static int chosenMaterialIndex = 0;
+				ImGui::Combo("Meshes", &chosenMaterialIndex, meshNames.data(), meshNames.size());
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Update Mesh"))
+				{
+					if (chosenMaterialIndex == 0)
+						m_ChosenObject->m_Mesh = Mesh::GetEmptyMesh();
+					else
+						m_ChosenObject->m_Mesh = m_AssetManager->GetMesh(allMeshes[chosenMaterialIndex - 1]->GetName());
+				}
+			}
+		}
+
+		else
+			ImGui::Text("No SceneObject is chosen!");
 
 		ImGui::End();
 	}

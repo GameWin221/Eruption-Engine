@@ -24,8 +24,8 @@ namespace en
 		bool flipped = false;
 	};
 	
-	const MeshImportProperties    g_DefaultMeshImportSettings;
-	const TextureImportProperties g_DefaultTextureImportSettings;
+	const MeshImportProperties    g_DefaultMeshImportSettings{};
+	const TextureImportProperties g_DefaultTextureImportSettings{};
 
 	class AssetManager
 	{

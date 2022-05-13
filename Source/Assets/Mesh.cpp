@@ -10,8 +10,8 @@ namespace en
 		if (!g_EmptyMesh)
 		{
 			g_EmptyMesh = new Mesh();
-			g_EmptyMesh->m_FilePath = "No Mesh!";
-			g_EmptyMesh->m_Name = "No Mesh!";
+			g_EmptyMesh->m_FilePath = "No Mesh";
+			g_EmptyMesh->m_Name = "No Mesh";
 		}
 
 		return g_EmptyMesh;

@@ -1,24 +1,21 @@
 #include <Core/EnPch.hpp>
 #include "Eruption.hpp"
 
-bool modelSpawned = true;
-
 void Eruption::Init()
 {
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.4.9";
-	windowInfo.resizable  = true;
+	windowInfo.title = "Eruption Engine v0.5.0";
+	windowInfo.resizable = true;
 	windowInfo.fullscreen = false;
-	windowInfo.size		  = glm::ivec2(1920, 1080);
+	windowInfo.size = glm::ivec2(1920, 1080);
 
 	m_Window = new en::Window(windowInfo);
 
 	m_Context = new en::Context;
 
 	en::RendererInfo rendererInfo{};
-	rendererInfo.clearColor = { 0.01f, 0.01f, 0.01f, 1.0f };
 	rendererInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	rendererInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 
@@ -28,22 +25,6 @@ void Eruption::Init()
 	m_Input->m_MouseSensitivity = 0.1f;
 
 	m_AssetManager = new en::AssetManager;
-
-	m_AssetManager->LoadMesh   ("SkullModel"   , "Models/Skull/Skull.gltf"     );
-	m_AssetManager->LoadTexture("SkullAlbedo"  , "Models/Skull/SkullAlbedo.jpg");
-	m_AssetManager->LoadTexture("SkullSpecular", "Models/Skull/SkullSpecular.jpg", { en::TextureFormat::NonColor });
-	m_AssetManager->LoadTexture("SkullNormal"  , "Models/Skull/SkullNormal.jpg"  , { en::TextureFormat::NonColor });	
-	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"   ), m_AssetManager->GetTexture("SkullSpecular")   , m_AssetManager->GetTexture("SkullNormal")   );
-	
-	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial"   );
-	
-	m_Skull = new en::SceneObject(m_AssetManager->GetMesh("SkullModel"));
-	m_Skull->m_Position = glm::vec3(0, 0.5f, 0);
-	m_Skull->m_Rotation = glm::vec3(45.0f, 0.0f, 0.0f);
-
-	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
-	m_Sponza = new en::SceneObject(m_AssetManager->GetMesh("Sponza"));
-	m_Sponza->m_Scale = glm::vec3(0.01f);
 
 	m_Editor = new en::EditorLayer;
 	m_Editor->AttachTo(m_Renderer, m_AssetManager, &m_DeltaTime);
@@ -58,6 +39,8 @@ void Eruption::Init()
 	m_Renderer->SetMainCamera(m_Camera);
 
 	EN_LOG("Eruption::Init() - Finished");
+
+	CreateExampleScene();
 }
 void Eruption::Update()
 {
@@ -80,13 +63,10 @@ void Eruption::Update()
 
 	// Spawning / Despawning the additional model
 	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed))
-		modelSpawned = true;
+		m_ExampleScene->GetSceneObject("SkullModel")->m_Active = true;
 	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed))
-		modelSpawned = false;
+		m_ExampleScene->GetSceneObject("SkullModel")->m_Active = false;
 
-	if (m_Input->IsKey(en::Key::X, en::InputState::Pressed))
-		m_AssetManager->DeleteMesh("SkullModel");
-	
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
 		if (m_Input->IsKey(en::Key::W))
@@ -119,12 +99,33 @@ void Eruption::Update()
 }
 void Eruption::Render()
 {
-	if (modelSpawned)
-		m_Renderer->EnqueueSceneObject(m_Skull);
-
-	m_Renderer->EnqueueSceneObject(m_Sponza);
-
 	m_Renderer->Render();
+}
+
+void Eruption::CreateExampleScene()
+{
+	m_AssetManager->LoadMesh("SkullModel", "Models/Skull/Skull.gltf"  );
+	
+	m_AssetManager->LoadTexture("SkullAlbedo", "Models/Skull/SkullAlbedo.jpg");
+	m_AssetManager->LoadTexture("SkullSpecular", "Models/Skull/SkullSpecular.jpg", { en::TextureFormat::NonColor });
+	m_AssetManager->LoadTexture("SkullNormal", "Models/Skull/SkullNormal.jpg", { en::TextureFormat::NonColor });
+	
+	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"), m_AssetManager->GetTexture("SkullSpecular"), m_AssetManager->GetTexture("SkullNormal"));
+	
+	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial");
+
+	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
+
+	m_ExampleScene = new en::Scene;
+
+	en::SceneObject* m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
+	m_Skull->m_Position = glm::vec3(0, 0.5f, -0.3);
+	m_Skull->m_Rotation = glm::vec3(90.0f, 45.0f, -90.0f);
+
+	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
+	m_Sponza->m_Scale = glm::vec3(0.01f);
+
+	m_Renderer->BindScene(m_ExampleScene);
 }
 
 void Eruption::Run()

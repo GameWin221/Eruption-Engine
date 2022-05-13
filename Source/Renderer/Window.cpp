@@ -50,11 +50,11 @@ namespace en
 
 		g_MainWindow = nullptr;
 
-		EN_LOG("Closed the main window");
+		EN_LOG("Closed the main window.");
 
 		glfwTerminate();
 
-		EN_LOG("Destroyed the glfw context");
+		EN_LOG("Destroyed the glfw context.");
 	}
 
 	void Window::Close()

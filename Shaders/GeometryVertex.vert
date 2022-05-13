@@ -27,7 +27,7 @@ void main()
 
     // Transform vertex positions to model space
     fPosition = vec3(object.model * vec4(vPos, 1.0));
-
+    
     // Transform vertex normals and tangents to model space
     fNormal  = normalize(vec3(object.model * vec4(vNormal , 0.0)));
     vec3 tanget = normalize(vec3(object.model * vec4(vTangent, 0.0)));
@@ -39,6 +39,6 @@ void main()
     vec3 bitangent = normalize(cross(tanget, fNormal));
 
     fTBN = mat3(tanget, bitangent, fNormal);
-
+    
     fTexcoord = vTexcoord;
 }

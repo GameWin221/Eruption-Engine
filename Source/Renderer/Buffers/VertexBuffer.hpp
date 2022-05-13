@@ -82,10 +82,10 @@ namespace en
         VkBuffer       m_Buffer;
         VkDeviceMemory m_BufferMemory;
 
-        const size_t& GetSize() const { return m_Size; };
+        const uint32_t& GetSize() const { return m_Size; };
 
     private:
-        size_t m_Size;
+        uint32_t m_Size;
     };
 }
 

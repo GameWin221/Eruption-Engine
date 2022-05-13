@@ -20,8 +20,10 @@ namespace en
 
 	class SceneObject
 	{
+		friend class Scene;
+
 	public:
-		SceneObject(Mesh* mesh);
+		SceneObject(Mesh* mesh, std::string name);
 
 		glm::vec3 m_Position = glm::vec3(0.0);
 		glm::vec3 m_Rotation = glm::vec3(0.0);
@@ -33,7 +35,13 @@ namespace en
 
 		bool m_Active = true;
 
+		// Renaming is in the Scene class
+
+		const std::string& GetName() const { return m_Name; };
+
 	private:
+		std::string m_Name;
+
 		PerObjectData m_Object;
 
 		void UpdateModelMatrix();

@@ -4,7 +4,7 @@
 namespace en
 {
 	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
-	std::array<unsigned char, 4> g_GreyTexturePixels = { 127, 127, 127, 255 };
+	std::array<unsigned char, 4> g_GreyTexturePixels = { 75, 75, 75, 255 };
 	std::array<unsigned char, 4> g_NormalTexturePixels = { 127, 127, 255, 255 };
 
 	Texture* g_WhiteTexture;
@@ -86,7 +86,7 @@ namespace en
 		UseContext();
 
 		en::Helpers::DestroyImage(m_Image, m_ImageMemory);
-
+		
 		vkDestroySampler(ctx.m_LogicalDevice, m_ImageSampler, nullptr);
 		vkDestroyImageView(ctx.m_LogicalDevice, m_ImageView, nullptr);
 	}

@@ -15,9 +15,18 @@ namespace en
 	}
 	Renderer::~Renderer(){}
 
-	void Renderer::EnqueueSceneObject(SceneObject* sceneObject)
+	void Renderer::BindScene(Scene* scene)
 	{
-		m_Backend.EnqueueSceneObject(sceneObject);
+		m_Backend.BindScene(scene);
+	}
+	void Renderer::UnbindScene()
+	{
+		m_Backend.UnbindScene();
+	}
+
+	Scene* Renderer::GetScene()
+	{
+		return m_Backend.GetScene();
 	}
 
 	void Renderer::WaitForGPUIdle()

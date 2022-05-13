@@ -8,7 +8,7 @@
 #include <Renderer/Renderer.hpp>
 #include <Assets/AssetManager.hpp>
 #include <Input/InputManager.hpp>
-#include <Core/EditorLayer.hpp>
+#include <Editor/EditorLayer.hpp>
 
 class Eruption
 {
@@ -20,6 +20,8 @@ private:
 	void Update();
 	void Render();
 
+	void CreateExampleScene();
+
 	en::EditorLayer*   m_Editor = nullptr;
 	en::Window*		   m_Window  = nullptr;
 	en::Context*	   m_Context = nullptr;
@@ -28,9 +30,7 @@ private:
 	en::Renderer*	   m_Renderer = nullptr;
 	en::Camera*		   m_Camera   = nullptr;
 
-	// For now it's here, but it will be moved to Scene class once I'll make one
-	en::SceneObject* m_Skull;
-	en::SceneObject* m_Sponza;
+	en::Scene* m_ExampleScene;
 
 	double m_DeltaTime;
 };

@@ -10,8 +10,6 @@ layout(binding = 0) uniform sampler2D gColor;
 layout(binding = 1) uniform sampler2D gPosition;
 layout(binding = 2) uniform sampler2D gNormal;
 
-const vec3 ambientLight = vec3(0.03);
-
 struct PointLight
 {
     vec3 position;
@@ -22,6 +20,8 @@ struct PointLight
 layout(binding = 3) uniform UBO 
 {
     PointLight lights[MAX_LIGHTS];
+
+    vec3 ambient;
 
 } lightsBuffer;
 
@@ -75,8 +75,8 @@ void main()
     float specular  = texture(gColor   , fTexcoord).a;
     float depth     = length(camera.viewPos-position)/30.0;
 
-    vec3 ambient = color * ambientLight;
-    vec3 lighting = vec3(0);
+    vec3 ambient = color * lightsBuffer.ambient;
+    vec3 lighting = ambient;
 
     for(int i = 0; i < MAX_LIGHTS; i++)
     {
@@ -94,7 +94,7 @@ void main()
     switch(camera.debugMode)
     {
         case 0:
-            result = ambient + lighting;
+            result = lighting;
             break;
         case 1:
             result = color;

@@ -3,7 +3,7 @@
 
 namespace en
 {
-	SceneObject::SceneObject(Mesh* mesh) : m_Mesh(mesh)
+	SceneObject::SceneObject(Mesh* mesh, std::string name) : m_Mesh(mesh), m_Name(name)
 	{
 		
 	}

@@ -31,10 +31,10 @@ namespace en
             break;
         }
 
-        m_ShaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        m_ShaderInfo.stage = shaderStage;
+        m_ShaderInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        m_ShaderInfo.stage  = shaderStage;
         m_ShaderInfo.module = m_ShaderModule;
-        m_ShaderInfo.pName = "main";
+        m_ShaderInfo.pName  = "main";
     }
 
     Shader::~Shader()
