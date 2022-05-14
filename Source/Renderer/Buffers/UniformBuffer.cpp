@@ -58,8 +58,8 @@ namespace en
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &m_DescriptorLayout) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor set layout!");
 
-		std::vector<VkDescriptorPoolSize> poolSizes;
 
+		std::vector<VkDescriptorPoolSize> poolSizes;
 		for (auto& binding : bindings)
 		{
 			VkDescriptorPoolSize size{};
@@ -73,7 +73,6 @@ namespace en
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes	   = poolSizes.data();
 		poolInfo.maxSets	   = 1U;
-		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor pool!");
@@ -97,7 +96,6 @@ namespace en
 			VkDescriptorImageInfo info{};
 			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			info.imageView = image.imageView;
-			std::cout << image.imageView << '\n';
 			info.sampler = image.imageSampler;
 
 			VkWriteDescriptorSet descriptorWrite{};
@@ -114,19 +112,19 @@ namespace en
 
 		if (bufferInfo.buffer != VK_NULL_HANDLE)
 		{
-			VkDescriptorBufferInfo descriptorBufferInfo{};
-			descriptorBufferInfo.buffer = bufferInfo.buffer;
-			descriptorBufferInfo.offset = 0U;
-			descriptorBufferInfo.range = bufferInfo.size;
+			VkDescriptorBufferInfo info{};
+			info.buffer = bufferInfo.buffer;
+			info.offset = 0U;
+			info.range  = bufferInfo.size;
 
 			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_DescriptorSet;
-			descriptorWrite.dstBinding = bufferInfo.index;
+			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet			= m_DescriptorSet;
+			descriptorWrite.dstBinding		= bufferInfo.index;
 			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1U;
-			descriptorWrite.pBufferInfo = &descriptorBufferInfo;
+			descriptorWrite.pBufferInfo		= &info;
 
 			descriptorWrites.emplace_back(descriptorWrite);
 		}

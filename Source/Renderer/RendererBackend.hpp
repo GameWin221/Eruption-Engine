@@ -172,11 +172,9 @@ namespace en
 		std::unique_ptr<UniformBuffer> m_TonemappingInput;
 
 		Pipeline m_LightingPipeline;
-		//std::unique_ptr<UniformBuffer> m_LightingInput;s
+		std::unique_ptr<UniformBuffer> m_LightingInputDescriptor;
 		struct LightingInput
 		{
-			VkDescriptorSetLayout m_DescriptorLayout;
-
 			VkDescriptorPool m_DescriptorPool;
 			VkDescriptorSet  m_DescriptorSet;
 		} m_LightingInput;

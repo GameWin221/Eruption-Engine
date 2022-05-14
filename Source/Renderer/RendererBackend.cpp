@@ -230,8 +230,9 @@ namespace en
 
 		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline.m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		//m_LightingInput->Bind(m_CommandBuffer, m_LightingPipeline.m_Layout);
-		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.m_Layout, 0U, 1U, &m_LightingInput.m_DescriptorSet, 0U, nullptr);
+		This doesnt work
+		m_LightingInputDescriptor->Bind(m_CommandBuffer, m_LightingPipeline.m_Layout);
+		//vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.m_Layout, 0U, 1U, &m_LightingInput.m_DescriptorSet, 0U, nullptr);
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
@@ -579,10 +580,20 @@ namespace en
 		LCreateHDRFramebuffer();
 		LCreateLightsBuffer();
 
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
+
+		VkPushConstantRange lightsCameraInfoRange{};
+		lightsCameraInfoRange.offset = 0U;
+		lightsCameraInfoRange.size = sizeof(Lights::LightsCameraInfo);
+		lightsCameraInfoRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::vector<VkPushConstantRange> pushConstants = { lightsCameraInfoRange };
+
 		UniformBuffer::ImageInfo albedo{};
-		albedo.imageView    = m_GBuffer.albedo.imageView;
+		albedo.imageView = m_GBuffer.albedo.imageView;
 		albedo.imageSampler = m_GBuffer.sampler;
-		albedo.index		= 0U;
+		albedo.index = 0U;
 
 		UniformBuffer::ImageInfo position{};
 		position.imageView = m_GBuffer.position.imageView;
@@ -601,27 +612,16 @@ namespace en
 
 		std::vector<UniformBuffer::ImageInfo> imageInfos = { albedo, position, normal };
 
+		m_LightingInputDescriptor = std::make_unique<UniformBuffer>(imageInfos, buffer);
+
 		CreateDescriptorPool();
 		CreateDescriptorSet();
 
-		//m_LightingInput = std::make_unique<UniformBuffer>(imageInfos, buffer);
+		std::vector<VkDescriptorSetLayout> layout = { m_LightingInputDescriptor->m_DescriptorLayout };
+		//std::vector<VkDescriptorSetLayout> layout = { m_LightingInput.m_DescriptorLayout };
 
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
-
-		VkPushConstantRange lightsCameraInfoRange{};
-		lightsCameraInfoRange.offset = 0U;
-		lightsCameraInfoRange.size = sizeof(Lights::LightsCameraInfo);
-		lightsCameraInfoRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		std::vector<VkPushConstantRange> pushConstants = { lightsCameraInfoRange };
-		//std::vector<VkDescriptorSetLayout> layout = { m_LightingInput->m_DescriptorLayout };
-		std::vector<VkDescriptorSetLayout> layout = { m_LightingInput.m_DescriptorLayout };
-
-		m_LightingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants);
+		m_LightingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants, false, false, false, VK_CULL_MODE_FRONT_BIT);
 		m_LightingPipeline.CreateSyncSemaphore();
-
-		system("pause");
 	}
 	void VulkanRendererBackend::InitPostProcessPipeline()
 	{
@@ -653,7 +653,7 @@ namespace en
 
 		std::vector<VkPushConstantRange> pushConstants = { exposurePushConstant };
 
-		m_TonemappingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants);
+		m_TonemappingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants, false, false, false, VK_CULL_MODE_FRONT_BIT);
 	}
 
 	void VulkanRendererBackend::CreateCommandBuffer()
@@ -899,34 +899,6 @@ namespace en
 	}
 	void VulkanRendererBackend::CreateDescriptorPool()
 	{
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
-		//0: Color Framebuffer
-		//1: Position Framebuffer (Alpha channel is specularity)
-		//2: Normal Framebuffer
-		//3: Lights Buffer
-
-		for (uint32_t i = 0U; auto & binding : bindings)
-		{
-			binding.binding = i;
-			binding.descriptorCount = 1U;
-			binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			binding.pImmutableSamplers = nullptr;
-			binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-			i++;
-		}
-
-		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
-
-		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_LightingInput.m_DescriptorLayout) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::A() - Failed to create descriptor set layout!");
-
 		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 
 		for (auto& poolSize : poolSizes)
@@ -950,14 +922,15 @@ namespace en
 	void VulkanRendererBackend::CreateDescriptorSet()
 	{
 		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = m_LightingInput.m_DescriptorPool;
+		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool	 = m_LightingInput.m_DescriptorPool;
 		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts = &m_LightingInput.m_DescriptorLayout;
+		allocInfo.pSetLayouts		 = &m_LightingInputDescriptor->m_DescriptorLayout;
 
 		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingInput.m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::A() - Failed to allocate descriptor set!");
 
+		
 		std::array<VkDescriptorImageInfo, 3> imageInfos{};
 
 		// Albedo
@@ -1001,7 +974,7 @@ namespace en
 		// Light Buffer
 		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[3].pBufferInfo = &lightBufferInfo;
-
+		
 		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }
