@@ -35,13 +35,17 @@ namespace en
 
         EN_SUCCESS("Created GBuffer attachments!")
 
+		CreateCommandBuffer();
+
+		EN_SUCCESS("Created command buffer!")
+
 		InitGeometryPipeline();
 
         EN_SUCCESS("Created geometry pipeline!")
 
 		CreateGBuffer();
 
-        EN_SUCCESS("Created GBuffer!")
+		EN_SUCCESS("Created GBuffer!")
 
 		InitLightingPipeline();
 
@@ -95,15 +99,11 @@ namespace en
 
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
-		m_GeometryPipeline.Destroy(m_Ctx->m_LogicalDevice);
-		m_LightingPipeline.Destroy(m_Ctx->m_LogicalDevice);
-		m_TonemappingPipeline.Destroy(m_Ctx->m_LogicalDevice);
+		m_GeometryPipeline.Destroy();
+		m_LightingPipeline.Destroy();
+		m_TonemappingPipeline.Destroy();
 
 		vkDestroyFence(m_Ctx->m_LogicalDevice, m_SubmitFence, nullptr);
-
-		vkFreeDescriptorSets(m_Ctx->m_LogicalDevice, m_LightingPipeline.descriptorPool, 1, &m_LightingPipeline.descriptorSet);
-
-		vkFreeCommandBuffers(m_Ctx->m_LogicalDevice, m_Ctx->m_CommandPool, 1, &m_CommandBuffer);
 
 		en::Helpers::DestroyBuffer(m_Lights.buffer, m_Lights.bufferMemory);
 
@@ -121,7 +121,7 @@ namespace en
 	}
 	void VulkanRendererBackend::BeginRender()
 	{
-		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline.passFinished, VK_NULL_HANDLE, &m_ImageIndex);
+		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline.m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
 		m_SkipFrame = false;
 
@@ -149,31 +149,16 @@ namespace en
 	{
 		if (m_SkipFrame || !m_Scene) return;
 
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType	   = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass  = m_GeometryPipeline.renderPass;
-		renderPassInfo.framebuffer = m_GBuffer.framebuffer;
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = m_Swapchain.extent;
-
-		VkClearColorValue clearValue{ m_Scene->m_AmbientColor.r, m_Scene->m_AmbientColor.g, m_Scene->m_AmbientColor.b, 1.0f };
-
-		std::array<VkClearValue, 4> clearValues;
-		clearValues[0].color = clearValue;
+		std::vector<VkClearValue> clearValues(4);
+		clearValues[0].color = { m_Scene->m_AmbientColor.r, m_Scene->m_AmbientColor.g, m_Scene->m_AmbientColor.b, 1.0f };
 		clearValues[1].color = m_BlackClearValue.color;
 		clearValues[2].color = m_BlackClearValue.color;
-
 		clearValues[3].depthStencil = { 1.0f, 0 };
 
-		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderPassInfo.pClearValues = clearValues.data();
-
-		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GeometryPipeline.pipeline);
+		m_GeometryPipeline.Bind(m_CommandBuffer, m_GBuffer.framebuffer, m_Swapchain.extent, clearValues);
 
 		// Bind the m_MainCamera once per geometry pass
-		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.layout, m_CameraMatrices.get());
+		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.m_Layout, m_CameraMatrices.get());
 
 		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
 		{
@@ -182,7 +167,7 @@ namespace en
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
-			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline.layout);
+			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline.m_Layout);
 
 			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
@@ -191,18 +176,18 @@ namespace en
 				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
 				subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
 				subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
-				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline.layout);
+				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline.m_Layout);
 
 				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
 			}
 		}
 
-		vkCmdEndRenderPass(m_CommandBuffer);
+		m_GeometryPipeline.Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::LightingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		
+
 		Helpers::TransitionImageLayout(m_GBuffer.albedo.image   , m_GBuffer.albedo.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer.position.image , m_GBuffer.position.format , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer.normal.image   , m_GBuffer.normal.format   , VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
@@ -239,53 +224,36 @@ namespace en
 		if (lightsChanged)
 			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
 
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass		 = m_LightingPipeline.renderPass;
-		renderPassInfo.framebuffer		 = m_LightingHDRFramebuffer;
-		renderPassInfo.renderArea.offset = { 0U, 0U };
-		renderPassInfo.renderArea.extent = m_Swapchain.extent;
-		renderPassInfo.clearValueCount	 = 1U;
-		renderPassInfo.pClearValues		 = &m_BlackClearValue;
+		static std::vector<VkClearValue> clearValues = { m_BlackClearValue };
 
-		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		m_LightingPipeline.Bind(m_CommandBuffer, m_LightingHDRFramebuffer, m_Swapchain.extent, clearValues);
 
-		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.pipeline);
+		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline.m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
-
-		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.layout, 0U, 1U, &m_LightingPipeline.descriptorSet, 0U, nullptr);
+		//m_LightingInput->Bind(m_CommandBuffer, m_LightingPipeline.m_Layout);
+		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.m_Layout, 0U, 1U, &m_LightingInput.m_DescriptorSet, 0U, nullptr);
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		vkCmdEndRenderPass(m_CommandBuffer);
+		m_LightingPipeline.Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::PostProcessPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass		 = m_TonemappingPipeline.renderPass;
-		renderPassInfo.framebuffer		 = m_Swapchain.framebuffers[m_ImageIndex];
-		renderPassInfo.renderArea.offset = { 0U, 0U };
-		renderPassInfo.renderArea.extent = m_Swapchain.extent;
-		renderPassInfo.clearValueCount   = 1U;
-		renderPassInfo.pClearValues		 = &m_BlackClearValue;
 		
-		vkCmdBeginRenderPass(m_CommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		static std::vector<VkClearValue> clearValue = { m_BlackClearValue };
 
-		vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.pipeline);
+		m_TonemappingPipeline.Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
 
 		m_PostProcessParams.exposure.value = m_MainCamera->m_Exposure;
 
-		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
+		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
 
-		vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_TonemappingPipeline.layout, 0U, 1U, &m_TonemappingPipeline.descriptorSet, 0U, nullptr);
+		m_TonemappingInput->Bind(m_CommandBuffer, m_TonemappingPipeline.m_Layout);
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		vkCmdEndRenderPass(m_CommandBuffer);
+		m_TonemappingPipeline.Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::ImGuiPass()
 	{
@@ -318,6 +286,8 @@ namespace en
 	}
 	void VulkanRendererBackend::EndRender()
 	{
+		
+
 		if (m_SkipFrame) return;
 		
 		if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
@@ -328,7 +298,7 @@ namespace en
 
 		VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		submitInfo.waitSemaphoreCount = 1U;
-		submitInfo.pWaitSemaphores    = &m_GeometryPipeline.passFinished;
+		submitInfo.pWaitSemaphores    = &m_GeometryPipeline.m_PassFinished;
 		submitInfo.pWaitDstStageMask  = &waitStage;
 
 		VkCommandBuffer commandBuffers[] = {m_CommandBuffer, m_ImGui.commandBuffers[m_ImageIndex]};
@@ -342,7 +312,7 @@ namespace en
 		}
 
 		submitInfo.signalSemaphoreCount = 1U;
-		submitInfo.pSignalSemaphores    = &m_LightingPipeline.passFinished;
+		submitInfo.pSignalSemaphores    = &m_LightingPipeline.m_PassFinished;
 
 		if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_SubmitFence) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
@@ -350,7 +320,7 @@ namespace en
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1U;
-		presentInfo.pWaitSemaphores	   = &m_LightingPipeline.passFinished;
+		presentInfo.pWaitSemaphores	   = &m_LightingPipeline.m_PassFinished;
 
 		presentInfo.swapchainCount = 1U;
 		presentInfo.pSwapchains    = &m_Swapchain.swapchain;
@@ -384,41 +354,25 @@ namespace en
 		m_GBuffer  .Destroy(m_Ctx->m_LogicalDevice);
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
-		vkDestroyPipeline	   (m_Ctx->m_LogicalDevice, m_TonemappingPipeline.pipeline, nullptr);
-		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_TonemappingPipeline.layout, nullptr);
-		vkDestroyRenderPass	   (m_Ctx->m_LogicalDevice, m_TonemappingPipeline.renderPass, nullptr);
-
-		vkDestroyPipeline	   (m_Ctx->m_LogicalDevice, m_LightingPipeline.pipeline, nullptr);
-		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_LightingPipeline.layout, nullptr);
-		vkDestroyRenderPass	   (m_Ctx->m_LogicalDevice, m_LightingPipeline.renderPass, nullptr);
-
-		vkDestroyPipeline	   (m_Ctx->m_LogicalDevice, m_GeometryPipeline.pipeline, nullptr);
-		vkDestroyPipelineLayout(m_Ctx->m_LogicalDevice, m_GeometryPipeline.layout, nullptr);
-		vkDestroyRenderPass	   (m_Ctx->m_LogicalDevice, m_GeometryPipeline.renderPass, nullptr);
-
 		m_LightingHDRColorBuffer.Destroy(m_Ctx->m_LogicalDevice);
 		vkDestroyFramebuffer(m_Ctx->m_LogicalDevice, m_LightingHDRFramebuffer, nullptr);
 
 		CreateSwapchain();
 
 		CreateGBufferAttachments();
-		
-		GCreateRenderPass();
-		GCreatePipeline();
 
 		CreateGBuffer();
 
-		LCreateRenderPass();
-		LCreateHDRFramebuffer();
-		LCreatePipeline();
+		m_GeometryPipeline.Resize(m_Swapchain.extent);
 
-		PPCreateRenderPass();
-		PPCreatePipeline();
+		m_LightingPipeline.Resize(m_Swapchain.extent);
+
+		m_TonemappingPipeline.Resize(m_Swapchain.extent);
 
 		CreateSwapchainFramebuffers();
 
-		LCreateDescriptorSet();
-		PPCreateDescriptorSet();
+		//LCreateDescriptorSet();
+		//PPCreateDescriptorSet();
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.imageViews.size());
 
@@ -513,7 +467,7 @@ namespace en
 		{
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass		= m_TonemappingPipeline.renderPass;
+			framebufferInfo.renderPass		= m_TonemappingPipeline.m_RenderPass;
 			framebufferInfo.attachmentCount = 1;
 			framebufferInfo.pAttachments	= &m_Swapchain.imageViews[i];
 			framebufferInfo.width			= m_Swapchain.extent.width;
@@ -537,12 +491,12 @@ namespace en
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass	    = m_GeometryPipeline.renderPass;
+		framebufferInfo.renderPass	    = m_GeometryPipeline.m_RenderPass;
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments    = attachments.data();
 		framebufferInfo.width  = m_Swapchain.extent.width;
 		framebufferInfo.height = m_Swapchain.extent.height;
-		framebufferInfo.layers = 1;
+		framebufferInfo.layers = 1U;
 
 		if (vkCreateFramebuffer(m_Ctx->m_LogicalDevice, &framebufferInfo, nullptr, &m_GBuffer.framebuffer) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitGBuffer() - Failed to create the GBuffer!");
@@ -555,7 +509,7 @@ namespace en
 		samplerInfo.addressModeV	 = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW	 = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.maxAnisotropy	 = 0;
+		samplerInfo.maxAnisotropy	 = 0U;
 		samplerInfo.borderColor		 = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.compareEnable = VK_FALSE;
@@ -586,30 +540,123 @@ namespace en
 
 	void VulkanRendererBackend::InitGeometryPipeline()
 	{
-		GCreateCommandBuffer();
-		GCreateRenderPass();
-		GCreatePipeline();
+		std::vector<Pipeline::Attachment> colorAttachments = 
+		{
+			{m_GBuffer.albedo.format  , VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED ,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U},
+			{m_GBuffer.position.format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED ,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U},
+			{m_GBuffer.normal.format  , VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED ,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 2U}
+		};
+
+		Pipeline::Attachment depthAttachment{ m_GBuffer.depth.format  , VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 3U };
+
+		m_GeometryPipeline.CreateRenderPass(colorAttachments, depthAttachment);
+
+		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
+
+		std::vector<VkDescriptorSetLayout> descriptors{ CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
+
+		VkPushConstantRange objectPushConstant{};
+		objectPushConstant.offset	  = 0U;
+		objectPushConstant.size		  = sizeof(PerObjectData);
+		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		std::vector<VkPushConstantRange> pushConstants = { objectPushConstant };
+
+		m_GeometryPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, descriptors, pushConstants, true, true);
+
+		m_GeometryPipeline.CreateSyncSemaphore();
 	}
 	void VulkanRendererBackend::InitLightingPipeline()
 	{
-		LCreateRenderPass();
+		std::vector<Pipeline::Attachment> colorAttachments = 
+		{
+			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
+		};
+
+		m_LightingPipeline.CreateRenderPass(colorAttachments);
+
 		LCreateHDRFramebuffer();
 		LCreateLightsBuffer();
-		LCreateDescriptorPool();
-		LCreateDescriptorSetLayout();
-		LCreateDescriptorSet();
-		LCreatePipeline();
+
+		UniformBuffer::ImageInfo albedo{};
+		albedo.imageView    = m_GBuffer.albedo.imageView;
+		albedo.imageSampler = m_GBuffer.sampler;
+		albedo.index		= 0U;
+
+		UniformBuffer::ImageInfo position{};
+		position.imageView = m_GBuffer.position.imageView;
+		position.imageSampler = m_GBuffer.sampler;
+		position.index = 1U;
+
+		UniformBuffer::ImageInfo normal{};
+		normal.imageView = m_GBuffer.normal.imageView;
+		normal.imageSampler = m_GBuffer.sampler;
+		normal.index = 2U;
+
+		UniformBuffer::BufferInfo buffer{};
+		buffer.buffer = m_Lights.buffer;
+		buffer.index = 3U;
+		buffer.size = sizeof(m_Lights.LBO);
+
+		std::vector<UniformBuffer::ImageInfo> imageInfos = { albedo, position, normal };
+
+		CreateDescriptorPool();
+		CreateDescriptorSet();
+
+		//m_LightingInput = std::make_unique<UniformBuffer>(imageInfos, buffer);
+
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
+
+		VkPushConstantRange lightsCameraInfoRange{};
+		lightsCameraInfoRange.offset = 0U;
+		lightsCameraInfoRange.size = sizeof(Lights::LightsCameraInfo);
+		lightsCameraInfoRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::vector<VkPushConstantRange> pushConstants = { lightsCameraInfoRange };
+		//std::vector<VkDescriptorSetLayout> layout = { m_LightingInput->m_DescriptorLayout };
+		std::vector<VkDescriptorSetLayout> layout = { m_LightingInput.m_DescriptorLayout };
+
+		m_LightingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants);
+		m_LightingPipeline.CreateSyncSemaphore();
+
+		system("pause");
 	}
 	void VulkanRendererBackend::InitPostProcessPipeline()
 	{
-		PPCreateRenderPass();
-		PPCreateDescriptorPool();
-		PPCreateDescriptorSetLayout();
-		PPCreateDescriptorSet();
-		PPCreatePipeline();
+		std::vector<Pipeline::Attachment> attachments = 
+		{
+			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
+		};
+
+		m_TonemappingPipeline.CreateRenderPass(attachments);
+
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/TonemapFrag.spv", ShaderType::Fragment);
+
+		UniformBuffer::ImageInfo HDRColorBuffer{};
+		HDRColorBuffer.imageView = m_LightingHDRColorBuffer.imageView;
+		HDRColorBuffer.imageSampler = m_GBuffer.sampler;
+		HDRColorBuffer.index = 0U;
+
+		std::vector<UniformBuffer::ImageInfo> imageInfos = { HDRColorBuffer };
+
+		m_TonemappingInput = std::make_unique<UniformBuffer>(imageInfos);
+
+		std::vector<VkDescriptorSetLayout> layout = { m_TonemappingInput->m_DescriptorLayout };
+
+		VkPushConstantRange exposurePushConstant{};
+		exposurePushConstant.offset		= 0U;
+		exposurePushConstant.size		= sizeof(PostProcessingParams::Exposure);
+		exposurePushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::vector<VkPushConstantRange> pushConstants = { exposurePushConstant };
+
+		m_TonemappingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants);
 	}
 
-	void VulkanRendererBackend::GCreateCommandBuffer()
+	void VulkanRendererBackend::CreateCommandBuffer()
 	{
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -620,516 +667,11 @@ namespace en
 		if (vkAllocateCommandBuffers(m_Ctx->m_LogicalDevice, &allocInfo, &m_CommandBuffer) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::GCreateCommandBuffer() - Failed to allocate command buffer!");
 	}
-	void VulkanRendererBackend::GCreateRenderPass()
-	{
-		VkAttachmentDescription albedoAttachment{};
-		albedoAttachment.format		    = m_GBuffer.albedo.format;
-		albedoAttachment.samples	    = VK_SAMPLE_COUNT_1_BIT;
-		albedoAttachment.loadOp		    = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		albedoAttachment.storeOp	    = VK_ATTACHMENT_STORE_OP_STORE;
-		albedoAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		albedoAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		albedoAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		albedoAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference albedoAttachmentRef{};
-		albedoAttachmentRef.attachment = 0;
-		albedoAttachmentRef.layout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentDescription positionAttachment{};
-		positionAttachment.format		  = m_GBuffer.position.format;
-		positionAttachment.samples		  = VK_SAMPLE_COUNT_1_BIT;
-		positionAttachment.loadOp		  = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		positionAttachment.storeOp		  = VK_ATTACHMENT_STORE_OP_STORE;
-		positionAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		positionAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		positionAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		positionAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference positionAttachmentRef{};
-		positionAttachmentRef.attachment = 1;
-		positionAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentDescription normalAttachment{};
-		normalAttachment.format		    = m_GBuffer.normal.format;
-		normalAttachment.samples	    = VK_SAMPLE_COUNT_1_BIT;
-		normalAttachment.loadOp		    = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		normalAttachment.storeOp	    = VK_ATTACHMENT_STORE_OP_STORE;
-		normalAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		normalAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		normalAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference normalAttachmentRef{};
-		normalAttachmentRef.attachment = 2;
-		normalAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentDescription depthAttachment{};
-		depthAttachment.format		   = m_GBuffer.depth.format;
-		depthAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
-		depthAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference depthAttachmentRef{};
-		depthAttachmentRef.attachment = 3;
-		depthAttachmentRef.layout	  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		std::array<VkAttachmentReference, 3> colorAttachments = {
-			albedoAttachmentRef,
-			positionAttachmentRef,
-			normalAttachmentRef
-		};
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount	= static_cast<uint32_t>(colorAttachments.size());
-		subpass.pColorAttachments		= colorAttachments.data();
-		subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass	 = 0;
-		dependency.srcAccessMask = 0;
-		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-		std::array<VkAttachmentDescription, 4> attachments = {
-			albedoAttachment,
-			positionAttachment,
-			normalAttachment,
-			depthAttachment
-		};
-
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		renderPassInfo.pAttachments    = attachments.data();
-		renderPassInfo.subpassCount    = 1;
-		renderPassInfo.pSubpasses      = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies   = &dependency;
-
-		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_GeometryPipeline.renderPass) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::GCreateRenderPass() - Failed to create render pass!");
-	}
-	void VulkanRendererBackend::GCreatePipeline()
-	{
-		auto bindingDescription    = Vertex::GetBindingDescription();
-		auto attributeDescriptions = Vertex::GetAttributeDescriptions();
-
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		vertexInputInfo.sType						    = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount   = 1;
-		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-		vertexInputInfo.pVertexBindingDescriptions	    = &bindingDescription;
-		vertexInputInfo.pVertexAttributeDescriptions    = attributeDescriptions.data();
-
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-		inputAssembly.sType					 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology				 = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-		VkViewport viewport{};
-		viewport.x		  = 0.0f;
-		viewport.y		  = 0.0f;
-		viewport.width    = (float)m_Swapchain.extent.width;
-		viewport.height   = (float)m_Swapchain.extent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = m_Swapchain.extent;
-
-		VkPipelineViewportStateCreateInfo viewportState{};
-		viewportState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports	= &viewport;
-		viewportState.scissorCount  = 1;
-		viewportState.pScissors		= &scissor;
-
-		VkPipelineRasterizationStateCreateInfo rasterizer{};
-		rasterizer.sType				   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable		   = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode			   = m_RendererInfo.polygonMode;
-		rasterizer.lineWidth			   = 1.0f;
-		rasterizer.cullMode				   = m_RendererInfo.cullMode;
-		rasterizer.frontFace			   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable		   = VK_FALSE;
-
-		VkPipelineMultisampleStateCreateInfo multisampling{};
-		multisampling.sType				   = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable  = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable		 = VK_FALSE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachment.colorBlendOp		 = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachment.alphaBlendOp		 = VK_BLEND_OP_ADD;
-
-		std::array<VkPipelineColorBlendAttachmentState, 3> colorBlendAttachments = {
-			colorBlendAttachment,
-			colorBlendAttachment,
-			colorBlendAttachment
-		};
-
-		VkPipelineColorBlendStateCreateInfo colorBlending{};
-		colorBlending.sType			    = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable     = VK_FALSE;
-		colorBlending.logicOp		    = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount   = static_cast<uint32_t>(colorBlendAttachments.size());
-		colorBlending.pAttachments		= colorBlendAttachments.data();
-		colorBlending.blendConstants[0] = 0.0f;
-		colorBlending.blendConstants[1] = 0.0f;
-		colorBlending.blendConstants[2] = 0.0f;
-		colorBlending.blendConstants[3] = 0.0f;
-
-		VkPipelineDepthStencilStateCreateInfo depthStencil{};
-		depthStencil.sType				   = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable	   = VK_TRUE;
-		depthStencil.depthWriteEnable	   = VK_TRUE;
-		depthStencil.depthCompareOp		   = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds		   = 0.0f;
-		depthStencil.maxDepthBounds		   = 1.0f;
-		depthStencil.stencilTestEnable	   = VK_FALSE;
-		depthStencil.front = {};
-		depthStencil.back  = {};
-
-		std::array<VkDescriptorSetLayout, 2> descriptorLayouts = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
-		
-		VkPushConstantRange objectPushConstant;
-		objectPushConstant.offset = 0U;
-		objectPushConstant.size   = sizeof(PerObjectData);
-		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size());
-		pipelineLayoutInfo.pSetLayouts	  = descriptorLayouts.data();
-		pipelineLayoutInfo.pPushConstantRanges = &objectPushConstant;
-		pipelineLayoutInfo.pushConstantRangeCount = 1U;
-
-		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_GeometryPipeline.layout) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::GCreatePipeline() - Failed to create pipeline layout!");
-
-		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
-
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
-
-		VkGraphicsPipelineCreateInfo pipelineInfo{};
-		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2U;
-		pipelineInfo.pStages	= shaderStages;
-
-		pipelineInfo.pVertexInputState   = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssembly;
-		pipelineInfo.pViewportState		 = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState   = &multisampling;
-		pipelineInfo.pDepthStencilState  = &depthStencil;
-		pipelineInfo.pColorBlendState    = &colorBlending;
-		pipelineInfo.pDynamicState		 = nullptr;
-
-		pipelineInfo.layout		= m_GeometryPipeline.layout;
-		pipelineInfo.renderPass = m_GeometryPipeline.renderPass;
-		pipelineInfo.subpass	= 0U;
-
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineInfo.basePipelineIndex  = -1;
-
-		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GeometryPipeline.pipeline) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::GCreatePipeline() - Failed to create graphics pipeline!");
-	}
 
 	void VulkanRendererBackend::LCreateLightsBuffer()
 	{
 		m_Lights.bufferSize = sizeof(m_Lights.LBO);
 		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
-	}
-	void VulkanRendererBackend::LCreateDescriptorSetLayout()
-	{
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
-		//0: Color Framebuffer
-		//1: Position Framebuffer (Alpha channel is specularity)
-		//2: Normal Framebuffer
-		//3: Lights Buffer
-		
-		for (uint32_t i = 0U; auto & binding : bindings)
-		{
-			binding.binding			   = i;
-			binding.descriptorCount	   = 1U;
-			binding.descriptorType	   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			binding.pImmutableSamplers = nullptr;
-			binding.stageFlags		   = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-			i++;
-		}
-
-		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings    = bindings.data();
-
-		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_LightingPipeline.descriptorSetLayout) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to create descriptor set layout!");
-
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = m_LightingPipeline.descriptorPool;
-		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts		 = &m_LightingPipeline.descriptorSetLayout;
-
-		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingPipeline.descriptorSet) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::LCreateDescriptorSetLayout() - Failed to allocate descriptor set!");
-	}
-	void VulkanRendererBackend::LCreateDescriptorPool()
-	{
-		std::array<VkDescriptorPoolSize, 4> poolSizes{};
-
-		for (auto& poolSize : poolSizes)
-		{
-			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSize.descriptorCount = 1U;
-		}
-
-		// Lights buffer
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes	   = poolSizes.data();
-		poolInfo.maxSets	   = 1U;
-
-		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_LightingPipeline.descriptorPool) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::LCreateDescriptorPool() - Failed to create descriptor pool!");
-	}
-	void VulkanRendererBackend::LCreateDescriptorSet()
-	{
-		std::array<VkDescriptorImageInfo, 3> imageInfos{};
-
-		// Albedo
-		imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[0].imageView	  = m_GBuffer.albedo.imageView;
-		imageInfos[0].sampler	  = m_GBuffer.sampler;
-
-		// Position
-		imageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[1].imageView   = m_GBuffer.position.imageView;
-		imageInfos[1].sampler	  = m_GBuffer.sampler;
-
-		// Normal
-		imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[2].imageView   = m_GBuffer.normal.imageView;
-		imageInfos[2].sampler	  = m_GBuffer.sampler;
-
-		// Light Buffer
-		VkDescriptorBufferInfo lightBufferInfo{};
-		lightBufferInfo.buffer = m_Lights.buffer;
-		lightBufferInfo.offset = 0U;
-		lightBufferInfo.range  = sizeof(m_Lights.LBO);
-
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
-
-		for (uint32_t i = 0U; auto & descriptorWrite : descriptorWrites)
-		{
-			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet			= m_LightingPipeline.descriptorSet;
-			descriptorWrite.dstBinding		= i;
-			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrite.descriptorCount = 1U;
-
-			if(i!=3U)
-				descriptorWrite.pImageInfo  = &imageInfos[i];
-
-			i++;
-		}
-
-		// Light Buffer
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[3].pBufferInfo    = &lightBufferInfo;
-
-		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-	}
-	void VulkanRendererBackend::LCreateRenderPass()
-	{
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format		   = VK_FORMAT_R16G16B16A16_SFLOAT;
-		colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0U;
-		colorAttachmentRef.layout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint	    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount    = 1U;
-		subpass.pColorAttachments	    = &colorAttachmentRef;
-		subpass.pDepthStencilAttachment = nullptr;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass	 = 0U;
-		dependency.srcAccessMask = 0U;
-		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1U;
-		renderPassInfo.pAttachments	   = &colorAttachment;
-		renderPassInfo.subpassCount	   = 1U;
-		renderPassInfo.pSubpasses	   = &subpass;
-		renderPassInfo.dependencyCount = 1U;
-		renderPassInfo.pDependencies   = &dependency;
-
-		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_LightingPipeline.renderPass) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::LCreateRenderPass() - Failed to create render pass!");
-	}
-	void VulkanRendererBackend::LCreatePipeline()
-	{
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
-
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
-
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		vertexInputInfo.sType							= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount	= 0U;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0U;
-		vertexInputInfo.pVertexBindingDescriptions		= nullptr;
-		vertexInputInfo.pVertexAttributeDescriptions	= nullptr;
-
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-		inputAssembly.sType					 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology				 = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-		VkViewport viewport{};
-		viewport.x		  = 0.0f;
-		viewport.y		  = 0.0f;
-		viewport.width	  = (float)m_Swapchain.extent.width;
-		viewport.height	  = (float)m_Swapchain.extent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = m_Swapchain.extent;
-
-		VkPipelineViewportStateCreateInfo viewportState{};
-		viewportState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports	= &viewport;
-		viewportState.scissorCount	= 1;
-		viewportState.pScissors		= &scissor;
-
-		VkPipelineRasterizationStateCreateInfo rasterizer{};
-		rasterizer.sType				   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable		   = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode			   = VK_POLYGON_MODE_FILL;
-		rasterizer.lineWidth			   = 1.0f;
-		rasterizer.cullMode				   = VK_CULL_MODE_FRONT_BIT;
-		rasterizer.frontFace			   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable		   = VK_FALSE;
-
-		VkPipelineMultisampleStateCreateInfo multisampling{};
-		multisampling.sType				   = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable  = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable		 = VK_FALSE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachment.colorBlendOp		 = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachment.alphaBlendOp		 = VK_BLEND_OP_ADD;
-
-		VkPipelineColorBlendStateCreateInfo colorBlending{};
-		colorBlending.sType			  = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable	  = VK_FALSE;
-		colorBlending.logicOp		  = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments    = &colorBlendAttachment;
-
-		VkPipelineDepthStencilStateCreateInfo depthStencil{};
-		depthStencil.sType				   = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable	   = VK_FALSE;
-		depthStencil.depthWriteEnable	   = VK_FALSE;
-		depthStencil.depthCompareOp		   = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds	       = 0.0f;
-		depthStencil.maxDepthBounds	       = 1.0f;
-		depthStencil.stencilTestEnable	   = VK_FALSE;
-		depthStencil.front = {};
-		depthStencil.back  = {};
-
-		VkPushConstantRange lightsCameraInfoRange{};
-		lightsCameraInfoRange.offset = 0U;
-		lightsCameraInfoRange.size = sizeof(Lights::LightsCameraInfo);
-		lightsCameraInfoRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1U;
-		pipelineLayoutInfo.pSetLayouts	  = &m_LightingPipeline.descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 1U;
-		pipelineLayoutInfo.pPushConstantRanges    = &lightsCameraInfoRange;
-
-		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_LightingPipeline.layout) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline layout!");
-
-		VkGraphicsPipelineCreateInfo pipelineInfo{};
-		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2U;
-		pipelineInfo.pStages	= shaderStages;
-
-		pipelineInfo.pVertexInputState   = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssembly;
-		pipelineInfo.pViewportState		 = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState   = &multisampling;
-		pipelineInfo.pDepthStencilState  = &depthStencil;
-		pipelineInfo.pColorBlendState    = &colorBlending;
-		pipelineInfo.pDynamicState		 = nullptr;
-
-		pipelineInfo.layout		= m_LightingPipeline.layout;
-		pipelineInfo.renderPass = m_LightingPipeline.renderPass;
-		pipelineInfo.subpass	= 0;
-
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineInfo.basePipelineIndex  = -1;
-
-		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_LightingPipeline.pipeline) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::LCreatePipeline() - Failed to create pipeline!");
 	}
 	void VulkanRendererBackend::LCreateHDRFramebuffer()
 	{
@@ -1137,7 +679,7 @@ namespace en
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass		= m_LightingPipeline.renderPass;
+		framebufferInfo.renderPass		= m_LightingPipeline.m_RenderPass;
 		framebufferInfo.attachmentCount = 1U;
 		framebufferInfo.pAttachments	= &m_LightingHDRColorBuffer.imageView;
 		framebufferInfo.width			= m_Swapchain.extent.width;
@@ -1147,249 +689,17 @@ namespace en
 		if (vkCreateFramebuffer(m_Ctx->m_LogicalDevice, &framebufferInfo, nullptr, &m_LightingHDRFramebuffer) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::LCreateHDRFramebuffer() - Failed to create the GBuffer!");
 	}
-
-	void VulkanRendererBackend::PPCreateDescriptorSetLayout()
-	{
-		VkDescriptorSetLayoutBinding binding;
-
-		binding.binding			   = 0U;
-		binding.descriptorCount	   = 1U;
-		binding.descriptorType	   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		binding.pImmutableSamplers = nullptr;
-		binding.stageFlags		   = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1U;
-		layoutInfo.pBindings	= &binding;
-
-		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_TonemappingPipeline.descriptorSetLayout) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::PPCreateDescriptorSetLayout() - Failed to create descriptor set layout!");
-
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = m_TonemappingPipeline.descriptorPool;
-		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts		 = &m_TonemappingPipeline.descriptorSetLayout;
-
-		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_TonemappingPipeline.descriptorSet) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::PPCreateDescriptorSetLayout() - Failed to allocate descriptor set!");
-	}
-	void VulkanRendererBackend::PPCreateDescriptorPool()
-	{
-		VkDescriptorPoolSize poolSize{};
-		poolSize.type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSize.descriptorCount = 1U;
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = 1U;
-		poolInfo.pPoolSizes	   = &poolSize;
-		poolInfo.maxSets	   = 1U;
-
-		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_TonemappingPipeline.descriptorPool) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::PPCreateDescriptorPool() - Failed to create descriptor pool!");
-	}
-	void VulkanRendererBackend::PPCreateDescriptorSet()
-	{
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView   = m_LightingHDRColorBuffer.imageView;
-		imageInfo.sampler	  = m_GBuffer.sampler;
-
-		VkWriteDescriptorSet descriptorWrite{};
-		descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet			= m_TonemappingPipeline.descriptorSet;
-		descriptorWrite.dstBinding		= 0U;
-		descriptorWrite.dstArrayElement = 0U;
-		descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrite.descriptorCount = 1U;
-		descriptorWrite.pImageInfo		= &imageInfo;
-
-		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, 1U, &descriptorWrite, 0, nullptr);
-	}
-	void VulkanRendererBackend::PPCreateRenderPass()
-	{
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format		   = m_Swapchain.imageFormat;
-		colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0U;
-		colorAttachmentRef.layout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount	= 1U;
-		subpass.pColorAttachments		= &colorAttachmentRef;
-		subpass.pDepthStencilAttachment = nullptr;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass	 = 0U;
-		dependency.srcAccessMask = 0U;
-		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1U;
-		renderPassInfo.pAttachments	   = &colorAttachment;
-		renderPassInfo.subpassCount	   = 1U;
-		renderPassInfo.pSubpasses	   = &subpass;
-		renderPassInfo.dependencyCount = 1U;
-		renderPassInfo.pDependencies   = &dependency;
-
-		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_TonemappingPipeline.renderPass) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::PPCreateRenderPass() - Failed to create render pass!");
-	}
-	void VulkanRendererBackend::PPCreatePipeline()
-	{
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex  );
-		Shader fShader("Shaders/TonemapFrag.spv"	  , ShaderType::Fragment);
-
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
-
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		vertexInputInfo.sType							= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount   = 0U;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0U;
-		vertexInputInfo.pVertexBindingDescriptions		= nullptr;
-		vertexInputInfo.pVertexAttributeDescriptions	= nullptr;
-
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-		inputAssembly.sType					 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology				 = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-		VkViewport viewport{};
-		viewport.x		  = 0.0f;
-		viewport.y		  = 0.0f;
-		viewport.width	  = (float)m_Swapchain.extent.width;
-		viewport.height	  = (float)m_Swapchain.extent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor{};
-		scissor.offset = { 0U, 0U };
-		scissor.extent = m_Swapchain.extent;
-
-		VkPipelineViewportStateCreateInfo viewportState{};
-		viewportState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1U;
-		viewportState.pViewports	= &viewport;
-		viewportState.scissorCount  = 1U;
-		viewportState.pScissors		= &scissor;
-
-		VkPipelineRasterizationStateCreateInfo rasterizer{};
-		rasterizer.sType				   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable		   = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode			   = VK_POLYGON_MODE_FILL;
-		rasterizer.lineWidth			   = 1.0f;
-		rasterizer.cullMode				   = VK_CULL_MODE_FRONT_BIT;
-		rasterizer.frontFace			   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable		   = VK_FALSE;
-
-		VkPipelineMultisampleStateCreateInfo multisampling{};
-		multisampling.sType				   = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable  = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable		 = VK_FALSE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachment.colorBlendOp		 = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachment.alphaBlendOp		 = VK_BLEND_OP_ADD;
-
-		VkPipelineColorBlendStateCreateInfo colorBlending{};
-		colorBlending.sType			  = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable	  = VK_FALSE;
-		colorBlending.logicOp		  = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1U;
-		colorBlending.pAttachments	  = &colorBlendAttachment;
-
-		VkPipelineDepthStencilStateCreateInfo depthStencil{};
-		depthStencil.sType				   = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable	   = VK_FALSE;
-		depthStencil.depthWriteEnable	   = VK_FALSE;
-		depthStencil.depthCompareOp		   = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds		   = 0.0f;
-		depthStencil.maxDepthBounds		   = 1.0f;
-		depthStencil.stencilTestEnable	   = VK_FALSE;
-		depthStencil.front = {};
-		depthStencil.back  = {};
-
-		VkPushConstantRange exposurePushConstant{};
-		exposurePushConstant.offset		= 0U;
-		exposurePushConstant.size		= sizeof(PostProcessingParams::Exposure);
-		exposurePushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType		  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1U;
-		pipelineLayoutInfo.pSetLayouts	  = &m_TonemappingPipeline.descriptorSetLayout;
-
-		pipelineLayoutInfo.pPushConstantRanges	  = &exposurePushConstant;
-		pipelineLayoutInfo.pushConstantRangeCount = 1U;
-
-		if (vkCreatePipelineLayout(m_Ctx->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_TonemappingPipeline.layout) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::PPCreatePipeline() - Failed to create pipeline layout!");
-
-		VkGraphicsPipelineCreateInfo pipelineInfo{};
-		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2U;
-		pipelineInfo.pStages	= shaderStages;
-
-		pipelineInfo.pVertexInputState   = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssembly;
-		pipelineInfo.pViewportState		 = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState   = &multisampling;
-		pipelineInfo.pDepthStencilState  = &depthStencil;
-		pipelineInfo.pColorBlendState    = &colorBlending;
-		pipelineInfo.pDynamicState		 = nullptr;
-
-		pipelineInfo.layout		= m_TonemappingPipeline.layout;
-		pipelineInfo.renderPass = m_TonemappingPipeline.renderPass;
-		pipelineInfo.subpass	= 0U;
-
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineInfo.basePipelineIndex = -1;
-
-		if (vkCreateGraphicsPipelines(m_Ctx->m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_TonemappingPipeline.pipeline) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::PPCreatePipeline() - Failed to create pipeline!");
-	}
 	
 	void VulkanRendererBackend::CreateSyncObjects()
 	{
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
 		VkFenceCreateInfo fenceInfo{};
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		if (vkCreateSemaphore(m_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &m_GeometryPipeline.passFinished) != VK_SUCCESS ||
-			vkCreateSemaphore(m_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &m_LightingPipeline.passFinished) != VK_SUCCESS ||
-			vkCreateFence	 (m_Ctx->m_LogicalDevice, &fenceInfo	, nullptr, &m_SubmitFence				   ) != VK_SUCCESS)
-		{
+		if (vkCreateFence(m_Ctx->m_LogicalDevice, &fenceInfo	, nullptr, &m_SubmitFence) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::CreateSyncObjects() - Failed to create sync objects!");
-		}
 	}
-
+	
 	void VulkanRendererBackend::CreateCameraMatricesBuffer()
 	{
 		m_CameraMatrices = std::make_unique<CameraMatricesBuffer>();
@@ -1586,5 +896,112 @@ namespace en
 	bool VulkanRendererBackend::HasStencilComponent(const VkFormat format)
 	{
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+	}
+	void VulkanRendererBackend::CreateDescriptorPool()
+	{
+		std::array<VkDescriptorSetLayoutBinding, 4> bindings;
+		//0: Color Framebuffer
+		//1: Position Framebuffer (Alpha channel is specularity)
+		//2: Normal Framebuffer
+		//3: Lights Buffer
+
+		for (uint32_t i = 0U; auto & binding : bindings)
+		{
+			binding.binding = i;
+			binding.descriptorCount = 1U;
+			binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			binding.pImmutableSamplers = nullptr;
+			binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+			i++;
+		}
+
+		// Change the light buffer's type to VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+		bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		if (vkCreateDescriptorSetLayout(m_Ctx->m_LogicalDevice, &layoutInfo, nullptr, &m_LightingInput.m_DescriptorLayout) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::A() - Failed to create descriptor set layout!");
+
+		std::array<VkDescriptorPoolSize, 4> poolSizes{};
+
+		for (auto& poolSize : poolSizes)
+		{
+			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			poolSize.descriptorCount = 1U;
+		}
+
+		// Lights buffer
+		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+		poolInfo.maxSets = 1U;
+
+		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_LightingInput.m_DescriptorPool) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::A() - Failed to create descriptor pool!");
+	}
+	void VulkanRendererBackend::CreateDescriptorSet()
+	{
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = m_LightingInput.m_DescriptorPool;
+		allocInfo.descriptorSetCount = 1U;
+		allocInfo.pSetLayouts = &m_LightingInput.m_DescriptorLayout;
+
+		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingInput.m_DescriptorSet) != VK_SUCCESS)
+			EN_ERROR("VulkanRendererBackend::A() - Failed to allocate descriptor set!");
+
+		std::array<VkDescriptorImageInfo, 3> imageInfos{};
+
+		// Albedo
+		imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfos[0].imageView = m_GBuffer.albedo.imageView;
+		imageInfos[0].sampler = m_GBuffer.sampler;
+
+		// Position
+		imageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfos[1].imageView = m_GBuffer.position.imageView;
+		imageInfos[1].sampler = m_GBuffer.sampler;
+
+		// Normal
+		imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfos[2].imageView = m_GBuffer.normal.imageView;
+		imageInfos[2].sampler = m_GBuffer.sampler;
+
+		// Light Buffer
+		VkDescriptorBufferInfo lightBufferInfo{};
+		lightBufferInfo.buffer = m_Lights.buffer;
+		lightBufferInfo.offset = 0U;
+		lightBufferInfo.range = sizeof(m_Lights.LBO);
+
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+
+		for (uint32_t i = 0U; auto & descriptorWrite : descriptorWrites)
+		{
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = m_LightingInput.m_DescriptorSet;
+			descriptorWrite.dstBinding = i;
+			descriptorWrite.dstArrayElement = 0U;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrite.descriptorCount = 1U;
+
+			if (i != 3U)
+				descriptorWrite.pImageInfo = &imageInfos[i];
+
+			i++;
+		}
+
+		// Light Buffer
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[3].pBufferInfo = &lightBufferInfo;
+
+		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }

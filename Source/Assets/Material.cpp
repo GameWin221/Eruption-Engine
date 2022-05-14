@@ -63,7 +63,7 @@ namespace en
 		m_MatBuffer.normalStrength = m_NormalStrength;
 
 		en::Helpers::MapBuffer(m_BufferMemory, &m_MatBuffer, g_MatBufferSize);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &m_DescriptorSet, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1U, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
 	void Material::UpdateDescriptorSet()
 	{

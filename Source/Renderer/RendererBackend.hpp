@@ -16,8 +16,11 @@
 #include <Renderer/Shader.hpp>
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Camera/Camera.hpp>
+#include <Renderer/Buffers/UniformBuffer.hpp>
 
 #include <Scene/Scene.hpp>
+
+#include <Renderer/Pipeline.hpp>
 
 namespace en
 {
@@ -63,31 +66,6 @@ namespace en
 		std::function<void()> m_ImGuiRenderCallback;
 
 	private:
-		struct Pipeline
-		{
-			VkDescriptorPool	  descriptorPool;
-			VkDescriptorSetLayout descriptorSetLayout;
-			VkDescriptorSet		  descriptorSet;
-
-			VkRenderPass	 renderPass;
-			VkPipelineLayout layout;
-			VkPipeline		 pipeline;
-
-			VkSemaphore passFinished;
-
-			void Destroy(VkDevice& device)
-			{
-				vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-				vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-
-				vkDestroySemaphore(device, passFinished, nullptr);
-
-				vkDestroyPipeline(device, pipeline, nullptr);
-				vkDestroyPipelineLayout(device, layout, nullptr);
-				vkDestroyRenderPass(device, renderPass, nullptr);
-			}
-		};
-
 		struct Attachment
 		{
 			VkImage		   image;
@@ -187,10 +165,24 @@ namespace en
 
 		} m_ImGui;
 
-		Pipeline m_DepthPipeline;
+		//Pipeline m_DepthPipeline;
 		Pipeline m_GeometryPipeline;
-		Pipeline m_LightingPipeline;
+
 		Pipeline m_TonemappingPipeline;
+		std::unique_ptr<UniformBuffer> m_TonemappingInput;
+
+		Pipeline m_LightingPipeline;
+		//std::unique_ptr<UniformBuffer> m_LightingInput;s
+		struct LightingInput
+		{
+			VkDescriptorSetLayout m_DescriptorLayout;
+
+			VkDescriptorPool m_DescriptorPool;
+			VkDescriptorSet  m_DescriptorSet;
+		} m_LightingInput;
+
+		void CreateDescriptorPool();
+		void CreateDescriptorSet();
 
 		Scene* m_Scene = nullptr;
 
@@ -226,25 +218,23 @@ namespace en
 		void CreateAttachment(Attachment& attachment, VkFormat format, VkImageLayout imageLayout, VkImageAspectFlags imageAspectFlags, VkImageUsageFlags imageUsageFlags);
 		
 		void InitGeometryPipeline();
-		void GCreateCommandBuffer();
-		void GCreateRenderPass();
-		void GCreatePipeline();
+		void CreateCommandBuffer();
 
 		void InitLightingPipeline();
 		void LCreateLightsBuffer();
-		void LCreateDescriptorSetLayout();
-		void LCreateDescriptorPool();
-		void LCreateDescriptorSet();
-		void LCreateRenderPass();
-		void LCreatePipeline();
+		//void LCreateDescriptorSetLayout();
+		//void LCreateDescriptorPool();
+		//void LCreateDescriptorSet();
+		//void LCreateRenderPass();
+		//void LCreatePipeline();
 		void LCreateHDRFramebuffer();
 
 		void InitPostProcessPipeline();
-		void PPCreateDescriptorPool();
-		void PPCreateDescriptorSetLayout();
-		void PPCreateDescriptorSet();
-		void PPCreateRenderPass();
-		void PPCreatePipeline();
+		//void PPCreateDescriptorPool();
+		//void PPCreateDescriptorSetLayout();
+		//void PPCreateDescriptorSet();
+		//void PPCreateRenderPass();
+		//void PPCreatePipeline();
 
 		void CreateSwapchainFramebuffers();
 
