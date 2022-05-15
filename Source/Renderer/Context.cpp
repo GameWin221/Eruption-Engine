@@ -10,7 +10,7 @@ const std::vector<const char*> deviceExtensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-#if not defined(DEBUG)
+#if not defined(NDEBUG)
 const bool enableValidationLayers = true;
 #else
 const bool enableValidationLayers = false;
@@ -29,7 +29,7 @@ namespace en
 		VKCreateLogicalDevice();
 		VKCreateCommandPool();
 
-		EN_SUCCESS("Successfully created the Vulkan context");
+		EN_SUCCESS("Created the Vulkan context");
 	}
 	Context::~Context()
 	{

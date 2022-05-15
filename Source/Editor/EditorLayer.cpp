@@ -8,7 +8,7 @@ namespace en
 	void EditorLayer::AttachTo(Renderer* renderer, AssetManager* assetManager, double* deltaTimeVar)
 	{
 		if (renderer && deltaTimeVar && assetManager)
-			EN_SUCCESS("Successfully attached the UI layer")
+			EN_SUCCESS("Attached the UI layer")
 		else
 		{
 			EN_WARN("UILayer::AttachTo() - Failed to attach the UI layer!");
@@ -688,6 +688,7 @@ namespace en
 
 			ImGui::DragFloat("Shininess: ", &m_ChosenMaterial->m_Shininess, 0.5f, 1.0f, 512.0f);
 			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
+			ImGui::DragFloat("Specular Strength: ", &m_ChosenMaterial->m_SpecularStrength, 0.02f, 0.0f, 1.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 

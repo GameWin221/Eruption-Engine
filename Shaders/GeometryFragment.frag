@@ -13,6 +13,7 @@ layout(set = 1, binding = 1) uniform MatBufferObject {
     vec3 color;
     float shininess;
     float normalStrength;
+    float specularStrength;
 } mbo;
 
 layout(set = 1, binding = 2) uniform sampler2D albedoTexture;
@@ -31,9 +32,9 @@ vec3 NormalMapping()
 }
 void main() 
 {
-    gColor = vec4(texture(albedoTexture, fTexcoord).rgb * mbo.color, texture(specularTexture, fTexcoord).r);
+    gColor = vec4(texture(albedoTexture, fTexcoord).rgb * mbo.color, texture(specularTexture, fTexcoord).r * mbo.specularStrength);
 
     gPosition = vec4(fPosition, mbo.shininess);
 
-    gNormal = vec4(NormalMapping(), 1.0);
+    gNormal = vec4(NormalMapping(), 1.0f);
 }

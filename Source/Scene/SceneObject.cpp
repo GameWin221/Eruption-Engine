@@ -19,13 +19,13 @@ namespace en
 
 		m_Object.model = glm::translate(m_Object.model, m_Position);
 
-		m_Object.model = glm::scale(m_Object.model, m_Scale);
-
 		if (m_Rotation != glm::vec3(0.0f))
 		{
 			m_Object.model = glm::rotate(m_Object.model, glm::radians(m_Rotation.x), glm::vec3(1, 0, 0));
 			m_Object.model = glm::rotate(m_Object.model, glm::radians(m_Rotation.y), glm::vec3(0, 1, 0));
 			m_Object.model = glm::rotate(m_Object.model, glm::radians(m_Rotation.z), glm::vec3(0, 0, 1));
 		}
+
+		m_Object.model = glm::scale(m_Object.model, m_Scale);
 	}
 }

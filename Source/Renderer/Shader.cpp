@@ -3,7 +3,7 @@
 
 namespace en
 {
-    Shader::Shader(std::string shaderPath, const ShaderType& shaderType)
+    Shader::Shader(std::string shaderPath, const ShaderType& shaderType) : m_Path(shaderPath)
     {
         auto shaderCode = Shader::ReadShaderFile(shaderPath);
 

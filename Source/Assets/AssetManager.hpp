@@ -32,7 +32,7 @@ namespace en
 	public:
 		AssetManager();
 
-		static AssetManager* GetInstance();
+		static AssetManager* Instance();
 
 		bool LoadMesh	(std::string nameID, std::string path, MeshImportProperties properties    = g_DefaultMeshImportSettings   );
 		bool LoadTexture(std::string nameID, std::string path, TextureImportProperties properties = g_DefaultTextureImportSettings);
@@ -40,7 +40,7 @@ namespace en
 		void DeleteMesh   (std::string nameID);
 		void DeleteTexture(std::string nameID);
 
-		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 48.0f, float normalStrength = 0.5f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* specularTexture = Texture::GetGreyNonSRGBTexture(), Texture* normalTexture = Texture::GetNormalTexture());
+		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float shininess = 48.0f, float normalStrength = 1.0f, float specularStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* specularTexture = Texture::GetGreyNonSRGBTexture(), Texture* normalTexture = Texture::GetNormalTexture());
 		void DeleteMaterial(std::string nameID);
 
 		bool ContainsMesh    (std::string nameID) { return m_Meshes   .contains(nameID); };

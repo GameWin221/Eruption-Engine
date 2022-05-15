@@ -12,10 +12,10 @@ namespace en
         if (g_AssetManagerInstance)
             EN_ERROR("Failed to create asset manager because there already is one created!");
 
-        EN_SUCCESS("Successfully created the asset manager");
+        EN_SUCCESS("Created the asset manager");
         g_AssetManagerInstance = this;
     }
-    AssetManager* AssetManager::GetInstance()
+    AssetManager* AssetManager::Instance()
     {
         return g_AssetManagerInstance;
     }
@@ -54,7 +54,7 @@ namespace en
         EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
-    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
+    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -62,13 +62,14 @@ namespace en
             return false;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(nameID, color, shininess, normalStrength, albedoTexture, specularTexture, normalTexture);
+        m_Materials[nameID] = std::make_unique<Material>(nameID, color, shininess, normalStrength, specularStrength, albedoTexture, specularTexture, normalTexture);
 
         EN_LOG("Created a material (Name: \"" + nameID + "\", Color: " + std::to_string(color.x) + ", " +
                                                                          std::to_string(color.y) + ", " +
                                                                          std::to_string(color.z) + 
                                                        ", Shininess: " + std::to_string(shininess) + 
                                                        ", Normal Strength: "+ std::to_string(normalStrength) + 
+                                                       ", Specular Strength: "+ std::to_string(specularStrength) + 
                                                        ", Albedo: "    + ((albedoTexture)   ? albedoTexture   ->m_Name : "No Texture") +
                                                        ", Specular: "  + ((specularTexture) ?  specularTexture->m_Name : "No Texture") +
                                                        ", Normal: "    + ((normalTexture)   ?  normalTexture  ->m_Name : "No Texture"));
@@ -209,13 +210,12 @@ namespace en
         mesh->m_Name = name;
         
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+        const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices| aiProcess_GenUVCoords | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
 
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
             EN_ERROR("AssetManager::LoadMeshFromFile() - " + std::string(importer.GetErrorString()));
 
-        std::string directory = mesh->m_FilePath.substr(0, mesh->m_FilePath.find_last_of('/')+1);
-
+        std::string directory = mesh->m_FilePath.substr(0, std::min(mesh->m_FilePath.find_last_of('\\'), mesh->m_FilePath.find_last_of('/'))+1);
         std::vector<Material*> materials;
 
         if(importMaterial)
@@ -264,7 +264,7 @@ namespace en
             Texture* specularTexture = (hasSpecularTex) ? GetTexture(std::string(specularPath.C_Str())): Texture::GetGreyNonSRGBTexture();
             Texture* normalTexture   = (hasNormalTex  ) ? GetTexture(std::string(normalPath.C_Str()))  : Texture::GetNormalTexture();
 
-            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, diffuseTexture, specularTexture, normalTexture);
+            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, 1.0f, diffuseTexture, specularTexture, normalTexture);
 
             materials.emplace_back(GetMaterial(name.C_Str()));
         }
@@ -280,7 +280,17 @@ namespace en
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
         {
             aiMesh* assimpMesh = scene->mMeshes[node->mMeshes[i]];
-            Material* material = (materials.size() > 0) ? materials[assimpMesh->mMaterialIndex] : Material::GetDefaultMaterial();
+            Material* material;
+
+            aiVector3D pos(0.0f);
+            aiQuaternion rot;
+
+            node->mTransformation.DecomposeNoScaling(rot, pos);
+
+            if (assimpMesh->mMaterialIndex < materials.size() && materials.size() > 0)
+                material = materials[assimpMesh->mMaterialIndex];
+            else
+                material = Material::GetDefaultMaterial();
             
             std::vector<Vertex> vertices;
             std::vector<uint32_t> indices;
@@ -288,30 +298,32 @@ namespace en
             GetVertices(assimpMesh, vertices);
             GetIndices(assimpMesh, indices);
 
-            mesh->m_SubMeshes.emplace_back(vertices, indices, material);
-        }
+            for (auto& vert : vertices)
+            {
+                vert.pos.x += pos.x;
+                vert.pos.y += pos.y;
+                vert.pos.z += pos.z;
+            }
 
+            if (vertices.size() > 0 && indices.size() > 0)
+                mesh->m_SubMeshes.emplace_back(vertices, indices, material);
+        }
         for (unsigned int i = 0; i < node->mNumChildren; i++)
             ProcessNode(node->mChildren[i], scene, materials, mesh);
     }
     void AssetManager::GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices)
     {
-        if(mesh->GetNumUVChannels() > 0)
-        for (unsigned int i = 0; i < mesh->mNumVertices; i++)
-            vertices.emplace_back(
-                glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
-                glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
-                glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z),
-                glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
-            );
-        else
-        for (unsigned int i = 0; i < mesh->mNumVertices; i++)
-            vertices.emplace_back(
-                glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
-                glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
-                glm::vec3(0.0),
-                glm::vec2(0.0)
-            );
+        if (mesh->HasTextureCoords(0) && mesh->HasPositions() && mesh->HasNormals() && mesh->HasTangentsAndBitangents())
+        {
+            for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+                vertices.emplace_back
+                (
+                    glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
+                    glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
+                    glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z),
+                    glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+                );
+        }
     }
     void AssetManager::GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices)
     {

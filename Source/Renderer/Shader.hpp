@@ -22,8 +22,12 @@ namespace en
 
 		VkPipelineShaderStageCreateInfo m_ShaderInfo{};
 
+		const std::string& GetPath() const { return m_Path; }
+
 	private:
 		VkShaderModule m_ShaderModule{};
+
+		std::string m_Path;
 
 		static std::vector<char> ReadShaderFile(std::string shaderPath);
 	};
