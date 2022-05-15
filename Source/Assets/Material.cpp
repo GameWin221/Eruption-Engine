@@ -30,7 +30,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 1.0f, 1.0f, nullptr, nullptr, nullptr);
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 1.0f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetGreyNonSRGBTexture(), Texture::GetNormalTexture());
 
 		return g_DefaultMaterial;
 	}
