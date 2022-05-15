@@ -4,10 +4,11 @@
 #include <Common/Helpers.hpp>
 namespace en
 {
-	UniformBuffer::UniformBuffer(std::vector<ImageInfo>& imageInfos, BufferInfo bufferInfo)
+	UniformBuffer::UniformBuffer(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfo);
 		CreateDescriptorSet(imageInfos, bufferInfo);
+		UpdateDescriptorSet(imageInfos, bufferInfo);
 	}
 	UniformBuffer::~UniformBuffer()
 	{
@@ -27,7 +28,7 @@ namespace en
 
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-		for (auto& image : imageInfos)
+		for (const auto& image : imageInfos)
 		{
 			VkDescriptorSetLayoutBinding binding{};
 			binding.binding			   = image.index;
@@ -42,10 +43,10 @@ namespace en
 		if (bufferInfo.buffer != VK_NULL_HANDLE)
 		{
 			VkDescriptorSetLayoutBinding binding{};
-			binding.binding = bufferInfo.index;
-			binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			binding.binding			= bufferInfo.index;
+			binding.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			binding.descriptorCount = 1U;
-			binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			binding.stageFlags		= VK_SHADER_STAGE_FRAGMENT_BIT;
 
 			bindings.emplace_back(binding);
 		}
@@ -60,11 +61,12 @@ namespace en
 
 
 		std::vector<VkDescriptorPoolSize> poolSizes;
-		for (auto& binding : bindings)
+		for (const auto& binding : bindings)
 		{
 			VkDescriptorPoolSize size{};
 			size.type = binding.descriptorType;
 			size.descriptorCount = 1U;
+
 			poolSizes.emplace_back(size);
 		}
 
@@ -89,46 +91,56 @@ namespace en
 
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
+		}
+	void UniformBuffer::UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo& bufferInfo)
+	{
+		UseContext();
 
-		std::vector<VkWriteDescriptorSet> descriptorWrites;
-		for (auto& image : imageInfos)
+		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
+		for (const auto& image : imageInfos)
 		{
 			VkDescriptorImageInfo info{};
 			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			info.imageView = image.imageView;
 			info.sampler = image.imageSampler;
+			descriptorImageInfos.emplace_back(info);
+		}
 
+		std::vector<VkWriteDescriptorSet> descriptorWrites;
+		for (int i = 0; const auto & image : imageInfos)
+		{
 			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet			= m_DescriptorSet;
-			descriptorWrite.dstBinding		= image.index;
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = m_DescriptorSet;
+			descriptorWrite.dstBinding = image.index;
 			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrite.descriptorCount = 1U;
-			descriptorWrite.pImageInfo      = &info;
+			descriptorWrite.pImageInfo = &descriptorImageInfos[i++];
 
 			descriptorWrites.emplace_back(descriptorWrite);
 		}
+
+		VkDescriptorBufferInfo info{};
+		info.buffer = bufferInfo.buffer;
+		info.offset = 0U;
+		info.range = bufferInfo.size;
 
 		if (bufferInfo.buffer != VK_NULL_HANDLE)
 		{
-			VkDescriptorBufferInfo info{};
-			info.buffer = bufferInfo.buffer;
-			info.offset = 0U;
-			info.range  = bufferInfo.size;
-
 			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet			= m_DescriptorSet;
-			descriptorWrite.dstBinding		= bufferInfo.index;
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = m_DescriptorSet;
+			descriptorWrite.dstBinding = bufferInfo.index;
 			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1U;
-			descriptorWrite.pBufferInfo		= &info;
+			descriptorWrite.pBufferInfo = &info;
 
 			descriptorWrites.emplace_back(descriptorWrite);
 		}
 
-		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0U, nullptr);
+
 	}
 }

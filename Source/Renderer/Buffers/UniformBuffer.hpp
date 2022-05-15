@@ -5,26 +5,30 @@
 
 namespace en
 { 
+	// It is possible that the buffer always has to be the last index
+
 	class UniformBuffer
 	{
 	public:
 		struct ImageInfo
 		{
-			uint32_t index = 0U;
-			VkImageView imageView = VK_NULL_HANDLE;
-			VkSampler imageSampler = VK_NULL_HANDLE;
+			uint32_t    index		 = 0U;
+			VkImageView imageView	 = VK_NULL_HANDLE;
+			VkSampler   imageSampler = VK_NULL_HANDLE;
 		};
 		struct BufferInfo
 		{
-			uint32_t index = 0U;
-			VkBuffer buffer = VK_NULL_HANDLE;
-			VkDeviceSize size = 0U;
+			uint32_t	 index  = 0U;
+			VkBuffer	 buffer = VK_NULL_HANDLE;
+			VkDeviceSize size	= 0U;
 		};
 
-		UniformBuffer(std::vector<ImageInfo>& imageInfos, BufferInfo bufferInfo = BufferInfo{});
+		UniformBuffer(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});
 		~UniformBuffer();
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index = 0U);
+
+		void UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo& bufferInfo);
 
 		VkDescriptorSetLayout m_DescriptorLayout;
 

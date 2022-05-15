@@ -11,16 +11,11 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(std::string name, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) : m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength)
+	Material::Material(std::string name, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) 
+		: m_Name(name), m_Albedo(albedoTexture), m_Specular(specularTexture), m_Normal(normalTexture), m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength), m_SpecularStrength(specularStrength)
 	{
-		m_Albedo = albedoTexture;
-		m_Specular = specularTexture;
-		m_Normal = normalTexture;
-
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
-
-		m_Name = name;
 
 		CreateMatBuffer();
 		CreateDescriptorSet();
@@ -35,7 +30,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 0.5f, nullptr, nullptr, nullptr);
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 1.0f, 1.0f, nullptr, nullptr, nullptr);
 
 		return g_DefaultMaterial;
 	}
@@ -58,11 +53,17 @@ namespace en
 
 	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
-		m_MatBuffer.color = m_Color;
-		m_MatBuffer.shininess = m_Shininess;
-		m_MatBuffer.normalStrength = m_NormalStrength;
+		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.shininess != m_Shininess || m_MatBuffer.normalStrength != m_NormalStrength || m_MatBuffer.m_SpecularStrength != m_SpecularStrength);
 
-		en::Helpers::MapBuffer(m_BufferMemory, &m_MatBuffer, g_MatBufferSize);
+		if (materialChanged)
+		{
+			m_MatBuffer.color = m_Color;
+			m_MatBuffer.shininess = m_Shininess;
+			m_MatBuffer.normalStrength = m_NormalStrength;
+			m_MatBuffer.m_SpecularStrength = m_SpecularStrength;
+			en::Helpers::MapBuffer(m_BufferMemory, &m_MatBuffer, g_MatBufferSize);
+		}
+		
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1U, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
 	void Material::UpdateDescriptorSet()

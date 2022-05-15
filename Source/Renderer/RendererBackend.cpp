@@ -51,7 +51,7 @@ namespace en
 
         EN_SUCCESS("Created lighting pipeline!")
 
-		InitPostProcessPipeline();
+		InitTonemappingPipeline();
 
         EN_SUCCESS("Created PP pipeline!")
 
@@ -69,7 +69,7 @@ namespace en
 
 		InitImGui();
 
-		EN_SUCCESS("Successfully created the renderer Vulkan backend");
+		EN_SUCCESS("Created the renderer Vulkan backend");
 
 		m_Lights.pointLights[0].m_Position = glm::vec3(3, 2, 0.5);
 		m_Lights.pointLights[0].m_Color    = glm::vec3(0.4, 1.0, 0.4);
@@ -96,7 +96,6 @@ namespace en
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
 		m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
-
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
 		m_GeometryPipeline.Destroy();
@@ -109,10 +108,7 @@ namespace en
 
 		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.renderPass, nullptr);
 
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-		vkDestroyDescriptorPool(m_Ctx->m_LogicalDevice, m_ImGui.descriptorPool, nullptr);
+		m_ImGui.Destroy();
 	}
 
 	void VulkanRendererBackend::WaitForGPUIdle()
@@ -224,15 +220,11 @@ namespace en
 		if (lightsChanged)
 			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
 
-		static std::vector<VkClearValue> clearValues = { m_BlackClearValue };
-
-		m_LightingPipeline.Bind(m_CommandBuffer, m_LightingHDRFramebuffer, m_Swapchain.extent, clearValues);
+		m_LightingPipeline.Bind(m_CommandBuffer, m_LightingHDRFramebuffer, m_Swapchain.extent);
 
 		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline.m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		This doesnt work
-		m_LightingInputDescriptor->Bind(m_CommandBuffer, m_LightingPipeline.m_Layout);
-		//vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightingPipeline.m_Layout, 0U, 1U, &m_LightingInput.m_DescriptorSet, 0U, nullptr);
+		m_LightingInput->Bind(m_CommandBuffer, m_LightingPipeline.m_Layout);
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
@@ -287,8 +279,6 @@ namespace en
 	}
 	void VulkanRendererBackend::EndRender()
 	{
-		
-
 		if (m_SkipFrame) return;
 		
 		if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
@@ -362,18 +352,21 @@ namespace en
 
 		CreateGBufferAttachments();
 
+		m_GeometryPipeline.Resize(m_Swapchain.extent, { CameraMatricesBuffer::GetLayout(), Material::GetLayout() });
+
 		CreateGBuffer();
 
-		m_GeometryPipeline.Resize(m_Swapchain.extent);
+		LCreateHDRFramebuffer();
 
-		m_LightingPipeline.Resize(m_Swapchain.extent);
+		CreateLightingInput();
 
-		m_TonemappingPipeline.Resize(m_Swapchain.extent);
+		m_LightingPipeline.Resize(m_Swapchain.extent, { m_LightingInput->m_DescriptorLayout });
+
+		CreateTonemappingInput();
+
+		m_TonemappingPipeline.Resize(m_Swapchain.extent, { m_TonemappingInput->m_DescriptorLayout });
 
 		CreateSwapchainFramebuffers();
-
-		//LCreateDescriptorSet();
-		//PPCreateDescriptorSet();
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.imageViews.size());
 
@@ -568,28 +561,9 @@ namespace en
 
 		m_GeometryPipeline.CreateSyncSemaphore();
 	}
-	void VulkanRendererBackend::InitLightingPipeline()
+
+	void VulkanRendererBackend::CreateLightingInput()
 	{
-		std::vector<Pipeline::Attachment> colorAttachments = 
-		{
-			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
-		};
-
-		m_LightingPipeline.CreateRenderPass(colorAttachments);
-
-		LCreateHDRFramebuffer();
-		LCreateLightsBuffer();
-
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
-
-		VkPushConstantRange lightsCameraInfoRange{};
-		lightsCameraInfoRange.offset = 0U;
-		lightsCameraInfoRange.size = sizeof(Lights::LightsCameraInfo);
-		lightsCameraInfoRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		std::vector<VkPushConstantRange> pushConstants = { lightsCameraInfoRange };
-
 		UniformBuffer::ImageInfo albedo{};
 		albedo.imageView = m_GBuffer.albedo.imageView;
 		albedo.imageSampler = m_GBuffer.sampler;
@@ -612,18 +586,48 @@ namespace en
 
 		std::vector<UniformBuffer::ImageInfo> imageInfos = { albedo, position, normal };
 
-		m_LightingInputDescriptor = std::make_unique<UniformBuffer>(imageInfos, buffer);
+		m_LightingInput = std::make_unique<UniformBuffer>(imageInfos, buffer);
+	}
+	void VulkanRendererBackend::InitLightingPipeline()
+	{
+		std::vector<Pipeline::Attachment> colorAttachments = 
+		{
+			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
+		};
 
-		CreateDescriptorPool();
-		CreateDescriptorSet();
+		m_LightingPipeline.CreateRenderPass(colorAttachments);
 
-		std::vector<VkDescriptorSetLayout> layout = { m_LightingInputDescriptor->m_DescriptorLayout };
-		//std::vector<VkDescriptorSetLayout> layout = { m_LightingInput.m_DescriptorLayout };
+		LCreateHDRFramebuffer();
 
-		m_LightingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants, false, false, false, VK_CULL_MODE_FRONT_BIT);
+		m_Lights.bufferSize = sizeof(m_Lights.LBO);
+		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
+
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
+
+		CreateLightingInput();
+
+		VkPushConstantRange cameraPushConstant{};
+		cameraPushConstant.offset = 0U;
+		cameraPushConstant.size = sizeof(Lights::LightsCameraInfo);
+		cameraPushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		m_LightingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, { m_LightingInput->m_DescriptorLayout } , { cameraPushConstant }, false, false, false, VK_CULL_MODE_FRONT_BIT);
 		m_LightingPipeline.CreateSyncSemaphore();
 	}
-	void VulkanRendererBackend::InitPostProcessPipeline()
+
+	void VulkanRendererBackend::CreateTonemappingInput()
+	{
+		UniformBuffer::ImageInfo HDRColorBuffer{};
+		HDRColorBuffer.imageView = m_LightingHDRColorBuffer.imageView;
+		HDRColorBuffer.imageSampler = m_GBuffer.sampler;
+		HDRColorBuffer.index = 0U;
+
+		std::vector<UniformBuffer::ImageInfo> imageInfos = { HDRColorBuffer };
+
+		m_TonemappingInput = std::make_unique<UniformBuffer>(imageInfos);
+	}
+	void VulkanRendererBackend::InitTonemappingPipeline()
 	{
 		std::vector<Pipeline::Attachment> attachments = 
 		{
@@ -635,25 +639,14 @@ namespace en
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/TonemapFrag.spv", ShaderType::Fragment);
 
-		UniformBuffer::ImageInfo HDRColorBuffer{};
-		HDRColorBuffer.imageView = m_LightingHDRColorBuffer.imageView;
-		HDRColorBuffer.imageSampler = m_GBuffer.sampler;
-		HDRColorBuffer.index = 0U;
-
-		std::vector<UniformBuffer::ImageInfo> imageInfos = { HDRColorBuffer };
-
-		m_TonemappingInput = std::make_unique<UniformBuffer>(imageInfos);
-
-		std::vector<VkDescriptorSetLayout> layout = { m_TonemappingInput->m_DescriptorLayout };
+		CreateTonemappingInput();
 
 		VkPushConstantRange exposurePushConstant{};
 		exposurePushConstant.offset		= 0U;
 		exposurePushConstant.size		= sizeof(PostProcessingParams::Exposure);
 		exposurePushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		std::vector<VkPushConstantRange> pushConstants = { exposurePushConstant };
-
-		m_TonemappingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, layout, pushConstants, false, false, false, VK_CULL_MODE_FRONT_BIT);
+		m_TonemappingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, { m_TonemappingInput->m_DescriptorLayout }, { exposurePushConstant }, false, false, false, VK_CULL_MODE_FRONT_BIT);
 	}
 
 	void VulkanRendererBackend::CreateCommandBuffer()
@@ -668,11 +661,6 @@ namespace en
 			EN_ERROR("VulkanRendererBackend::GCreateCommandBuffer() - Failed to allocate command buffer!");
 	}
 
-	void VulkanRendererBackend::LCreateLightsBuffer()
-	{
-		m_Lights.bufferSize = sizeof(m_Lights.LBO);
-		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
-	}
 	void VulkanRendererBackend::LCreateHDRFramebuffer()
 	{
 		CreateAttachment(m_LightingHDRColorBuffer, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -897,84 +885,5 @@ namespace en
 	{
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
-	void VulkanRendererBackend::CreateDescriptorPool()
-	{
-		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 
-		for (auto& poolSize : poolSizes)
-		{
-			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSize.descriptorCount = 1U;
-		}
-
-		// Lights buffer
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = 1U;
-
-		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_LightingInput.m_DescriptorPool) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::A() - Failed to create descriptor pool!");
-	}
-	void VulkanRendererBackend::CreateDescriptorSet()
-	{
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = m_LightingInput.m_DescriptorPool;
-		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts		 = &m_LightingInputDescriptor->m_DescriptorLayout;
-
-		if (vkAllocateDescriptorSets(m_Ctx->m_LogicalDevice, &allocInfo, &m_LightingInput.m_DescriptorSet) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::A() - Failed to allocate descriptor set!");
-
-		
-		std::array<VkDescriptorImageInfo, 3> imageInfos{};
-
-		// Albedo
-		imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[0].imageView = m_GBuffer.albedo.imageView;
-		imageInfos[0].sampler = m_GBuffer.sampler;
-
-		// Position
-		imageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[1].imageView = m_GBuffer.position.imageView;
-		imageInfos[1].sampler = m_GBuffer.sampler;
-
-		// Normal
-		imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfos[2].imageView = m_GBuffer.normal.imageView;
-		imageInfos[2].sampler = m_GBuffer.sampler;
-
-		// Light Buffer
-		VkDescriptorBufferInfo lightBufferInfo{};
-		lightBufferInfo.buffer = m_Lights.buffer;
-		lightBufferInfo.offset = 0U;
-		lightBufferInfo.range = sizeof(m_Lights.LBO);
-
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
-
-		for (uint32_t i = 0U; auto & descriptorWrite : descriptorWrites)
-		{
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_LightingInput.m_DescriptorSet;
-			descriptorWrite.dstBinding = i;
-			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrite.descriptorCount = 1U;
-
-			if (i != 3U)
-				descriptorWrite.pImageInfo = &imageInfos[i];
-
-			i++;
-		}
-
-		// Light Buffer
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[3].pBufferInfo = &lightBufferInfo;
-		
-		vkUpdateDescriptorSets(m_Ctx->m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-	}
 }

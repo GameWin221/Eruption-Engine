@@ -4,18 +4,19 @@
 #define EN_PIPELINE_HPP
 
 #include <Renderer/Shader.hpp>
-#include <Renderer/Buffers/VertexBuffer.hpp>
 
 namespace en
 {
+	static std::vector<VkClearValue> defaultBlackClearValue{ {0.0f, 0.0f, 0.0f, 1.0f} };
+
 	class Pipeline
 	{
 	public:
-		void Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues);
+		void Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues = defaultBlackClearValue);
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 
-		void Resize(VkExtent2D& extent);
+		void Resize(VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts);
 
 		struct Attachment
 		{
@@ -31,8 +32,8 @@ namespace en
 			uint32_t index = 0U;
 		};
 		
-		void CreateRenderPass(std::vector<Attachment>& colorAttachments, Attachment depthAttachment = Attachment{});
-		void CreatePipeline(Shader& vShader, Shader& fShader, VkExtent2D& extent, std::vector<VkDescriptorSetLayout>& descriptorLayouts, std::vector<VkPushConstantRange>& pushConstantRanges, bool useVertexBindings = false, bool enableDepthTest = false, bool blendEnable = false, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT, VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
+		void CreateRenderPass(std::vector<Attachment> colorAttachments, Attachment depthAttachment = Attachment{});
+		void CreatePipeline(Shader& vShader, Shader& fShader, VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts, std::vector<VkPushConstantRange> pushConstantRanges, bool useVertexBindings = false, bool enableDepthTest = false, bool blendEnable = false, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT, VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
 		
 		void CreateSyncSemaphore();
 		

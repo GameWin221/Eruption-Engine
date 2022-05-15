@@ -12,13 +12,14 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Material(std::string name, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture);
+		Material(std::string name, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture);
 		~Material();
 
 		glm::vec3 m_Color;
 
 		float m_Shininess;
 		float m_NormalStrength;
+		float m_SpecularStrength;
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
 
@@ -58,7 +59,8 @@ namespace en
 		{
 			alignas(4) glm::vec3 color = glm::vec3(1.0f);
 			alignas(4) float shininess = 32.0f;
-			alignas(4) float normalStrength = 0.5f;
+			alignas(4) float normalStrength = 1.0f;
+			alignas(4) float m_SpecularStrength = 1.0f;
 
 		} m_MatBuffer;
 	};

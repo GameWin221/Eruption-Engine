@@ -688,6 +688,7 @@ namespace en
 
 			ImGui::DragFloat("Shininess: ", &m_ChosenMaterial->m_Shininess, 0.5f, 1.0f, 512.0f);
 			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
+			ImGui::DragFloat("Specular Strength: ", &m_ChosenMaterial->m_SpecularStrength, 0.02f, 0.0f, 1.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 

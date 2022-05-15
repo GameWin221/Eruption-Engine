@@ -15,7 +15,7 @@ namespace en
         EN_SUCCESS("Successfully created the asset manager");
         g_AssetManagerInstance = this;
     }
-    AssetManager* AssetManager::GetInstance()
+    AssetManager* AssetManager::Instance()
     {
         return g_AssetManagerInstance;
     }
@@ -54,7 +54,7 @@ namespace en
         EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
-    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
+    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -62,13 +62,14 @@ namespace en
             return false;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(nameID, color, shininess, normalStrength, albedoTexture, specularTexture, normalTexture);
+        m_Materials[nameID] = std::make_unique<Material>(nameID, color, shininess, normalStrength, specularStrength, albedoTexture, specularTexture, normalTexture);
 
         EN_LOG("Created a material (Name: \"" + nameID + "\", Color: " + std::to_string(color.x) + ", " +
                                                                          std::to_string(color.y) + ", " +
                                                                          std::to_string(color.z) + 
                                                        ", Shininess: " + std::to_string(shininess) + 
                                                        ", Normal Strength: "+ std::to_string(normalStrength) + 
+                                                       ", Specular Strength: "+ std::to_string(specularStrength) + 
                                                        ", Albedo: "    + ((albedoTexture)   ? albedoTexture   ->m_Name : "No Texture") +
                                                        ", Specular: "  + ((specularTexture) ?  specularTexture->m_Name : "No Texture") +
                                                        ", Normal: "    + ((normalTexture)   ?  normalTexture  ->m_Name : "No Texture"));
@@ -264,7 +265,7 @@ namespace en
             Texture* specularTexture = (hasSpecularTex) ? GetTexture(std::string(specularPath.C_Str())): Texture::GetGreyNonSRGBTexture();
             Texture* normalTexture   = (hasNormalTex  ) ? GetTexture(std::string(normalPath.C_Str()))  : Texture::GetNormalTexture();
 
-            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, diffuseTexture, specularTexture, normalTexture);
+            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, 1.0f, diffuseTexture, specularTexture, normalTexture);
 
             materials.emplace_back(GetMaterial(name.C_Str()));
         }

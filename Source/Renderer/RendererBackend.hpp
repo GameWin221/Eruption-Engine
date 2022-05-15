@@ -163,6 +163,21 @@ namespace en
 
 			std::vector<VkCommandBuffer> commandBuffers;
 
+			void Destroy()
+			{
+				UseContext();
+
+				ImGui_ImplVulkan_Shutdown();
+				ImGui_ImplGlfw_Shutdown();
+				ImGui::DestroyContext();
+
+				vkDestroyCommandPool(ctx.m_LogicalDevice, commandPool, nullptr);
+
+				vkDestroyDescriptorPool(ctx.m_LogicalDevice, descriptorPool, nullptr);
+
+				vkDestroyRenderPass(ctx.m_LogicalDevice, renderPass, nullptr);
+			}
+
 		} m_ImGui;
 
 		//Pipeline m_DepthPipeline;
@@ -172,15 +187,7 @@ namespace en
 		std::unique_ptr<UniformBuffer> m_TonemappingInput;
 
 		Pipeline m_LightingPipeline;
-		std::unique_ptr<UniformBuffer> m_LightingInputDescriptor;
-		struct LightingInput
-		{
-			VkDescriptorPool m_DescriptorPool;
-			VkDescriptorSet  m_DescriptorSet;
-		} m_LightingInput;
-
-		void CreateDescriptorPool();
-		void CreateDescriptorSet();
+		std::unique_ptr<UniformBuffer> m_LightingInput;
 
 		Scene* m_Scene = nullptr;
 
@@ -193,7 +200,7 @@ namespace en
 		
 		VkFence	m_SubmitFence;
 
-		const VkClearValue m_BlackClearValue{0, 0, 0, 1.0};
+		const VkClearValue m_BlackClearValue{};
 
 		RendererInfo m_RendererInfo;
 
@@ -218,21 +225,12 @@ namespace en
 		void InitGeometryPipeline();
 		void CreateCommandBuffer();
 
+		void CreateLightingInput();
 		void InitLightingPipeline();
-		void LCreateLightsBuffer();
-		//void LCreateDescriptorSetLayout();
-		//void LCreateDescriptorPool();
-		//void LCreateDescriptorSet();
-		//void LCreateRenderPass();
-		//void LCreatePipeline();
 		void LCreateHDRFramebuffer();
 
-		void InitPostProcessPipeline();
-		//void PPCreateDescriptorPool();
-		//void PPCreateDescriptorSetLayout();
-		//void PPCreateDescriptorSet();
-		//void PPCreateRenderPass();
-		//void PPCreatePipeline();
+		void CreateTonemappingInput();
+		void InitTonemappingPipeline();
 
 		void CreateSwapchainFramebuffers();
 

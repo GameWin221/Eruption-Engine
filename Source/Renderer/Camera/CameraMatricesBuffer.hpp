@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Common/Helpers.hpp>
+#include <Renderer/Buffers/UniformBuffer.hpp>
 
 #ifndef EN_CAMERAMATRICESBUFFER_HPP
 #define EN_CAMERAMATRICESBUFFER_HPP

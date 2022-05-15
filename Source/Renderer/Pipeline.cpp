@@ -2,6 +2,7 @@
 #include "Pipeline.hpp"
 
 #include <Common/Helpers.hpp>
+#include <Renderer/Buffers/VertexBuffer.hpp>
 
 namespace en
 {
@@ -24,9 +25,11 @@ namespace en
 	{
 		vkCmdEndRenderPass(commandBuffer);
 	}
-	void Pipeline::Resize(VkExtent2D& extent)
+	void Pipeline::Resize(VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts)
 	{
 		UseContext();
+
+		m_DescriptorSetLayouts = descriptorLayouts;
 
 		vkDestroyRenderPass(ctx.m_LogicalDevice, m_RenderPass, nullptr);
 		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
@@ -40,7 +43,7 @@ namespace en
 		CreatePipeline(vShader, fShader, extent, m_DescriptorSetLayouts, m_PushConstantRanges, m_UseVertexBindings, m_EnableDepthTest, m_BlendEnable, m_CullMode, m_PolygonMode);
 	}
 
-	void Pipeline::CreateRenderPass(std::vector<Attachment>& colorAttachments, Attachment depthAttachment)
+	void Pipeline::CreateRenderPass(std::vector<Attachment> colorAttachments, Attachment depthAttachment)
 	{
 		UseContext();
 
@@ -129,7 +132,7 @@ namespace en
 		if (vkCreateRenderPass(ctx.m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreateRenderPass() - Failed to create render pass!");
 	}
-	void Pipeline::CreatePipeline(Shader& vShader, Shader& fShader, VkExtent2D& extent, std::vector<VkDescriptorSetLayout>& descriptorLayouts, std::vector<VkPushConstantRange>& pushConstantRanges, bool useVertexBindings, bool enableDepthTest, bool blendEnable, VkCullModeFlags cullMode, VkPolygonMode polygonMode)
+	void Pipeline::CreatePipeline(Shader& vShader, Shader& fShader, VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts, std::vector<VkPushConstantRange> pushConstantRanges, bool useVertexBindings, bool enableDepthTest, bool blendEnable, VkCullModeFlags cullMode, VkPolygonMode polygonMode)
 	{
 		m_VShaderPath = vShader.GetPath();
 		m_FShaderPath = fShader.GetPath();

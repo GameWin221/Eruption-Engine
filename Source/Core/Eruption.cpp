@@ -110,7 +110,7 @@ void Eruption::CreateExampleScene()
 	m_AssetManager->LoadTexture("SkullSpecular", "Models/Skull/SkullSpecular.jpg", { en::TextureFormat::NonColor });
 	m_AssetManager->LoadTexture("SkullNormal", "Models/Skull/SkullNormal.jpg", { en::TextureFormat::NonColor });
 	
-	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"), m_AssetManager->GetTexture("SkullSpecular"), m_AssetManager->GetTexture("SkullNormal"));
+	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"), m_AssetManager->GetTexture("SkullSpecular"), m_AssetManager->GetTexture("SkullNormal"));
 	
 	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial");
 
