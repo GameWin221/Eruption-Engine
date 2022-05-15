@@ -117,7 +117,7 @@
     <ClCompile Include="Source\Renderer\Pipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp">
+    <ClCompile Include="Source\Renderer\PipelineInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -230,7 +230,7 @@
     <ClInclude Include="Source\Renderer\Pipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Buffers\UniformBuffer.hpp">
+    <ClInclude Include="Source\Renderer\PipelineInput.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

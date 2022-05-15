@@ -98,9 +98,9 @@ namespace en
 		m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
-		m_GeometryPipeline.Destroy();
-		m_LightingPipeline.Destroy();
-		m_TonemappingPipeline.Destroy();
+		m_GeometryPipeline->Destroy();
+		m_LightingPipeline->Destroy();
+		m_TonemappingPipeline->Destroy();
 
 		vkDestroyFence(m_Ctx->m_LogicalDevice, m_SubmitFence, nullptr);
 
@@ -117,7 +117,7 @@ namespace en
 	}
 	void VulkanRendererBackend::BeginRender()
 	{
-		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline.m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
+		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline->m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
 		m_SkipFrame = false;
 
@@ -151,10 +151,10 @@ namespace en
 		clearValues[2].color = m_BlackClearValue.color;
 		clearValues[3].depthStencil = { 1.0f, 0 };
 
-		m_GeometryPipeline.Bind(m_CommandBuffer, m_GBuffer.framebuffer, m_Swapchain.extent, clearValues);
+		m_GeometryPipeline->Bind(m_CommandBuffer, m_GBuffer.framebuffer, m_Swapchain.extent, clearValues);
 
 		// Bind the m_MainCamera once per geometry pass
-		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline.m_Layout, m_CameraMatrices.get());
+		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout, m_CameraMatrices.get());
 
 		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
 		{
@@ -163,7 +163,7 @@ namespace en
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
-			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline.m_Layout);
+			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout);
 
 			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
@@ -172,13 +172,13 @@ namespace en
 				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
 				subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
 				subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
-				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline.m_Layout);
+				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout);
 
 				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
 			}
 		}
 
-		m_GeometryPipeline.Unbind(m_CommandBuffer);
+		m_GeometryPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::LightingPass()
 	{
@@ -220,15 +220,15 @@ namespace en
 		if (lightsChanged)
 			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
 
-		m_LightingPipeline.Bind(m_CommandBuffer, m_LightingHDRFramebuffer, m_Swapchain.extent);
+		m_LightingPipeline->Bind(m_CommandBuffer, m_LightingHDRFramebuffer, m_Swapchain.extent);
 
-		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline.m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
+		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		m_LightingInput->Bind(m_CommandBuffer, m_LightingPipeline.m_Layout);
+		m_LightingInput->Bind(m_CommandBuffer, m_LightingPipeline->m_Layout);
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		m_LightingPipeline.Unbind(m_CommandBuffer);
+		m_LightingPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::PostProcessPass()
 	{
@@ -236,17 +236,17 @@ namespace en
 		
 		static std::vector<VkClearValue> clearValue = { m_BlackClearValue };
 
-		m_TonemappingPipeline.Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
+		m_TonemappingPipeline->Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
 
 		m_PostProcessParams.exposure.value = m_MainCamera->m_Exposure;
 
-		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline.m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
+		vkCmdPushConstants(m_CommandBuffer, m_TonemappingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
 
-		m_TonemappingInput->Bind(m_CommandBuffer, m_TonemappingPipeline.m_Layout);
+		m_TonemappingInput->Bind(m_CommandBuffer, m_TonemappingPipeline->m_Layout);
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		m_TonemappingPipeline.Unbind(m_CommandBuffer);
+		m_TonemappingPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::ImGuiPass()
 	{
@@ -289,7 +289,7 @@ namespace en
 
 		VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		submitInfo.waitSemaphoreCount = 1U;
-		submitInfo.pWaitSemaphores    = &m_GeometryPipeline.m_PassFinished;
+		submitInfo.pWaitSemaphores    = &m_GeometryPipeline->m_PassFinished;
 		submitInfo.pWaitDstStageMask  = &waitStage;
 
 		VkCommandBuffer commandBuffers[] = {m_CommandBuffer, m_ImGui.commandBuffers[m_ImageIndex]};
@@ -303,7 +303,7 @@ namespace en
 		}
 
 		submitInfo.signalSemaphoreCount = 1U;
-		submitInfo.pSignalSemaphores    = &m_LightingPipeline.m_PassFinished;
+		submitInfo.pSignalSemaphores    = &m_LightingPipeline->m_PassFinished;
 
 		if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_SubmitFence) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
@@ -311,7 +311,7 @@ namespace en
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1U;
-		presentInfo.pWaitSemaphores	   = &m_LightingPipeline.m_PassFinished;
+		presentInfo.pWaitSemaphores	   = &m_LightingPipeline->m_PassFinished;
 
 		presentInfo.swapchainCount = 1U;
 		presentInfo.pSwapchains    = &m_Swapchain.swapchain;
@@ -352,19 +352,19 @@ namespace en
 
 		CreateGBufferAttachments();
 
-		m_GeometryPipeline.Resize(m_Swapchain.extent, { CameraMatricesBuffer::GetLayout(), Material::GetLayout() });
+		m_GeometryPipeline->Resize(m_Swapchain.extent);
 
 		CreateGBuffer();
 
 		LCreateHDRFramebuffer();
 
-		CreateLightingInput();
+		UpdateLightingInput();
 
-		m_LightingPipeline.Resize(m_Swapchain.extent, { m_LightingInput->m_DescriptorLayout });
+		m_LightingPipeline->Resize(m_Swapchain.extent);
 
-		CreateTonemappingInput();
+		UpdateTonemappingInput();
 
-		m_TonemappingPipeline.Resize(m_Swapchain.extent, { m_TonemappingInput->m_DescriptorLayout });
+		m_TonemappingPipeline->Resize(m_Swapchain.extent);
 
 		CreateSwapchainFramebuffers();
 
@@ -461,7 +461,7 @@ namespace en
 		{
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass		= m_TonemappingPipeline.m_RenderPass;
+			framebufferInfo.renderPass		= m_TonemappingPipeline->m_RenderPass;
 			framebufferInfo.attachmentCount = 1;
 			framebufferInfo.pAttachments	= &m_Swapchain.imageViews[i];
 			framebufferInfo.width			= m_Swapchain.extent.width;
@@ -485,7 +485,7 @@ namespace en
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass	    = m_GeometryPipeline.m_RenderPass;
+		framebufferInfo.renderPass	    = m_GeometryPipeline->m_RenderPass;
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments    = attachments.data();
 		framebufferInfo.width  = m_Swapchain.extent.width;
@@ -534,6 +534,8 @@ namespace en
 
 	void VulkanRendererBackend::InitGeometryPipeline()
 	{
+		m_GeometryPipeline = std::make_unique<Pipeline>();
+
 		std::vector<Pipeline::Attachment> colorAttachments = 
 		{
 			{m_GBuffer.albedo.format  , VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED ,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U},
@@ -543,110 +545,151 @@ namespace en
 
 		Pipeline::Attachment depthAttachment{ m_GBuffer.depth.format  , VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 3U };
 
-		m_GeometryPipeline.CreateRenderPass(colorAttachments, depthAttachment);
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = colorAttachments;
+		renderPassInfo.depthAttachment = depthAttachment;
+
+		m_GeometryPipeline->CreateRenderPass(renderPassInfo);
 
 		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
 
-		std::vector<VkDescriptorSetLayout> descriptors{ CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
-
 		VkPushConstantRange objectPushConstant{};
-		objectPushConstant.offset	  = 0U;
-		objectPushConstant.size		  = sizeof(PerObjectData);
+		objectPushConstant.offset = 0U;
+		objectPushConstant.size = sizeof(PerObjectData);
 		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		std::vector<VkPushConstantRange> pushConstants = { objectPushConstant };
-
-		m_GeometryPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, descriptors, pushConstants, true, true);
-
-		m_GeometryPipeline.CreateSyncSemaphore();
+		Pipeline::PipelineInfo pipelineInfo{};
+		pipelineInfo.vShader			= &vShader;
+		pipelineInfo.fShader			= &fShader;
+		pipelineInfo.extent				= m_Swapchain.extent;
+		pipelineInfo.descriptorLayouts  = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
+		pipelineInfo.pushConstantRanges = { objectPushConstant };
+		pipelineInfo.enableDepthTest    = true;
+		pipelineInfo.useVertexBindings  = true;
+		
+		m_GeometryPipeline->CreatePipeline(pipelineInfo); 
+		m_GeometryPipeline->CreateSyncSemaphore(); 
 	}
 
-	void VulkanRendererBackend::CreateLightingInput()
+	void VulkanRendererBackend::UpdateLightingInput()
 	{
-		UniformBuffer::ImageInfo albedo{};
+		PipelineInput::ImageInfo albedo{};
 		albedo.imageView = m_GBuffer.albedo.imageView;
 		albedo.imageSampler = m_GBuffer.sampler;
 		albedo.index = 0U;
 
-		UniformBuffer::ImageInfo position{};
+		PipelineInput::ImageInfo position{};
 		position.imageView = m_GBuffer.position.imageView;
 		position.imageSampler = m_GBuffer.sampler;
 		position.index = 1U;
 
-		UniformBuffer::ImageInfo normal{};
+		PipelineInput::ImageInfo normal{};
 		normal.imageView = m_GBuffer.normal.imageView;
 		normal.imageSampler = m_GBuffer.sampler;
 		normal.index = 2U;
 
-		UniformBuffer::BufferInfo buffer{};
+		PipelineInput::BufferInfo buffer{};
 		buffer.buffer = m_Lights.buffer;
 		buffer.index = 3U;
 		buffer.size = sizeof(m_Lights.LBO);
 
-		std::vector<UniformBuffer::ImageInfo> imageInfos = { albedo, position, normal };
+		std::vector<PipelineInput::ImageInfo> imageInfos = { albedo, position, normal };
 
-		m_LightingInput = std::make_unique<UniformBuffer>(imageInfos, buffer);
+		if (!m_LightingInput)
+			m_LightingInput = std::make_unique<PipelineInput>(imageInfos, buffer);
+		else
+			m_LightingInput->UpdateDescriptorSet(imageInfos, buffer);
 	}
 	void VulkanRendererBackend::InitLightingPipeline()
 	{
+		m_LightingPipeline = std::make_unique<Pipeline>();
+
 		std::vector<Pipeline::Attachment> colorAttachments = 
 		{
 			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
-		m_LightingPipeline.CreateRenderPass(colorAttachments);
-
-		LCreateHDRFramebuffer();
-
 		m_Lights.bufferSize = sizeof(m_Lights.LBO);
 		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
 
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
+		UpdateLightingInput();
 
-		CreateLightingInput();
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = colorAttachments;
+
+		m_LightingPipeline->CreateRenderPass(renderPassInfo);
+
+		LCreateHDRFramebuffer();
 
 		VkPushConstantRange cameraPushConstant{};
-		cameraPushConstant.offset = 0U;
-		cameraPushConstant.size = sizeof(Lights::LightsCameraInfo);
+		cameraPushConstant.offset	  = 0U;
+		cameraPushConstant.size		  = sizeof(Lights::LightsCameraInfo);
 		cameraPushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		m_LightingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, { m_LightingInput->m_DescriptorLayout } , { cameraPushConstant }, false, false, false, VK_CULL_MODE_FRONT_BIT);
-		m_LightingPipeline.CreateSyncSemaphore();
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex  );
+		Shader fShader("Shaders/LightingFrag.spv"     , ShaderType::Fragment);
+
+		Pipeline::PipelineInfo pipelineInfo{};
+		pipelineInfo.vShader			= &vShader;
+		pipelineInfo.fShader			= &fShader;
+		pipelineInfo.extent				= m_Swapchain.extent;
+		pipelineInfo.descriptorLayouts  = { m_LightingInput->m_DescriptorLayout };
+		pipelineInfo.pushConstantRanges = { cameraPushConstant };
+		pipelineInfo.cullMode			= VK_CULL_MODE_FRONT_BIT;
+
+		m_LightingPipeline->CreatePipeline(pipelineInfo);
+		m_LightingPipeline->CreateSyncSemaphore();
 	}
 
-	void VulkanRendererBackend::CreateTonemappingInput()
+	void VulkanRendererBackend::UpdateTonemappingInput()
 	{
-		UniformBuffer::ImageInfo HDRColorBuffer{};
+		PipelineInput::ImageInfo HDRColorBuffer{};
 		HDRColorBuffer.imageView = m_LightingHDRColorBuffer.imageView;
 		HDRColorBuffer.imageSampler = m_GBuffer.sampler;
 		HDRColorBuffer.index = 0U;
 
-		std::vector<UniformBuffer::ImageInfo> imageInfos = { HDRColorBuffer };
+		std::vector<PipelineInput::ImageInfo> imageInfos = { HDRColorBuffer };
 
-		m_TonemappingInput = std::make_unique<UniformBuffer>(imageInfos);
+		if (!m_TonemappingInput)
+			m_TonemappingInput = std::make_unique<PipelineInput>(imageInfos);
+		else
+			m_TonemappingInput->UpdateDescriptorSet(imageInfos);
 	}
 	void VulkanRendererBackend::InitTonemappingPipeline()
 	{
+		m_TonemappingPipeline = std::make_unique<Pipeline>();
+
 		std::vector<Pipeline::Attachment> attachments = 
 		{
 			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
-		m_TonemappingPipeline.CreateRenderPass(attachments);
+		UpdateTonemappingInput();
 
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/TonemapFrag.spv", ShaderType::Fragment);
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = attachments;
 
-		CreateTonemappingInput();
+		m_TonemappingPipeline->CreateRenderPass(renderPassInfo);
 
 		VkPushConstantRange exposurePushConstant{};
 		exposurePushConstant.offset		= 0U;
 		exposurePushConstant.size		= sizeof(PostProcessingParams::Exposure);
 		exposurePushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		m_TonemappingPipeline.CreatePipeline(vShader, fShader, m_Swapchain.extent, { m_TonemappingInput->m_DescriptorLayout }, { exposurePushConstant }, false, false, false, VK_CULL_MODE_FRONT_BIT);
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/TonemapFrag.spv", ShaderType::Fragment);
+
+		Pipeline::PipelineInfo pipelineInfo{};
+		pipelineInfo.vShader			= &vShader;
+		pipelineInfo.fShader			= &fShader;
+		pipelineInfo.extent				= m_Swapchain.extent;
+		pipelineInfo.descriptorLayouts  = { m_TonemappingInput->m_DescriptorLayout };
+		pipelineInfo.pushConstantRanges = { exposurePushConstant };
+		pipelineInfo.cullMode		    = VK_CULL_MODE_FRONT_BIT;
+
+		m_TonemappingPipeline->CreatePipeline(pipelineInfo);
+		m_TonemappingPipeline->CreateSyncSemaphore();
 	}
 
 	void VulkanRendererBackend::CreateCommandBuffer()
@@ -667,7 +710,7 @@ namespace en
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass		= m_LightingPipeline.m_RenderPass;
+		framebufferInfo.renderPass		= m_LightingPipeline->m_RenderPass;
 		framebufferInfo.attachmentCount = 1U;
 		framebufferInfo.pAttachments	= &m_LightingHDRColorBuffer.imageView;
 		framebufferInfo.width			= m_Swapchain.extent.width;

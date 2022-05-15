@@ -29,7 +29,7 @@ namespace en
 		VKCreateLogicalDevice();
 		VKCreateCommandPool();
 
-		EN_SUCCESS("Successfully created the Vulkan context");
+		EN_SUCCESS("Created the Vulkan context");
 	}
 	Context::~Context()
 	{

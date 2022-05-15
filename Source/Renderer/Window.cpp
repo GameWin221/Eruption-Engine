@@ -25,7 +25,7 @@ namespace en
 		glfwWindowHint(GLFW_BLUE_BITS   , mode->blueBits);
 		glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
 
-		EN_SUCCESS("Successfully created the glfw context");
+		EN_SUCCESS("Created the glfw context");
 
 		// Fullscreen
 		if (m_WindowInfo.fullscreen)
@@ -41,7 +41,7 @@ namespace en
         if(!m_GLFWWindow)
             EN_ERROR("Window::Window() - Failed to create m_GLFWWindow!")
         else
-		    EN_SUCCESS("Successfully created a window")
+		    EN_SUCCESS("Created a window")
 
 	}
 	Window::~Window()

@@ -12,7 +12,7 @@ namespace en
         if (g_AssetManagerInstance)
             EN_ERROR("Failed to create asset manager because there already is one created!");
 
-        EN_SUCCESS("Successfully created the asset manager");
+        EN_SUCCESS("Created the asset manager");
         g_AssetManagerInstance = this;
     }
     AssetManager* AssetManager::Instance()

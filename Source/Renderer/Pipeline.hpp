@@ -12,30 +12,49 @@ namespace en
 	class Pipeline
 	{
 	public:
-		void Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues = defaultBlackClearValue);
-
-		void Unbind(VkCommandBuffer& commandBuffer);
-
-		void Resize(VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts);
-
 		struct Attachment
 		{
 			VkFormat format = VK_FORMAT_UNDEFINED;
 
-			VkAttachmentLoadOp  loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			VkAttachmentLoadOp  loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
 			VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			VkImageLayout refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkImageLayout finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkImageLayout refLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 			uint32_t index = 0U;
 		};
-		
-		void CreateRenderPass(std::vector<Attachment> colorAttachments, Attachment depthAttachment = Attachment{});
-		void CreatePipeline(Shader& vShader, Shader& fShader, VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts, std::vector<VkPushConstantRange> pushConstantRanges, bool useVertexBindings = false, bool enableDepthTest = false, bool blendEnable = false, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT, VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
-		
+		struct RenderPassInfo
+		{
+			std::vector<Attachment> colorAttachments{};
+			Attachment depthAttachment{};
+		}; 
+		struct PipelineInfo
+		{
+			Shader* vShader;
+			Shader* fShader;
+			VkExtent2D extent;
+			std::vector<VkDescriptorSetLayout> descriptorLayouts;
+			std::vector<VkPushConstantRange> pushConstantRanges;
+			bool useVertexBindings = false;
+			bool enableDepthTest = false;
+			bool blendEnable = false;
+			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
+		};
+
+		void CreateRenderPass(RenderPassInfo& renderPass);
+		void CreatePipeline(PipelineInfo& pipeline);
 		void CreateSyncSemaphore();
+
+		~Pipeline();
+
+		void Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues = defaultBlackClearValue);
+
+		void Unbind(VkCommandBuffer& commandBuffer);
+
+		void Resize(VkExtent2D& extent);
 		
 		void Destroy();
 

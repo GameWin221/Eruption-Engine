@@ -8,7 +8,7 @@ namespace en
 	void EditorLayer::AttachTo(Renderer* renderer, AssetManager* assetManager, double* deltaTimeVar)
 	{
 		if (renderer && deltaTimeVar && assetManager)
-			EN_SUCCESS("Successfully attached the UI layer")
+			EN_SUCCESS("Attached the UI layer")
 		else
 		{
 			EN_WARN("UILayer::AttachTo() - Failed to attach the UI layer!");

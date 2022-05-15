@@ -25,7 +25,7 @@ namespace en
 		for (int button = 0; button <= 7; button++)
 			m_LastButtonStates[button] = false;
 
-		EN_SUCCESS("Successfully created the input manager");
+		EN_SUCCESS("Created the input manager");
 	}
 	
 	void InputManager::UpdateMouse()

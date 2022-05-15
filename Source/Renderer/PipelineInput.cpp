@@ -1,16 +1,16 @@
 #include "Core/EnPch.hpp"
-#include "UniformBuffer.hpp"
+#include "PipelineInput.hpp"
 
 #include <Common/Helpers.hpp>
 namespace en
 {
-	UniformBuffer::UniformBuffer(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
+	PipelineInput::PipelineInput(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfo);
 		CreateDescriptorSet(imageInfos, bufferInfo);
 		UpdateDescriptorSet(imageInfos, bufferInfo);
 	}
-	UniformBuffer::~UniformBuffer()
+	PipelineInput::~PipelineInput()
 	{
 		UseContext();
 
@@ -18,11 +18,11 @@ namespace en
 		vkDestroyDescriptorPool(ctx.m_LogicalDevice, m_DescriptorPool, nullptr);
 	}
 	
-	void UniformBuffer::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index)
+	void PipelineInput::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index)
 	{
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, index, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
-	void UniformBuffer::CreateDescriptorPool(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo)
+	void PipelineInput::CreateDescriptorPool(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo)
 	{
 		UseContext();
 
@@ -79,7 +79,7 @@ namespace en
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor pool!");
 	}
-	void UniformBuffer::CreateDescriptorSet(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo)
+	void PipelineInput::CreateDescriptorSet(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo)
 	{
 		UseContext();
 
@@ -92,7 +92,7 @@ namespace en
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 		}
-	void UniformBuffer::UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo& bufferInfo)
+	void PipelineInput::UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
 	{
 		UseContext();
 

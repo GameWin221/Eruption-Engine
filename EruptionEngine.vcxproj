@@ -182,7 +182,7 @@ compile.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Renderer\Buffers\UniformBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\PipelineInput.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp" />
@@ -251,7 +251,7 @@ compile.bat</Command>
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Renderer\Buffers\UniformBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\PipelineInput.hpp" />
     <ClInclude Include="Source\Renderer\Pipeline.hpp" />
     <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
     <ClInclude Include="External\ImGui\imconfig.h" />

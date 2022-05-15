@@ -11,7 +11,7 @@ namespace en
 
 		m_Backend.Init(rendererInfo);
 
-		EN_SUCCESS("Successfully created the renderer");
+		EN_SUCCESS("Created the renderer");
 	}
 	Renderer::~Renderer(){}
 

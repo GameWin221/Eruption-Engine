@@ -16,7 +16,7 @@
 #include <Renderer/Shader.hpp>
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Camera/Camera.hpp>
-#include <Renderer/Buffers/UniformBuffer.hpp>
+#include <Renderer/PipelineInput.hpp>
 
 #include <Scene/Scene.hpp>
 
@@ -40,8 +40,6 @@ namespace en
 		void BindScene(Scene* scene);
 		void UnbindScene();
 		
-		//void EnqueueSceneObject(SceneObject* sceneObject);
-
 		void WaitForGPUIdle();
 
 		void BeginRender();
@@ -181,13 +179,13 @@ namespace en
 		} m_ImGui;
 
 		//Pipeline m_DepthPipeline;
-		Pipeline m_GeometryPipeline;
+		std::unique_ptr<Pipeline> m_GeometryPipeline;
 
-		Pipeline m_TonemappingPipeline;
-		std::unique_ptr<UniformBuffer> m_TonemappingInput;
+		std::unique_ptr<Pipeline> m_TonemappingPipeline;
+		std::unique_ptr<PipelineInput> m_TonemappingInput;
 
-		Pipeline m_LightingPipeline;
-		std::unique_ptr<UniformBuffer> m_LightingInput;
+		std::unique_ptr<Pipeline> m_LightingPipeline;
+		std::unique_ptr<PipelineInput> m_LightingInput;
 
 		Scene* m_Scene = nullptr;
 
@@ -225,11 +223,11 @@ namespace en
 		void InitGeometryPipeline();
 		void CreateCommandBuffer();
 
-		void CreateLightingInput();
+		void UpdateLightingInput();
 		void InitLightingPipeline();
 		void LCreateHDRFramebuffer();
 
-		void CreateTonemappingInput();
+		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
 
 		void CreateSwapchainFramebuffers();

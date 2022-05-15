@@ -6,6 +6,10 @@
 
 namespace en
 {
+	Pipeline::~Pipeline()
+	{
+		Destroy();
+	}
 	void Pipeline::Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues)
 	{
 		VkRenderPassBeginInfo renderPassInfo{};
@@ -25,37 +29,51 @@ namespace en
 	{
 		vkCmdEndRenderPass(commandBuffer);
 	}
-	void Pipeline::Resize(VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts)
+	void Pipeline::Resize(VkExtent2D& extent)
 	{
 		UseContext();
-
-		m_DescriptorSetLayouts = descriptorLayouts;
 
 		vkDestroyRenderPass(ctx.m_LogicalDevice, m_RenderPass, nullptr);
 		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
 		vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);
 
-		CreateRenderPass(m_ColorAttachments, m_DepthAttachment);
+		RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = m_ColorAttachments;
+		renderPassInfo.depthAttachment = m_DepthAttachment;
+
+		CreateRenderPass(renderPassInfo);
 
 		Shader vShader(m_VShaderPath, ShaderType::Vertex  );
 		Shader fShader(m_FShaderPath, ShaderType::Fragment);
 
-		CreatePipeline(vShader, fShader, extent, m_DescriptorSetLayouts, m_PushConstantRanges, m_UseVertexBindings, m_EnableDepthTest, m_BlendEnable, m_CullMode, m_PolygonMode);
+		PipelineInfo pipelineInfo{};
+		pipelineInfo.vShader			= &vShader;
+		pipelineInfo.fShader			= &fShader;
+		pipelineInfo.extent				= extent;
+		pipelineInfo.descriptorLayouts  = m_DescriptorSetLayouts;
+		pipelineInfo.pushConstantRanges = m_PushConstantRanges;
+		pipelineInfo.useVertexBindings  = m_UseVertexBindings;
+		pipelineInfo.enableDepthTest	= m_EnableDepthTest;
+		pipelineInfo.blendEnable		= m_BlendEnable;
+		pipelineInfo.cullMode			= m_CullMode;
+		pipelineInfo.polygonMode		= m_PolygonMode;
+
+		CreatePipeline(pipelineInfo);
 	}
 
-	void Pipeline::CreateRenderPass(std::vector<Attachment> colorAttachments, Attachment depthAttachment)
+	void Pipeline::CreateRenderPass(RenderPassInfo& renderPass)
 	{
 		UseContext();
 
-		m_ColorAttachments = colorAttachments;
-		m_DepthAttachment = depthAttachment;
+		m_ColorAttachments = renderPass.colorAttachments;
+		m_DepthAttachment = renderPass.depthAttachment;
 
 		std::vector<VkAttachmentDescription> descriptions;
 		std::vector<VkAttachmentReference>   references;
 
-		const bool hasDepthAttachment = (depthAttachment.format != VK_FORMAT_UNDEFINED);
+		const bool hasDepthAttachment = (renderPass.depthAttachment.format != VK_FORMAT_UNDEFINED);
 
-		for (const auto& attachment : colorAttachments)
+		for (const auto& attachment : renderPass.colorAttachments)
 		{
 			VkAttachmentDescription description{};
 			description.format  = attachment.format;
@@ -81,17 +99,17 @@ namespace en
 
 		if (hasDepthAttachment)
 		{
-			depthDescription.format			= depthAttachment.format;
+			depthDescription.format			= renderPass.depthAttachment.format;
 			depthDescription.samples		= VK_SAMPLE_COUNT_1_BIT;
-			depthDescription.loadOp			= depthAttachment.loadOp;
-			depthDescription.storeOp		= depthAttachment.storeOp;
+			depthDescription.loadOp			= renderPass.depthAttachment.loadOp;
+			depthDescription.storeOp		= renderPass.depthAttachment.storeOp;
 			depthDescription.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			depthDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			depthDescription.initialLayout  = depthAttachment.initialLayout;
-			depthDescription.finalLayout	= depthAttachment.finalLayout;
+			depthDescription.initialLayout  = renderPass.depthAttachment.initialLayout;
+			depthDescription.finalLayout	= renderPass.depthAttachment.finalLayout;
 
-			depthReference.attachment = depthAttachment.index;
-			depthReference.layout     = depthAttachment.refLayout;
+			depthReference.attachment = renderPass.depthAttachment.index;
+			depthReference.layout     = renderPass.depthAttachment.refLayout;
 		}
 
 		VkSubpassDescription subpass{};
@@ -132,20 +150,20 @@ namespace en
 		if (vkCreateRenderPass(ctx.m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreateRenderPass() - Failed to create render pass!");
 	}
-	void Pipeline::CreatePipeline(Shader& vShader, Shader& fShader, VkExtent2D& extent, std::vector<VkDescriptorSetLayout> descriptorLayouts, std::vector<VkPushConstantRange> pushConstantRanges, bool useVertexBindings, bool enableDepthTest, bool blendEnable, VkCullModeFlags cullMode, VkPolygonMode polygonMode)
+	void Pipeline::CreatePipeline(PipelineInfo& pipeline)
 	{
-		m_VShaderPath = vShader.GetPath();
-		m_FShaderPath = fShader.GetPath();
+		m_VShaderPath = pipeline.vShader->GetPath();
+		m_FShaderPath = pipeline.fShader->GetPath();
 
-		m_DescriptorSetLayouts = descriptorLayouts;
-		m_PushConstantRanges = pushConstantRanges;
+		m_DescriptorSetLayouts = pipeline.descriptorLayouts;
+		m_PushConstantRanges   = pipeline.pushConstantRanges;
 
-		m_UseVertexBindings = useVertexBindings;
-		m_EnableDepthTest = enableDepthTest;
-		m_BlendEnable = blendEnable;
+		m_UseVertexBindings = pipeline.useVertexBindings;
+		m_EnableDepthTest	= pipeline.enableDepthTest;
+		m_BlendEnable		= pipeline.blendEnable;
 
-		m_CullMode = cullMode;
-		m_PolygonMode = polygonMode;
+		m_CullMode	  = pipeline.cullMode;
+		m_PolygonMode = pipeline.polygonMode;
 
 		UseContext();
 
@@ -155,7 +173,7 @@ namespace en
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-		if (useVertexBindings)
+		if (pipeline.useVertexBindings)
 		{
 			vertexInputInfo.vertexBindingDescriptionCount = 1U;
 			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
@@ -171,14 +189,14 @@ namespace en
 		VkViewport viewport{};
 		viewport.x		  = 0.0f;
 		viewport.y		  = 0.0f;
-		viewport.width    = (float)extent.width;
-		viewport.height   = (float)extent.height;
+		viewport.width    = (float)pipeline.extent.width;
+		viewport.height   = (float)pipeline.extent.height;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
 		scissor.offset = { 0U, 0U };
-		scissor.extent = extent;
+		scissor.extent = pipeline.extent;
 
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -191,9 +209,9 @@ namespace en
 		rasterizer.sType				   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable		   = VK_FALSE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode			   = polygonMode;
+		rasterizer.polygonMode			   = pipeline.polygonMode;
 		rasterizer.lineWidth			   = 1.0f;
-		rasterizer.cullMode				   = cullMode;
+		rasterizer.cullMode				   = pipeline.cullMode;
 		rasterizer.frontFace			   = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable		   = VK_FALSE;
 
@@ -204,7 +222,7 @@ namespace en
 
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 		colorBlendAttachment.colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable		 = blendEnable;
+		colorBlendAttachment.blendEnable		 = pipeline.blendEnable;
 		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		colorBlendAttachment.colorBlendOp		 = VK_BLEND_OP_ADD;
@@ -230,7 +248,7 @@ namespace en
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType				   = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable	   = enableDepthTest;
+		depthStencil.depthTestEnable	   = pipeline.enableDepthTest;
 		depthStencil.depthWriteEnable	   = VK_TRUE;
 		depthStencil.depthCompareOp		   = VK_COMPARE_OP_LESS;
 		depthStencil.depthBoundsTestEnable = VK_FALSE;
@@ -242,15 +260,15 @@ namespace en
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType			      = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount	      = static_cast<uint32_t>(descriptorLayouts.size());
-		pipelineLayoutInfo.pSetLayouts		      = descriptorLayouts.data();
-		pipelineLayoutInfo.pPushConstantRanges    = pushConstantRanges.data();
-		pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+		pipelineLayoutInfo.setLayoutCount	      = static_cast<uint32_t>(pipeline.descriptorLayouts.size());
+		pipelineLayoutInfo.pSetLayouts		      = pipeline.descriptorLayouts.data();
+		pipelineLayoutInfo.pPushConstantRanges    = pipeline.pushConstantRanges.data();
+		pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pipeline.pushConstantRanges.size());
 
 		if (vkCreatePipelineLayout(ctx.m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_Layout) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline layout!");
 
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vShader.m_ShaderInfo, fShader.m_ShaderInfo };
+		VkPipelineShaderStageCreateInfo shaderStages[] = { pipeline.vShader->m_ShaderInfo, pipeline.fShader->m_ShaderInfo };
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

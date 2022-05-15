@@ -1,13 +1,13 @@
 #pragma once
 
-#ifndef EN_UNIFORMBUFFER_HPP
-#define EN_UNIFORMBUFFER_HPP
+#ifndef EN_PIPELINEINPUT_HPP
+#define EN_PIPELINEINPUT_HPP
 
 namespace en
 { 
 	// It is possible that the buffer always has to be the last index
 
-	class UniformBuffer
+	class PipelineInput
 	{
 	public:
 		struct ImageInfo
@@ -23,12 +23,12 @@ namespace en
 			VkDeviceSize size	= 0U;
 		};
 
-		UniformBuffer(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});
-		~UniformBuffer();
+		PipelineInput(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});
+		~PipelineInput();
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index = 0U);
 
-		void UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo& bufferInfo);
+		void UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});
 
 		VkDescriptorSetLayout m_DescriptorLayout;
 
