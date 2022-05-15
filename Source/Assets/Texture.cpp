@@ -127,7 +127,7 @@ namespace en
 		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.anisotropyEnable		= VK_TRUE;
+		samplerInfo.anisotropyEnable		= (ANISOTROPIC_FILTERING > 0);
 		samplerInfo.maxAnisotropy			= std::min((float)ANISOTROPIC_FILTERING, properties.limits.maxSamplerAnisotropy);
 		samplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
