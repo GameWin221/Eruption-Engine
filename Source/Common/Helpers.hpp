@@ -12,11 +12,6 @@ namespace en
 		extern VkCommandBuffer BeginSingleTimeCommands();
 		extern void EndSingleTimeCommands(VkCommandBuffer& commandBuffer);
 
-		extern void CopyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize& size);
-		extern void CreateBuffer(VkDeviceSize& size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-		extern void MapBuffer(VkDeviceMemory& dstBufferMemory, const void* memory, VkDeviceSize& memorySize);
-		extern void DestroyBuffer(VkBuffer& buffer, VkDeviceMemory& memory);
-
 		extern void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 		extern void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags);
 		extern void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdBuffer = VK_NULL_HANDLE);

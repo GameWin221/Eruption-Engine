@@ -4,6 +4,7 @@
 #define EN_MATERIAL_HPP
 
 #include <Assets/Texture.hpp>
+#include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
 {
@@ -40,7 +41,6 @@ namespace en
 	private:
 		void UpdateDescriptorSet();
 		void CreateDescriptorSet();
-		void CreateMatBuffer();
 
 		bool m_UpdateQueued = false;
 
@@ -50,8 +50,7 @@ namespace en
 		Texture* m_Specular;
 		Texture* m_Normal;
 
-		VkBuffer m_Buffer;
-		VkDeviceMemory m_BufferMemory;
+		std::unique_ptr<MemoryBuffer> m_Buffer;
 
 		VkDescriptorSet m_DescriptorSet;
 

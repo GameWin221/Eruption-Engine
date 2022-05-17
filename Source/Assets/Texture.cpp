@@ -14,9 +14,6 @@ namespace en
 	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture) : m_Name(name), m_FilePath(texturePath), m_ImageFormat(format)
 	{
 		bool shouldFreeImage = true;
-		
-		VkBuffer       stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
 
 		stbi_set_flip_vertically_on_load(flipTexture);
 
@@ -35,17 +32,16 @@ namespace en
 
 		VkDeviceSize imageSize = m_Size.x * m_Size.y * 4;
 
-		en::Helpers::CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-		en::Helpers::MapBuffer(stagingBufferMemory, pixels, imageSize);
+		MemoryBuffer stagingBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		stagingBuffer.MapMemory(pixels, imageSize);
 
 		en::Helpers::CreateImage(m_Size.x, m_Size.y, m_ImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Image, m_ImageMemory);
 		en::Helpers::CreateImageView(m_Image, m_ImageView, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
 		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		CopyBufferToImage(stagingBuffer);
-
+		stagingBuffer.CopyTo(m_Image, m_Size.x, m_Size.y);
+	
 		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		CreateImageSampler();
@@ -55,31 +51,24 @@ namespace en
 			stbi_image_free(pixels);
 			EN_SUCCESS("Successfully loaded a texture from \"" + m_FilePath + "\"");
 		}
-
-		en::Helpers::DestroyBuffer(stagingBuffer, stagingBufferMemory);
 	}
 	Texture::Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size): m_Name(name), m_Size(size), m_ImageFormat(format)
 	{
-		VkBuffer       stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		VkDeviceSize   imageSize = m_Size.x * m_Size.y * 4;
+		VkDeviceSize imageSize = m_Size.x * m_Size.y * 4;
 
-		en::Helpers::CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-		en::Helpers::MapBuffer(stagingBufferMemory, pixelData, imageSize);
+		MemoryBuffer stagingBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		stagingBuffer.MapMemory(pixelData, imageSize);
 
 		en::Helpers::CreateImage(m_Size.x, m_Size.y, m_ImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->m_Image, this->m_ImageMemory);
 		en::Helpers::CreateImageView(m_Image, m_ImageView, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
 		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		CopyBufferToImage(stagingBuffer);
+		stagingBuffer.CopyTo(m_Image, m_Size.x, m_Size.y);
 
 		en::Helpers::TransitionImageLayout(m_Image, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		CreateImageSampler();
-
-		en::Helpers::DestroyBuffer(stagingBuffer, stagingBufferMemory);
 	}
 	Texture::~Texture()
 	{
@@ -140,53 +129,5 @@ namespace en
 
 		if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &this->m_ImageSampler) != VK_SUCCESS)
 			EN_ERROR("Texture.cpp::Texture::CreateImageSampler() - Failed to create texture sampler!");
-	}
-	void Texture::CopyBufferToImage(const VkBuffer& srcBuffer)
-	{
-		UseContext();
-
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = ctx.m_CommandPool;
-		allocInfo.commandBufferCount = 1;
-
-		VkCommandBuffer commandBuffer;
-		vkAllocateCommandBuffers(ctx.m_LogicalDevice, &allocInfo, &commandBuffer);
-
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-		VkBufferImageCopy region{};
-		region.bufferOffset = 0;
-		region.bufferRowLength = 0;
-		region.bufferImageHeight = 0;
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.mipLevel = 0;
-		region.imageSubresource.baseArrayLayer = 0;
-		region.imageSubresource.layerCount = 1;
-		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = {
-			static_cast<uint32_t>(this->m_Size.x),
-			static_cast<uint32_t>(this->m_Size.y),
-			1
-		};
-
-		vkCmdCopyBufferToImage(commandBuffer, srcBuffer, this->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-		vkEndCommandBuffer(commandBuffer);
-
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-
-		vkQueueSubmit(ctx.m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(ctx.m_GraphicsQueue);
-
-		vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_CommandPool, 1, &commandBuffer);
 	}
 }

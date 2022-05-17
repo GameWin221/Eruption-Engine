@@ -809,7 +809,7 @@ namespace en
 
 				if (ImGui::CollapsingHeader(("Submesh [" + std::to_string(id) + "]").c_str()))
 				{
-					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->GetSize())).c_str());
+					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->GetVerticesCount())).c_str());
 					ImGui::Text(("Material: " + subMesh.m_Material->GetName()).c_str());
 
 					SPACE();

@@ -98,13 +98,7 @@ namespace en
 		m_GBuffer.Destroy(m_Ctx->m_LogicalDevice);
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
-		m_GeometryPipeline->Destroy();
-		m_LightingPipeline->Destroy();
-		m_TonemappingPipeline->Destroy();
-
 		vkDestroyFence(m_Ctx->m_LogicalDevice, m_SubmitFence, nullptr);
-
-		en::Helpers::DestroyBuffer(m_Lights.buffer, m_Lights.bufferMemory);
 
 		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.renderPass, nullptr);
 
@@ -174,7 +168,7 @@ namespace en
 				subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
 				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout);
 
-				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetSize(), 1, 0, 0, 0);
+				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetIndicesCount(), 1, 0, 0, 0);
 			}
 		}
 
@@ -218,7 +212,7 @@ namespace en
 		m_Lights.camera.debugMode = m_DebugMode;
 		
 		if (lightsChanged)
-			en::Helpers::MapBuffer(m_Lights.bufferMemory, &m_Lights.LBO, m_Lights.bufferSize);
+			m_Lights.buffer->MapMemory( &m_Lights.LBO, m_Lights.buffer->GetSize());
 
 		m_LightingPipeline->Bind(m_CommandBuffer, m_LightingHDRFramebuffer, m_Swapchain.extent);
 
@@ -590,7 +584,7 @@ namespace en
 		normal.index = 2U;
 
 		PipelineInput::BufferInfo buffer{};
-		buffer.buffer = m_Lights.buffer;
+		buffer.buffer = m_Lights.buffer->GetHandle();
 		buffer.index = 3U;
 		buffer.size = sizeof(m_Lights.LBO);
 
@@ -610,8 +604,7 @@ namespace en
 			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
-		m_Lights.bufferSize = sizeof(m_Lights.LBO);
-		en::Helpers::CreateBuffer(m_Lights.bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Lights.buffer, m_Lights.bufferMemory);
+		m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		UpdateLightingInput();
 

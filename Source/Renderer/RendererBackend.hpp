@@ -138,9 +138,7 @@ namespace en
 
 			std::array<PointLight, MAX_LIGHTS> pointLights;
 
-			VkBuffer       buffer;
-			VkDeviceMemory bufferMemory;
-			VkDeviceSize   bufferSize;
+			std::unique_ptr<MemoryBuffer> buffer;
 
 		} m_Lights;
 

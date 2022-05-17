@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Common/Helpers.hpp>
-
 #ifndef EN_CAMERAMATRICESBUFFER_HPP
 #define EN_CAMERAMATRICESBUFFER_HPP
+
+#include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
 {
@@ -28,9 +28,7 @@ namespace en
 
 		VkDescriptorSet m_DescriptorSet;
 
-		VkBuffer       m_Buffer;
-		VkDeviceMemory m_BufferMemory;
-		VkDeviceSize   m_BufferSize;
+		std::unique_ptr<MemoryBuffer> m_Buffer;
 	};
 }
 #endif
