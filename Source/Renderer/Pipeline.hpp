@@ -34,12 +34,16 @@ namespace en
 		{
 			Shader* vShader;
 			Shader* fShader;
+
 			VkExtent2D extent;
+
 			std::vector<VkDescriptorSetLayout> descriptorLayouts;
 			std::vector<VkPushConstantRange> pushConstantRanges;
+
 			bool useVertexBindings = false;
 			bool enableDepthTest = false;
 			bool blendEnable = false;
+
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};

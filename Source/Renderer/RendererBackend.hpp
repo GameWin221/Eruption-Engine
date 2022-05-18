@@ -11,16 +11,19 @@
 
 #include <Common/Helpers.hpp>
 
+#include <Scene/Scene.hpp>
+
 #include <Renderer/Window.hpp>
 #include <Renderer/Context.hpp>
 #include <Renderer/Shader.hpp>
-#include <Renderer/Lights/PointLight.hpp>
-#include <Renderer/Camera/Camera.hpp>
-#include <Renderer/PipelineInput.hpp>
 
-#include <Scene/Scene.hpp>
+#include <Renderer/Lights/PointLight.hpp>
+
+#include <Renderer/Camera/Camera.hpp>
 
 #include <Renderer/Pipeline.hpp>
+#include <Renderer/PipelineInput.hpp>
+#include <Renderer/Framebuffer.hpp>
 
 namespace en
 {
@@ -64,42 +67,6 @@ namespace en
 		std::function<void()> m_ImGuiRenderCallback;
 
 	private:
-		struct Attachment
-		{
-			VkImage		   image;
-			VkDeviceMemory imageMemory;
-			VkImageView    imageView;
-			VkFormat	   format;
-
-			void Destroy(VkDevice& device)
-			{
-				vkFreeMemory(device, imageMemory, nullptr);
-				vkDestroyImageView(device, imageView, nullptr);
-				vkDestroyImage(device, image, nullptr);
-			}
-		};
-
-		struct GBuffer
-		{
-			Attachment albedo, position, normal;
-			Attachment depth;
-
-			VkFramebuffer framebuffer;
-			VkSampler	  sampler;
-
-			void Destroy(VkDevice& device)
-			{
-				albedo.Destroy(device);
-				position.Destroy(device);
-				normal.Destroy(device);
-				depth.Destroy(device);
-
-				vkDestroySampler(device, sampler, nullptr);
-				vkDestroyFramebuffer(device, framebuffer, nullptr);
-			}
-
-		} m_GBuffer;
-
 		struct Swapchain
 		{
 			VkSwapchainKHR			   swapchain;
@@ -185,13 +152,11 @@ namespace en
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 		std::unique_ptr<PipelineInput> m_LightingInput;
 
-		Scene* m_Scene = nullptr;
-
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		VkFramebuffer   m_LightingHDRFramebuffer;
-		Attachment      m_LightingHDRColorBuffer;
-		
+		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
+		std::unique_ptr<Framebuffer> m_GBuffer;
+
 		VkCommandBuffer m_CommandBuffer;
 		
 		VkFence	m_SubmitFence;
@@ -205,6 +170,8 @@ namespace en
 		Window*  m_Window;
 		Camera*  m_MainCamera;
 
+		Scene* m_Scene = nullptr;
+
 		uint32_t m_ImageIndex;
 
 		bool m_FramebufferResized = false;
@@ -214,16 +181,16 @@ namespace en
 		void RecreateFramebuffer();
 
 		void CreateSwapchain();
-		void CreateGBufferAttachments();
-		void CreateGBuffer();
-		void CreateAttachment(Attachment& attachment, VkFormat format, VkImageLayout imageLayout, VkImageAspectFlags imageAspectFlags, VkImageUsageFlags imageUsageFlags);
-		
+
 		void InitGeometryPipeline();
 		void CreateCommandBuffer();
 
+		void CreateGBufferHandle();
+		void CreateGBufferAttachments();
+
 		void UpdateLightingInput();
 		void InitLightingPipeline();
-		void LCreateHDRFramebuffer();
+		void CreateLightingHDRFramebuffer();
 
 		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
