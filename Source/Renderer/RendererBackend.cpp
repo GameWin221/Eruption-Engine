@@ -657,7 +657,7 @@ namespace en
 
 		Framebuffer::AttachmentInfo depth{};
 		depth.format		   = FindDepthFormat();
-		depth.imageLayout	   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depth.imageFinalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depth.imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 		depth.imageUsageFlags  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
@@ -672,7 +672,7 @@ namespace en
 
 		Framebuffer::AttachmentInfo attachment{};
 		attachment.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-		attachment.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		attachment.imageFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		m_HDRFramebuffer->CreateSampler();
 		m_HDRFramebuffer->CreateAttachments({ attachment }, m_Swapchain.extent.width, m_Swapchain.extent.height);

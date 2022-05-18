@@ -83,7 +83,7 @@ namespace en
 
 			Helpers::CreateImage(m_SizeX, m_SizeY, info.format, VK_IMAGE_TILING_OPTIMAL, info.imageUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, attachment.image, attachment.imageMemory);
 			Helpers::CreateImageView(attachment.image, attachment.imageView, info.format, info.imageAspectFlags);
-			Helpers::TransitionImageLayout(attachment.image, info.format, info.imageAspectFlags, VK_IMAGE_LAYOUT_UNDEFINED, info.imageLayout);
+			Helpers::TransitionImageLayout(attachment.image, info.format, info.imageAspectFlags, info.imageInitialLayout, info.imageFinalLayout);
 			attachment.format = info.format;
 		}
 	}
@@ -92,8 +92,10 @@ namespace en
 	{
 		UseContext();
 
-		vkDestroySampler(ctx.m_LogicalDevice, m_Sampler, nullptr);
-		vkDestroyFramebuffer(ctx.m_LogicalDevice, m_Framebuffer, nullptr);
+		if (m_Sampler != VK_NULL_HANDLE)
+			vkDestroySampler(ctx.m_LogicalDevice, m_Sampler, nullptr);
+		if (m_Framebuffer != VK_NULL_HANDLE)
+			vkDestroyFramebuffer(ctx.m_LogicalDevice, m_Framebuffer, nullptr);
 
 		for (auto& attachment : m_Attachments)
 			attachment.Destroy();

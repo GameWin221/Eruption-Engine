@@ -12,10 +12,11 @@ namespace en
 
 		struct AttachmentInfo
 		{
-			VkFormat		   format			= VK_FORMAT_UNDEFINED;
-			VkImageLayout      imageLayout		= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			VkImageAspectFlags imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-			VkImageUsageFlags  imageUsageFlags  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			VkFormat		   format			  = VK_FORMAT_UNDEFINED;
+			VkImageLayout      imageInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkImageLayout      imageFinalLayout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkImageAspectFlags imageAspectFlags   = VK_IMAGE_ASPECT_COLOR_BIT;
+			VkImageUsageFlags  imageUsageFlags    = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		};
 		struct Attachment
 		{
@@ -35,8 +36,8 @@ namespace en
 
 		std::vector<Attachment> m_Attachments;
 
-		VkFramebuffer m_Framebuffer;
-		VkSampler m_Sampler;
+		VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+		VkSampler m_Sampler = VK_NULL_HANDLE;
 
 	private:
 		uint32_t m_SizeX = 0U;
