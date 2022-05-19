@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title = "Eruption Engine v0.5.1";
+	windowInfo.title = "Eruption Engine v0.5.2";
 	windowInfo.resizable = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size = glm::ivec2(1920, 1080);
