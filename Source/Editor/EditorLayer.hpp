@@ -55,6 +55,8 @@ namespace en
 		bool m_ShowSceneMenu = true;
 		bool m_ShowInspector = true;
 
+		int m_MatCounter = 0;
+
 		void TextCentered(std::string text);
 
 		bool ShowImageButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos);

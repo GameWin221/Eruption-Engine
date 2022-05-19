@@ -91,6 +91,11 @@ namespace en
 	{
 		m_Scene = nullptr;
 	}
+	void VulkanRendererBackend::SetVSync(bool& vSync)
+	{
+		m_VSync = vSync;
+		m_FramebufferResized = true;
+	}
 	VulkanRendererBackend::~VulkanRendererBackend()
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
@@ -389,7 +394,7 @@ namespace en
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_Ctx->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode   = VSYNC ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+		VkPresentModeKHR   presentMode   = m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
 		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;

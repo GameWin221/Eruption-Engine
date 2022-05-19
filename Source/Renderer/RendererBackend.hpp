@@ -43,6 +43,8 @@ namespace en
 		void BindScene(Scene* scene);
 		void UnbindScene();
 		
+		void SetVSync(bool& vSync);
+
 		void WaitForGPUIdle();
 
 		void BeginRender();
@@ -176,6 +178,7 @@ namespace en
 
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
+		bool m_VSync = true;
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();

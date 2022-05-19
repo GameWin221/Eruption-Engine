@@ -55,6 +55,11 @@ namespace en
 		return m_Backend.GetMainCamera();
 	}
 
+	void Renderer::SetVSync(bool vSync)
+	{
+		m_Backend.SetVSync(vSync);
+	}
+
 	Renderer& Renderer::GetRenderer()
 	{
 		if (!g_CurrentRenderer)

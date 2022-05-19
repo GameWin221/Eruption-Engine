@@ -210,7 +210,7 @@ namespace en
         mesh->m_Name = name;
         
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(filePath, 
+        const aiScene* scene = importer.ReadFile(filePath,
             aiProcess_CalcTangentSpace |
             aiProcess_GenSmoothNormals |
             aiProcess_JoinIdenticalVertices |

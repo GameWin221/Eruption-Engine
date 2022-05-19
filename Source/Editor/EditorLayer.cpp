@@ -77,7 +77,7 @@ namespace en
 		else if (m_ChosenTexture && m_ShowAssetEditor)
 			EditingTexture(&m_ShowAssetEditor);
 
-		if (m_ChosenMaterial && m_IsCreatingMaterial)
+		if (m_IsCreatingMaterial)
 			CreatingMaterial();
 
 		EndRender();
@@ -312,23 +312,9 @@ namespace en
 			}
 		}
 
-		static int matCounter = 0;
-
 		if (ImGui::Button("Create Material", buttonSize) && !m_IsCreatingMaterial)
-		{
 			m_IsCreatingMaterial = true;
-
-			std::string newName{ "New Material" };
-
-			if (matCounter > 0)
-				newName.append("[" + std::to_string(matCounter) + "]");
-
-			m_AssetManager->CreateMaterial(newName);
-
-			m_ChosenMaterial = m_AssetManager->GetMaterial(newName);
-
-			matCounter++;
-		}
+		
 
 		ImGui::EndChild();
 
@@ -431,40 +417,43 @@ namespace en
 	{
 		ImGui::Begin("Scene Menu");
 
-		const std::vector<SceneObject*> sceneObjects = m_Renderer->GetScene()->GetAllSceneObjects();
-		const uint32_t sceneObjectCount = sceneObjects.size();
+		if (ImGui::CollapsingHeader("Scene Properties"))
+		{
+			static float col[3];
 
-		static float col[3];
+			col[0] = m_Renderer->GetScene()->m_AmbientColor.r;
+			col[1] = m_Renderer->GetScene()->m_AmbientColor.g;
+			col[2] = m_Renderer->GetScene()->m_AmbientColor.b;
 
-		col[0] = m_Renderer->GetScene()->m_AmbientColor.r;
-		col[1] = m_Renderer->GetScene()->m_AmbientColor.g;
-		col[2] = m_Renderer->GetScene()->m_AmbientColor.b;
-
-		if (ImGui::DragFloat3("Ambient Color", col, 0.05, 0.0, 1.0))
-			m_Renderer->GetScene()->m_AmbientColor = glm::vec3(col[0], col[1], col[2]);
+			ImGui::Text("Ambient Color:");
+			if (ImGui::DragFloat3("", col, 0.05, 0.0, 1.0))
+				m_Renderer->GetScene()->m_AmbientColor = glm::vec3(col[0], col[1], col[2]);
+		}
 
 		SPACE();
 
-		if (ImGui::Button("Add a SceneObject"))
+		if (ImGui::Button("Add a SceneObject", ImVec2(ImGui::GetWindowWidth() - 15.0f, 40)))
 			m_Renderer->GetScene()->CreateSceneObject("New SceneObject", Mesh::GetEmptyMesh());
 
 		SPACE();
 
-		for (int i = 0; const auto& object : sceneObjects)
+		const std::vector<SceneObject*> sceneObjects = m_Renderer->GetScene()->GetAllSceneObjects();
+		const uint32_t sceneObjectCount = sceneObjects.size();
+
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.23f, 0.53f, 0.89f, 0.12f));
+		for (const auto& object : sceneObjects)
 		{
-			if (ImGui::Selectable(object->GetName().c_str()))
+			if (ImGui::Button(object->GetName().c_str(), ImVec2(ImGui::GetWindowWidth() - 15.0f, 20)))
 			{
 				EN_LOG("Selected " + object->GetName());
 				m_ChosenObject = m_Renderer->GetScene()->GetSceneObject(object->GetName());
 				m_InspectorInit = true;
 			}
-
-			if (i != sceneObjectCount)
-				ImGui::Spacing();
-
-			i++;
+			
+			ImGui::Spacing();
 		}
 
+		ImGui::PopStyleColor();
 		ImGui::End();
 	}
 	void EditorLayer::DrawInspector()
@@ -473,13 +462,46 @@ namespace en
 
 		if (m_ChosenObject)
 		{
-			if (ImGui::CollapsingHeader("Properties"))
+			static char name[86];
+
+			static float pos[3];
+			static float rot[3];
+			static float scl[3];
+
+			static int chosenMeshIndex = 0;
+
+			if (m_InspectorInit)
 			{
-				static char name[86];
+				strcpy_s(name, sizeof(char) * 86, m_ChosenObject->GetName().c_str());
 
-				if (m_InspectorInit)
-					strcpy_s(name, sizeof(char) * 86, m_ChosenObject->GetName().c_str());
+				chosenMeshIndex = 0;
 
+				const auto& meshes = m_AssetManager->GetAllMeshes();
+
+				for (int i = 0; i < meshes.size(); i++)
+					if (meshes[i]->GetName() == m_ChosenObject->m_Mesh->GetName())
+					{
+						chosenMeshIndex = i + 1;
+						break;
+					}
+
+				pos[0] = m_ChosenObject->m_Position.x;
+				pos[1] = m_ChosenObject->m_Position.y;
+				pos[2] = m_ChosenObject->m_Position.z;
+
+				rot[0] = m_ChosenObject->m_Rotation.x;
+				rot[1] = m_ChosenObject->m_Rotation.y;
+				rot[2] = m_ChosenObject->m_Rotation.z;
+
+				scl[0] = m_ChosenObject->m_Scale.x;
+				scl[1] = m_ChosenObject->m_Scale.y;
+				scl[2] = m_ChosenObject->m_Scale.z;
+
+				m_InspectorInit = false;
+			}
+
+			if (ImGui::CollapsingHeader("Properties", ImGuiTreeNodeFlags_DefaultOpen))
+			{
 				ImGui::InputText("Name: ", name, 86);
 
 				ImGui::SameLine();
@@ -494,44 +516,17 @@ namespace en
 
 				SPACE();
 
-				static float pos[3];
-				static float rot[3];
-				static float scl[3];
-
-				// Initialise positions and colors if aren't initialised yet
-				if (m_InspectorInit)
-				{
-					pos[0] = m_ChosenObject->m_Position.x;
-					pos[1] = m_ChosenObject->m_Position.y;
-					pos[2] = m_ChosenObject->m_Position.z;
-
-					rot[0] = m_ChosenObject->m_Rotation.x;
-					rot[1] = m_ChosenObject->m_Rotation.y;
-					rot[2] = m_ChosenObject->m_Rotation.z;
-
-					scl[0] = m_ChosenObject->m_Scale.x;
-					scl[1] = m_ChosenObject->m_Scale.y;
-					scl[2] = m_ChosenObject->m_Scale.z;
-
-					m_InspectorInit = false;
-				}
-
 				ImGui::DragFloat3("Position", pos, 0.1f);
 				ImGui::DragFloat3("Rotation", rot, 0.1f);
 				ImGui::DragFloat3("Scale", scl, 0.1f);
 				ImGui::Checkbox("Active", &m_ChosenObject->m_Active);
 
-
 				m_ChosenObject->m_Position = glm::vec3(pos[0], pos[1], pos[2]);
 				m_ChosenObject->m_Rotation = glm::vec3(rot[0], rot[1], rot[2]);
 				m_ChosenObject->m_Scale = glm::vec3(scl[0], scl[1], scl[2]);
-			}
 
-			SPACE();
+				SPACE();
 
-			if (ImGui::CollapsingHeader("Mesh"))
-			{
-				ImGui::Text("Choose new mesh: ");
 				const std::vector<Mesh*>& allMeshes = m_AssetManager->GetAllMeshes();
 
 				std::vector<const char*> meshNames(allMeshes.size() + 1);
@@ -541,17 +536,12 @@ namespace en
 				for (int i = 1; i < meshNames.size(); i++)
 					meshNames[i] = allMeshes[i - 1]->GetName().c_str();
 
-				static int chosenMaterialIndex = 0;
-				ImGui::Combo("Meshes", &chosenMaterialIndex, meshNames.data(), meshNames.size());
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Update Mesh"))
+				if (ImGui::Combo("Mesh", &chosenMeshIndex, meshNames.data(), meshNames.size()))
 				{
-					if (chosenMaterialIndex == 0)
+					if (chosenMeshIndex == 0)
 						m_ChosenObject->m_Mesh = Mesh::GetEmptyMesh();
 					else
-						m_ChosenObject->m_Mesh = m_AssetManager->GetMesh(allMeshes[chosenMaterialIndex - 1]->GetName());
+						m_ChosenObject->m_Mesh = m_AssetManager->GetMesh(allMeshes[chosenMeshIndex - 1]->GetName());
 				}
 			}
 		}
@@ -641,6 +631,10 @@ namespace en
 			ImGui::Text(("View: " + modeName).c_str());
 		}
 
+		static bool vSync = true;
+		if (ImGui::Checkbox("VSync", &vSync))
+			m_Renderer->SetVSync(vSync);
+
 		ImGui::End();
 	}
 	void EditorLayer::EndRender()
@@ -659,9 +653,41 @@ namespace en
 
 			static char name[86];
 
+			static int chosenAlbedoIndex = 0;
+			static int chosenSpecularIndex = 0;
+			static int chosenNormalIndex = 0;
+
 			if (m_AssetEditorInit)
 			{
 				strcpy_s(name, sizeof(char) * 86, m_ChosenMaterial->GetName().c_str());
+
+				const auto& textures = m_AssetManager->GetAllTextures();
+
+				chosenAlbedoIndex = 0;
+				chosenSpecularIndex = 0;
+				chosenNormalIndex = 0;
+
+				for (int i = 0; i < textures.size(); i++)
+					if (textures[i]->GetName() == m_ChosenMaterial->GetAlbedoTexture()->GetName())
+					{
+						chosenAlbedoIndex = i + 1;
+						break;
+					}
+
+				for (int i = 0; i < textures.size(); i++)
+					if (textures[i]->GetName() == m_ChosenMaterial->GetSpecularTexture()->GetName())
+					{
+						chosenSpecularIndex = i + 1;
+						break;
+					}
+
+				for (int i = 0; i < textures.size(); i++)
+					if (textures[i]->GetName() == m_ChosenMaterial->GetNormalTexture()->GetName())
+					{
+						chosenNormalIndex = i + 1;
+						break;
+					}
+
 				m_AssetEditorInit = false;
 			}
 
@@ -703,15 +729,9 @@ namespace en
 			// Albedo texture
 			{ 
 				ImGui::PushID("Albedo");
-				ImGui::Text(("Albedo Texture Name: " + m_ChosenMaterial->GetAlbedoTexture()->GetName()).c_str());
-				ImGui::Text("Choose new albedo texture: ");
+				ImGui::Text("Albedo texture: ");
 
-				static int chosenAlbedoIndex = 0;
-				ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size());
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Update Texture"))
+				if (ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size()))
 				{
 					if (chosenAlbedoIndex == 0)
 						m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
@@ -726,15 +746,9 @@ namespace en
 			// Specular texture
 			{ 
 				ImGui::PushID("Specular");
-				ImGui::Text(("Specular Texture Name: " + m_ChosenMaterial->GetSpecularTexture()->GetName()).c_str());
-				ImGui::Text("Choose new specular texture: ");
+				ImGui::Text("Specular texture: ");
 
-				static int chosenSpecularIndex = 0;
-				ImGui::Combo("Textures", &chosenSpecularIndex, textureNames.data(), textureNames.size());
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Update Texture"))
+				if (ImGui::Combo("Textures", &chosenSpecularIndex, textureNames.data(), textureNames.size()))
 				{
 					if (chosenSpecularIndex == 0)
 						m_ChosenMaterial->SetSpecularTexture(Texture::GetGreyNonSRGBTexture());
@@ -749,15 +763,9 @@ namespace en
 			// Normal texture
 			{
 				ImGui::PushID("Normal");
-				ImGui::Text(("Normal Texture Name: " + m_ChosenMaterial->GetNormalTexture()->GetName()).c_str());
-				ImGui::Text("Choose new normal texture: ");
+				ImGui::Text("Normal texture: ");
 
-				static int chosenNormalIndex = 0;
-				ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size());
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Update Texture"))
+				if (ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size()))
 				{
 					if (chosenNormalIndex == 0)
 						m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
@@ -782,9 +790,27 @@ namespace en
 		{
 			static char name[86];
 
+			static std::vector<int> chosenMaterialIndices{};
+
 			if (m_AssetEditorInit)
 			{
 				strcpy_s(name, sizeof(char) * 86, m_ChosenMesh->GetName().c_str());
+
+				chosenMaterialIndices.clear();
+				chosenMaterialIndices.resize(m_ChosenMesh->m_SubMeshes.size());
+
+				const auto& materials = m_AssetManager->GetAllMaterials();
+
+				for (int i = 0; i < m_ChosenMesh->m_SubMeshes.size(); i++)
+				{
+					for (int matIndex = 0; matIndex < materials.size(); matIndex++)
+						if (materials[matIndex]->GetName() == m_ChosenMesh->m_SubMeshes[i].m_Material->GetName())
+						{
+							chosenMaterialIndices[i] = matIndex + 1;
+							break;
+						}
+				}
+
 				m_AssetEditorInit = false;
 			}
 			
@@ -810,17 +836,10 @@ namespace en
 				if (ImGui::CollapsingHeader(("Submesh [" + std::to_string(id) + "]").c_str()))
 				{
 					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->GetVerticesCount())).c_str());
-					ImGui::Text(("Material: " + subMesh.m_Material->GetName()).c_str());
 
 					SPACE();
 
-					ImGui::Checkbox("Is Active", &subMesh.m_Active);
-
-					SPACE();
-
-					ImGui::Spacing();
-
-					ImGui::Text("Choose new material: ");
+					ImGui::Text("Material: ");
 					const std::vector<Material*>& allMaterials = m_AssetManager->GetAllMaterials();
 
 					std::vector<const char*> materialNames(allMaterials.size()+1);
@@ -829,19 +848,18 @@ namespace en
 
 					for (int i = 1; i < materialNames.size(); i++)
 						materialNames[i] = allMaterials[i-1]->GetName().c_str();
-					
-					static int chosenMaterialIndex = 0;
-					ImGui::Combo("Materials", &chosenMaterialIndex, materialNames.data(), materialNames.size());
 
-					ImGui::SameLine();
-
-					if (ImGui::Button("Update Material"))
+					if (ImGui::Combo("Materials", &chosenMaterialIndices[id], materialNames.data(), materialNames.size()))
 					{
-						if (chosenMaterialIndex == 0)
+						if (chosenMaterialIndices[id] == 0)
 							subMesh.m_Material = Material::GetDefaultMaterial();
 						else
-							subMesh.m_Material = m_AssetManager->GetMaterial(allMaterials[chosenMaterialIndex-1]->GetName());
+							subMesh.m_Material = m_AssetManager->GetMaterial(allMaterials[chosenMaterialIndices[id] - 1]->GetName());
 					}
+
+					SPACE();
+
+					ImGui::Checkbox("Is Active", &subMesh.m_Active);
 
 					SPACE();
 				}
@@ -890,29 +908,21 @@ namespace en
 
 		if (ImGui::Begin("Creating a new material", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
-			
-			static float col[3] = { m_ChosenMaterial->m_Color.r, m_ChosenMaterial->m_Color.y, m_ChosenMaterial->m_Color.z };
+			static float col[3] = { 1.0f, 1.0f, 1.0f };
+			static float shininess = 48.0f;
+
+			static float normalStrength = 1.0f;
+			static float specularStrength = 1.0f;
 
 			static char name[86];
 
 			ImGui::InputText("Name: ", name, 86);
 			
-			if (ImGui::ColorEdit3("Color: ", col))
-			{
-				m_ChosenMaterial->m_Color.r = col[0];
-				m_ChosenMaterial->m_Color.y = col[1];
-				m_ChosenMaterial->m_Color.z = col[2];
-			}
-			else
-			{
-				col[0] = m_ChosenMaterial->m_Color.r;
-				col[1] = m_ChosenMaterial->m_Color.y;
-				col[2] = m_ChosenMaterial->m_Color.z;
-			}
+			ImGui::ColorEdit3("Color: ", col);
 
-
-			ImGui::DragFloat("Shininess: ", &m_ChosenMaterial->m_Shininess, 0.5f, 1.0f, 512.0f);
-			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
+			ImGui::DragFloat("Shininess: ", &shininess, 0.5f, 1.0f, 512.0f);
+			ImGui::DragFloat("Normal Strength: ", &normalStrength, 0.02f, 0.0f, 1.0f);
+			ImGui::DragFloat("Specular Strength: ", &specularStrength, 0.02f, 0.0f, 1.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -962,27 +972,21 @@ namespace en
 					EN_WARN("Enter a valid material name!")
 				else
 				{
-					m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
+					Texture* albedo   = ((chosenAlbedoIndex   == 0) ? Texture::GetWhiteSRGBTexture()   : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex   - 1]->GetName()));
+					Texture* specular = ((chosenSpecularIndex == 0) ? Texture::GetGreyNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenSpecularIndex - 1]->GetName()));
+					Texture* normal	  = ((chosenNormalIndex   == 0) ? Texture::GetNormalTexture()      : m_AssetManager->GetTexture(allTextures[chosenNormalIndex   - 1]->GetName()));
 
-					if (chosenAlbedoIndex == 0)
-						m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
-					else
-						m_ChosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
+					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), shininess, normalStrength, specularStrength, albedo, specular, normal);
 
-					if (chosenSpecularIndex == 0)
-						m_ChosenMaterial->SetSpecularTexture(Texture::GetGreyNonSRGBTexture());
-					else
-						m_ChosenMaterial->SetSpecularTexture(m_AssetManager->GetTexture(allTextures[chosenSpecularIndex - 1]->GetName()));
-
-					if (chosenNormalIndex == 0)
-						m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
-					else
-						m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
+					m_MatCounter++;
 
 					m_IsCreatingMaterial = false;
 				}
 			}
-			
+			ImGui::SameLine();
+
+			if (ImGui::Button("Cancel", { 100, 100 }))
+				m_IsCreatingMaterial = false;
 		}
 		
 		ImGui::End();

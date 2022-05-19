@@ -61,12 +61,6 @@ void Eruption::Update()
 	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	// Spawning / Despawning the additional model
-	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed))
-		m_ExampleScene->GetSceneObject("SkullModel")->m_Active = true;
-	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed))
-		m_ExampleScene->GetSceneObject("SkullModel")->m_Active = false;
-
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
 		if (m_Input->IsKey(en::Key::W))
