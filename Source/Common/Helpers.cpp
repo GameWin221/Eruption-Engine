@@ -10,10 +10,10 @@ namespace en
             UseContext();
 
             VkCommandBufferAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocInfo.commandPool = ctx.m_CommandPool;
-            allocInfo.commandBufferCount = 1;
+            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandPool        = ctx.m_CommandPool;
+            allocInfo.commandBufferCount = 1U;
 
             VkCommandBuffer commandBuffer;
             vkAllocateCommandBuffers(ctx.m_LogicalDevice, &allocInfo, &commandBuffer);
@@ -33,70 +33,14 @@ namespace en
             vkEndCommandBuffer(commandBuffer);
 
             VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &commandBuffer;
+            submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1U;
+            submitInfo.pCommandBuffers    = &commandBuffer;
 
-            vkQueueSubmit(ctx.m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+            vkQueueSubmit(ctx.m_GraphicsQueue, 1U, &submitInfo, VK_NULL_HANDLE);
             vkQueueWaitIdle(ctx.m_GraphicsQueue);
 
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_CommandPool, 1, &commandBuffer);
-        }
-        
-        void CopyBuffer(VkBuffer& srcBuffer, VkBuffer& dstBuffer, VkDeviceSize& size)
-        {
-            UseContext();
-
-            VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
-
-            VkBufferCopy copyRegion{};
-            copyRegion.size = size;
-            vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-            EndSingleTimeCommands(commandBuffer);
-        }
-        void CreateBuffer(VkDeviceSize& size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
-        {
-            UseContext();
-
-            VkBufferCreateInfo bufferInfo{};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            bufferInfo.size = size;
-            bufferInfo.usage = usage;
-            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-            if (vkCreateBuffer(ctx.m_LogicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
-                EN_ERROR("Failed to create a buffer!")
-
-            VkMemoryRequirements memRequirements;
-            vkGetBufferMemoryRequirements(ctx.m_LogicalDevice, buffer, &memRequirements);
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
-
-            if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
-                EN_ERROR("Failed to allocate buffer memory!")
-
-            vkBindBufferMemory(ctx.m_LogicalDevice, buffer, bufferMemory, 0);
-        }
-        void MapBuffer(VkDeviceMemory& dstBufferMemory, const void* memory, VkDeviceSize& memorySize)
-        {
-            UseContext();
-
-            void* data;
-
-            vkMapMemory(ctx.m_LogicalDevice, dstBufferMemory, 0, memorySize, 0, &data);
-            memcpy(data, memory, static_cast<size_t>(memorySize));
-            vkUnmapMemory(ctx.m_LogicalDevice, dstBufferMemory);
-        }
-        void DestroyBuffer(VkBuffer& buffer, VkDeviceMemory& memory)
-        {
-            UseContext();
-
-            vkDestroyBuffer(ctx.m_LogicalDevice, buffer, nullptr);
-            vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
         }
         
         void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)

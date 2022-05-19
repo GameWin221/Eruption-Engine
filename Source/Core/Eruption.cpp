@@ -61,12 +61,6 @@ void Eruption::Update()
 	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	// Spawning / Despawning the additional model
-	if (m_Input->IsKey(en::Key::R, en::InputState::Pressed))
-		m_ExampleScene->GetSceneObject("SkullModel")->m_Active = true;
-	else if (m_Input->IsKey(en::Key::T, en::InputState::Pressed))
-		m_ExampleScene->GetSceneObject("SkullModel")->m_Active = false;
-
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
 		if (m_Input->IsKey(en::Key::W))
@@ -105,13 +99,13 @@ void Eruption::Render()
 void Eruption::CreateExampleScene()
 {
 	m_AssetManager->LoadMesh("SkullModel", "Models/Skull/Skull.gltf"  );
-	
+
 	m_AssetManager->LoadTexture("SkullAlbedo", "Models/Skull/SkullAlbedo.jpg");
 	m_AssetManager->LoadTexture("SkullSpecular", "Models/Skull/SkullSpecular.jpg", { en::TextureFormat::NonColor });
 	m_AssetManager->LoadTexture("SkullNormal", "Models/Skull/SkullNormal.jpg", { en::TextureFormat::NonColor });
-	
+
 	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"), m_AssetManager->GetTexture("SkullSpecular"), m_AssetManager->GetTexture("SkullNormal"));
-	
+
 	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial");
 
 	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");

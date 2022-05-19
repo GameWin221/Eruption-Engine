@@ -3,32 +3,23 @@
 
 namespace en
 {
-	VertexBuffer::VertexBuffer(const std::vector<Vertex>& vertexData)
+	VertexBuffer::VertexBuffer(const std::vector<Vertex>& vertices) : m_VerticesCount(vertices.size())
 	{
-		m_Size = vertexData.size();
+		const VkDeviceSize bufferSize = m_VerticesCount * sizeof(vertices[0]);
 
-		VkDeviceSize bufferSize = m_Size * sizeof(Vertex);
+		MemoryBuffer stagingBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		stagingBuffer.MapMemory(vertices.data(), bufferSize);
 
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
 
-		en::Helpers::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		m_Buffer = std::make_unique<MemoryBuffer>(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		en::Helpers::MapBuffer(stagingBufferMemory, vertexData.data(), bufferSize);
-
-		en::Helpers::CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Buffer, m_BufferMemory);
-		en::Helpers::CopyBuffer(stagingBuffer, m_Buffer, bufferSize);
-
-		en::Helpers::DestroyBuffer(stagingBuffer, stagingBufferMemory);
+		stagingBuffer.CopyTo(m_Buffer.get());
 	}
-	VertexBuffer::~VertexBuffer()
-	{
-		en::Helpers::DestroyBuffer(m_Buffer, m_BufferMemory);
-	}
+
+	constexpr VkDeviceSize vertexBufferZeroOffset = 0;
 
 	void VertexBuffer::Bind(VkCommandBuffer& commandBuffer)
 	{
-		const VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_Buffer, &offset);
+		vkCmdBindVertexBuffers(commandBuffer, 0U, 1U, &m_Buffer->GetHandle(), &vertexBufferZeroOffset);
 	}
 }

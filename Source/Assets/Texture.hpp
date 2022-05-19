@@ -7,7 +7,8 @@
 
 #include <stb_image.h>
 
-#include <Renderer/Context.hpp>
+#include <Renderer/Buffers/MemoryBuffer.hpp>
+#include <Common/Helpers.hpp>
 
 namespace en
 {
@@ -36,7 +37,6 @@ namespace en
 
 	private:
 		void CreateImageSampler();
-		void CopyBufferToImage(const VkBuffer& srcBuffer);
 
 		std::string m_Name;
 

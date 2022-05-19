@@ -16,8 +16,10 @@ namespace en
 		void BindScene(Scene* scene);
 		void UnbindScene();
 
+		void SetVSync(bool vSync);
+
 		Scene* GetScene();
-		
+
 		void WaitForGPUIdle();
 		void Render();
 

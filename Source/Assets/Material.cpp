@@ -7,7 +7,6 @@ namespace en
 	
 	VkDescriptorSetLayout g_MatDescriptorSetLayout;
 	VkDescriptorPool g_MatDescriptorPool;
-	VkDeviceSize g_MatBufferSize;
 
 	void CreateMatDescriptorPool();
 
@@ -17,15 +16,14 @@ namespace en
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
 
-		CreateMatBuffer();
+		m_Buffer = std::make_unique<MemoryBuffer>(sizeof(m_MatBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
 		CreateDescriptorSet();
 	}
 	Material::~Material()
 	{
 		UseContext();
 		vkFreeDescriptorSets(ctx.m_LogicalDevice, g_MatDescriptorPool, 1, &m_DescriptorSet);
-
-		Helpers::DestroyBuffer(m_Buffer, m_BufferMemory);
 	}
 	Material* Material::GetDefaultMaterial()
 	{
@@ -61,7 +59,7 @@ namespace en
 			m_MatBuffer.shininess = m_Shininess;
 			m_MatBuffer.normalStrength = m_NormalStrength;
 			m_MatBuffer.m_SpecularStrength = m_SpecularStrength;
-			en::Helpers::MapBuffer(m_BufferMemory, &m_MatBuffer, g_MatBufferSize);
+			m_Buffer->MapMemory( &m_MatBuffer, m_Buffer->GetSize());
 		}
 		
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1U, 1U, &m_DescriptorSet, 0U, nullptr);
@@ -73,7 +71,7 @@ namespace en
 			UseContext();
 
 			VkDescriptorBufferInfo matInfo{};
-			matInfo.buffer = m_Buffer;
+			matInfo.buffer = m_Buffer->GetHandle();
 			matInfo.offset = 0;
 			matInfo.range = sizeof(MatBuffer);
 
@@ -221,10 +219,5 @@ namespace en
 
 		m_UpdateQueued = true;
 		UpdateDescriptorSet();
-	}
-	void Material::CreateMatBuffer()
-	{
-		g_MatBufferSize = sizeof(m_MatBuffer);
-		en::Helpers::CreateBuffer(g_MatBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Buffer, m_BufferMemory);
 	}
 }

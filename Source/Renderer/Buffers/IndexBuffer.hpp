@@ -3,25 +3,24 @@
 #ifndef EN_INDEXBUFFER_HPP
 #define EN_INDEXBUFFER_HPP
 
-#include <Common/Helpers.hpp>
+#include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
 {
     class IndexBuffer
     {
     public:
-        IndexBuffer(const std::vector<uint32_t>& indexData);
-        ~IndexBuffer();
+        IndexBuffer(const std::vector<uint32_t>& indices);
 
         void Bind(VkCommandBuffer& commandBuffer);
 
-        VkBuffer m_Buffer;
-        VkDeviceMemory m_BufferMemory;
-
-        const uint32_t& GetSize() const { return m_Size; };
+        const VkDeviceSize& GetBufferSize()   const { return m_Buffer->GetSize(); };
+        const uint32_t&     GetIndicesCount() const { return m_IndicesCount;      };
 
     private:
-        uint32_t m_Size;
+        std::unique_ptr<MemoryBuffer> m_Buffer;
+
+        uint32_t m_IndicesCount;
     };
 }
 

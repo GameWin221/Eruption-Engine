@@ -182,6 +182,8 @@ compile.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Framebuffer.cpp" />
     <ClCompile Include="Source\Renderer\PipelineInput.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
@@ -251,6 +253,8 @@ compile.bat</Command>
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Framebuffer.hpp" />
     <ClInclude Include="Source\Renderer\PipelineInput.hpp" />
     <ClInclude Include="Source\Renderer\Pipeline.hpp" />
     <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />

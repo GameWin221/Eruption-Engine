@@ -1,6 +1,8 @@
 #include <Core/EnPch.hpp>
 #include "CameraMatricesBuffer.hpp"
 
+#include <Renderer/Context.hpp>
+
 namespace en
 {
 	VkDescriptorSetLayout g_CameraDescriptorSetLayout;
@@ -10,9 +12,7 @@ namespace en
 
 	CameraMatricesBuffer::CameraMatricesBuffer()
 	{
-		m_BufferSize = sizeof(CameraMatricesBufferObject);
-
-		en::Helpers::CreateBuffer(m_BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_Buffer, m_BufferMemory);
+		m_Buffer = std::make_unique<MemoryBuffer>(sizeof(CameraMatricesBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		if (g_CameraDescriptorPool == VK_NULL_HANDLE)
 			CreateCameraDescriptorPool();
@@ -23,13 +23,11 @@ namespace en
 	{
 		UseContext();
 		vkFreeDescriptorSets(ctx.m_LogicalDevice, g_CameraDescriptorPool, 1U, &m_DescriptorSet);
-
-		en::Helpers::DestroyBuffer(m_Buffer, m_BufferMemory);
 	}
 
 	void CameraMatricesBuffer::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
-		en::Helpers::MapBuffer(m_BufferMemory, &m_Matrices, m_BufferSize);
+		m_Buffer->MapMemory(&m_Matrices, m_Buffer->GetSize());
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0U, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
 
@@ -55,7 +53,7 @@ namespace en
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = m_Buffer;
+		bufferInfo.buffer = m_Buffer->GetHandle();
 		bufferInfo.offset = 0U;
 		bufferInfo.range  = sizeof(CameraMatricesBufferObject);
 

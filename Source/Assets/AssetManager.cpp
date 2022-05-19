@@ -210,7 +210,19 @@ namespace en
         mesh->m_Name = name;
         
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices| aiProcess_GenUVCoords | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+        const aiScene* scene = importer.ReadFile(filePath,
+            aiProcess_CalcTangentSpace |
+            aiProcess_GenSmoothNormals |
+            aiProcess_JoinIdenticalVertices |
+            aiProcess_ImproveCacheLocality |
+            aiProcess_RemoveRedundantMaterials |
+            aiProcess_Triangulate |
+            aiProcess_GenUVCoords |
+            aiProcess_SplitLargeMeshes |
+            aiProcess_FindDegenerates |
+            aiProcess_FindInvalidData |
+            aiProcess_FlipUVs
+        );
 
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
             EN_ERROR("AssetManager::LoadMeshFromFile() - " + std::string(importer.GetErrorString()));
@@ -268,7 +280,7 @@ namespace en
 
             materials.emplace_back(GetMaterial(name.C_Str()));
         }
-        
+
         ProcessNode(scene->mRootNode, scene, materials, mesh.get());
         
         EN_SUCCESS("Succesfully loaded a mesh from \"" + filePath + "\"");
@@ -313,8 +325,14 @@ namespace en
     }
     void AssetManager::GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices)
     {
-        if (mesh->HasTextureCoords(0) && mesh->HasPositions() && mesh->HasNormals() && mesh->HasTangentsAndBitangents())
+        if (!mesh->HasPositions() || !mesh->HasNormals())
         {
+            std::string name{ mesh->mName.C_Str() };
+            EN_WARN("Failed to get vertices data from \"" + name + "\"!");
+            return;
+        }
+
+        if(mesh->HasTextureCoords(0))
             for (unsigned int i = 0; i < mesh->mNumVertices; i++)
                 vertices.emplace_back
                 (
@@ -323,7 +341,15 @@ namespace en
                     glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z),
                     glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
                 );
-        }
+        else
+            for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+                vertices.emplace_back
+                (
+                    glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
+                    glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
+                    glm::vec3(0),
+                    glm::vec2(0)
+                );
     }
     void AssetManager::GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices)
     {
