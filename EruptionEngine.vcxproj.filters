@@ -253,6 +253,8 @@
     <None Include="Shaders\LightingFrag.frag" />
     <None Include="Shaders\FullscreenTriVert.vert" />
     <None Include="Shaders\TonemapFrag.frag" />
+    <None Include="Shaders\DepthFragment.frag" />
+    <None Include="Shaders\DepthVertex.vert" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />

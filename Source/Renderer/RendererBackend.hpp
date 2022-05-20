@@ -49,6 +49,7 @@ namespace en
 
 		void BeginRender();
 
+		void DepthPass();
 		void GeometryPass();
 		void LightingPass();
 		void PostProcessPass();
@@ -145,7 +146,8 @@ namespace en
 
 		} m_ImGui;
 
-		//Pipeline m_DepthPipeline;
+		std::unique_ptr<Pipeline> m_DepthPipeline;
+
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
 
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
@@ -157,6 +159,7 @@ namespace en
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
 		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
+		std::unique_ptr<Framebuffer> m_DepthBuffer;
 		std::unique_ptr<Framebuffer> m_GBuffer;
 
 		VkCommandBuffer m_CommandBuffer;
@@ -185,8 +188,14 @@ namespace en
 
 		void CreateSwapchain();
 
-		void InitGeometryPipeline();
 		void CreateCommandBuffer();
+
+		void InitDepthPipeline();
+
+		void CreateDepthBufferHandle();
+		void CreateDepthBufferAttachments();
+
+		void InitGeometryPipeline();
 
 		void CreateGBufferHandle();
 		void CreateGBufferAttachments();

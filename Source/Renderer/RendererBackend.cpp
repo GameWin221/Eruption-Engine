@@ -29,7 +29,11 @@ namespace en
 
 		CreateSwapchain();
 
-        EN_SUCCESS("Created swapchain!")
+		EN_SUCCESS("Created swapchain!")
+
+		CreateDepthBufferAttachments();
+
+		EN_SUCCESS("Created depth attachments!")
 
 		CreateGBufferAttachments();
 
@@ -39,9 +43,17 @@ namespace en
 
 		EN_SUCCESS("Created command buffer!")
 
+		InitDepthPipeline();
+
+		EN_SUCCESS("Created depth pipeline!")
+
 		InitGeometryPipeline();
 
-        EN_SUCCESS("Created geometry pipeline!")
+		EN_SUCCESS("Created geometry pipeline!")
+
+		CreateDepthBufferHandle();
+
+		EN_SUCCESS("Created depth buffer handle!")
 
 		CreateGBufferHandle();
 
@@ -139,6 +151,41 @@ namespace en
 		if (vkBeginCommandBuffer(m_CommandBuffer, &beginInfo) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
 	}
+	void VulkanRendererBackend::DepthPass()
+	{
+		if (m_SkipFrame || !m_Scene) return;
+
+		static std::vector<VkClearValue> clearValues(1);
+		clearValues[0].depthStencil = { 1.0f, 0 };
+
+		m_DepthPipeline->Bind(m_CommandBuffer, m_DepthBuffer->m_Framebuffer, m_Swapchain.extent, clearValues);
+
+		// Bind the m_MainCamera once per geometry pass
+		m_MainCamera->Bind(m_CommandBuffer, m_DepthPipeline->m_Layout, m_CameraMatrices.get());
+
+		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
+		{
+			SceneObject* object = sceneObjectPair.second.get();
+
+			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
+
+			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
+			object->GetObjectData().Bind(m_CommandBuffer, m_DepthPipeline->m_Layout);
+
+			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
+			{
+				if (!subMesh.m_Active) continue;
+
+				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
+				subMesh.m_VertexBuffer->Bind(m_CommandBuffer);
+				subMesh.m_IndexBuffer->Bind(m_CommandBuffer);
+
+				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetIndicesCount(), 1, 0, 0, 0);
+			}
+		}
+
+		m_DepthPipeline->Unbind(m_CommandBuffer);
+	}
 	void VulkanRendererBackend::GeometryPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
@@ -148,6 +195,7 @@ namespace en
 		clearValues[1].color = m_BlackClearValue.color;
 		clearValues[2].color = m_BlackClearValue.color;
 		clearValues[3].depthStencil = { 1.0f, 0 };
+		clearValues[3].color = { 0.0f, 0.0f, 0.0f };
 
 		m_GeometryPipeline->Bind(m_CommandBuffer, m_GBuffer->m_Framebuffer, m_Swapchain.extent, clearValues);
 
@@ -343,14 +391,23 @@ namespace en
 
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
+		m_GBuffer->m_Attachments[3] = Framebuffer::Attachment{};
+
 		m_GBuffer->Destroy();
+		m_DepthBuffer->Destroy();
 		m_HDRFramebuffer->Destroy();
 
 		CreateSwapchain();
 
+		CreateDepthBufferAttachments();
+
 		CreateGBufferAttachments();
 
+		m_DepthPipeline->Resize(m_Swapchain.extent);
+
 		m_GeometryPipeline->Resize(m_Swapchain.extent);
+
+		CreateDepthBufferHandle();
 
 		CreateGBufferHandle();
 
@@ -471,6 +528,56 @@ namespace en
 		}
 	}
 
+	void VulkanRendererBackend::CreateDepthBufferHandle()
+	{
+		m_DepthBuffer->CreateFramebuffer(m_DepthPipeline->m_RenderPass);
+	}
+	void VulkanRendererBackend::CreateDepthBufferAttachments()
+	{
+		if (!m_DepthBuffer)
+			m_DepthBuffer = std::make_unique<Framebuffer>();
+
+		Framebuffer::AttachmentInfo depth{};
+		depth.format = FindDepthFormat();
+		depth.imageFinalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depth.imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+		depth.imageUsageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+		m_DepthBuffer->CreateSampler();
+		m_DepthBuffer->CreateAttachments({ depth }, m_Swapchain.extent.width, m_Swapchain.extent.height);
+	}
+	void VulkanRendererBackend::InitDepthPipeline()
+	{
+		m_DepthPipeline = std::make_unique<Pipeline>();
+
+		Pipeline::Attachment depthAttachment{ FindDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0U };
+
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.depthAttachment = depthAttachment;
+
+		m_DepthPipeline->CreateRenderPass(renderPassInfo);
+
+		Shader vShader("Shaders/DepthVertex.spv", ShaderType::Vertex);
+		Shader fShader("Shaders/DepthFragment.spv", ShaderType::Fragment);
+
+		VkPushConstantRange objectPushConstant{};
+		objectPushConstant.offset	  = 0U;
+		objectPushConstant.size		  = sizeof(PerObjectData);
+		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		Pipeline::PipelineInfo pipelineInfo{};
+		pipelineInfo.vShader			= &vShader;
+		pipelineInfo.fShader			= &fShader;
+		pipelineInfo.extent				= m_Swapchain.extent;
+		pipelineInfo.descriptorLayouts  = { CameraMatricesBuffer::GetLayout() };
+		pipelineInfo.pushConstantRanges = { objectPushConstant };
+		pipelineInfo.enableDepthTest    = true;
+		pipelineInfo.useVertexBindings  = true;
+
+		m_DepthPipeline->CreatePipeline(pipelineInfo);
+		m_DepthPipeline->CreateSyncSemaphore();
+	}
+
 	void VulkanRendererBackend::InitGeometryPipeline()
 	{
 		m_GeometryPipeline = std::make_unique<Pipeline>();
@@ -482,7 +589,7 @@ namespace en
 			{m_GBuffer->m_Attachments[2].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 2U}
 		};
 
-		Pipeline::Attachment depthAttachment{ m_GBuffer->m_Attachments[3].format  , VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 3U };
+		Pipeline::Attachment depthAttachment{ m_GBuffer->m_Attachments[3].format, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 3U };
 
 		Pipeline::RenderPassInfo renderPassInfo{};
 		renderPassInfo.colorAttachments = colorAttachments;
@@ -494,8 +601,8 @@ namespace en
 		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
 
 		VkPushConstantRange objectPushConstant{};
-		objectPushConstant.offset = 0U;
-		objectPushConstant.size = sizeof(PerObjectData);
+		objectPushConstant.offset	  = 0U;
+		objectPushConstant.size		  = sizeof(PerObjectData);
 		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		Pipeline::PipelineInfo pipelineInfo{};
@@ -505,6 +612,8 @@ namespace en
 		pipelineInfo.descriptorLayouts  = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
 		pipelineInfo.pushConstantRanges = { objectPushConstant };
 		pipelineInfo.enableDepthTest    = true;
+		pipelineInfo.enableDepthWrite   = false;
+		pipelineInfo.compareOp			= VK_COMPARE_OP_LESS_OR_EQUAL;
 		pipelineInfo.useVertexBindings  = true;
 		
 		m_GeometryPipeline->CreatePipeline(pipelineInfo); 
@@ -668,6 +777,8 @@ namespace en
 
 		m_GBuffer->CreateSampler();
 		m_GBuffer->CreateAttachments({ albedo , position, normal, depth }, m_Swapchain.extent.width, m_Swapchain.extent.height);
+
+		m_GBuffer->m_Attachments[3] = m_DepthBuffer->m_Attachments[0];
 	}
 
 	void VulkanRendererBackend::CreateLightingHDRFramebuffer()

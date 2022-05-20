@@ -41,8 +41,11 @@ namespace en
 			std::vector<VkPushConstantRange> pushConstantRanges;
 
 			bool useVertexBindings = false;
-			bool enableDepthTest = false;
+			bool enableDepthTest  = false;
+			bool enableDepthWrite = true;
 			bool blendEnable = false;
+
+			VkCompareOp compareOp = VK_COMPARE_OP_LESS;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
@@ -81,7 +84,10 @@ namespace en
 
 		bool m_UseVertexBindings;
 		bool m_EnableDepthTest;
+		bool m_EnableDepthWrite;
 		bool m_BlendEnable;
+
+		VkCompareOp m_CompareOp;
 
 		VkCullModeFlags m_CullMode;
 		VkPolygonMode m_PolygonMode;
