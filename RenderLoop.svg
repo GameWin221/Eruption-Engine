@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="48cm"
-   height="5cm"
-   viewBox="0 0 480 50"
+   width="53cm"
+   height="4.5cm"
+   viewBox="0 0 530 45"
    version="1.1"
    id="svg1630"
    inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
@@ -24,9 +24,9 @@
      inkscape:document-units="mm"
      showgrid="false"
      width="49cm"
-     inkscape:zoom="0.64052329"
-     inkscape:cx="623.70878"
-     inkscape:cy="257.60188"
+     inkscape:zoom="0.90583672"
+     inkscape:cx="677.27437"
+     inkscape:cy="161.17695"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
@@ -42,7 +42,9 @@
      id="layer1">
     <g
        id="g869"
-       transform="translate(15.188536)">
+       transform="translate(-1.9540231)"
+       style="display:inline"
+       inkscape:label="g869">
       <path
          style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          d="m 8.0773152,14.816667 h 5.3578198 v 0.06615"
@@ -57,13 +59,13 @@
          inkscape:connector-curvature="0" />
       <path
          style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 446.80474,39.158333 v 1e-6 H 8.3602351"
+         d="m 521.88092,39.158333 v 1e-6 H 8.3602355"
          id="path20310"
          inkscape:connector-type="orthogonal"
          inkscape:connector-curvature="0" />
       <path
          style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 442.30683,15.08125 h 4.49792 v 24.077084"
+         d="m 517.383,15.08125 h 4.49792 v 24.077084"
          id="path20308"
          inkscape:connector-type="orthogonal"
          inkscape:connector-curvature="0" />
@@ -72,7 +74,7 @@
        id="g60751-0"
        inkscape:label="Node"
        style="display:inline"
-       transform="translate(20.003437,-0.59858933)">
+       transform="translate(2.8608779,-0.59858933)">
       <rect
          style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect13965-1"
@@ -97,10 +99,38 @@
            y="17.374935">BeginRender()</tspan></text>
     </g>
     <g
+       id="g60751-0-8"
+       inkscape:label="Node"
+       style="display:inline"
+       transform="translate(80.105662,-0.18551562)">
+      <rect
+         style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:0.999997;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect13965-1-5"
+         width="50.558308"
+         height="16.285269"
+         x="7.2323489"
+         y="6.8581715"
+         rx="3.9999971"
+         ry="3.9999974"
+         inkscape:label="NodeBG" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.76111px;line-height:1.25;font-family:Bahnschrift;-inkscape-font-specification:Bahnschrift;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.264583"
+         x="10.332992"
+         y="17.374935"
+         id="text19821-7-0"
+         inkscape:label="Text"><tspan
+           sodipodi:role="line"
+           id="tspan19819-9-0"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.76111px;font-family:Bahnschrift;-inkscape-font-specification:Bahnschrift;fill:#ffffff;stroke-width:0.264583"
+           x="10.332992"
+           y="17.374935">DepthPass()</tspan></text>
+    </g>
+    <g
        id="g60751-0-0"
        inkscape:label="Node"
        style="display:inline"
-       transform="translate(94.651817,-0.59858933)">
+       transform="translate(151.61195,-0.59858933)">
       <rect
          style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect13965-1-0"
@@ -127,7 +157,7 @@
     <g
        id="g57026-2-8"
        inkscape:label="Arrow"
-       transform="translate(4.3815367,-0.59858933)"
+       transform="translate(-12.761022,-0.59858933)"
        style="display:inline">
       <path
          style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
@@ -139,10 +169,24 @@
          id="path56876-0-2" />
     </g>
     <g
+       id="g57026-2-8-4"
+       inkscape:label="Arrow"
+       transform="translate(60.766098,-0.59858933)"
+       style="display:inline">
+      <path
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M 81.012108,15.130859 H 93.348306"
+         id="path40078-6-5-6" />
+      <path
+         style="fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m 91.636783,13.419336 1.711523,1.711523 -1.604036,1.604036"
+         id="path56876-0-2-1" />
+    </g>
+    <g
        id="g60751-0-0-6"
        inkscape:label="Node"
        style="display:inline"
-       transform="translate(173.41615,-0.59858933)">
+       transform="translate(230.37629,-0.59858933)">
       <rect
          style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect13965-1-0-2"
@@ -169,7 +213,7 @@
     <g
        id="g57026-2-8-7"
        inkscape:label="Arrow"
-       transform="translate(84.268397,-0.59858933)"
+       transform="translate(141.22853,-0.59858933)"
        style="display:inline">
       <path
          style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
@@ -184,7 +228,7 @@
        id="g60751-0-0-6-1"
        inkscape:label="Node"
        style="display:inline"
-       transform="translate(337.39552,-0.59858933)">
+       transform="translate(394.35566,-0.59858933)">
       <rect
          style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect13965-1-0-2-0"
@@ -212,7 +256,7 @@
        id="g60751-0-0-6-1-47"
        inkscape:label="Node"
        style="display:inline"
-       transform="translate(246.07066,-0.59858933)">
+       transform="translate(303.0308,-0.59858933)">
       <rect
          style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:0.999999;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect13965-1-0-2-0-2"
@@ -239,7 +283,7 @@
     <g
        id="g57026-2-8-7-7"
        inkscape:label="Arrow"
-       transform="translate(156.48085,-0.59858933)"
+       transform="translate(213.44099,-0.59858933)"
        style="display:inline">
       <path
          style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
@@ -253,7 +297,7 @@
     <g
        id="g57026-2-8-7-7-9"
        inkscape:label="Arrow"
-       transform="translate(247.12265,-0.59858933)"
+       transform="translate(304.08279,-0.59858933)"
        style="display:inline">
       <path
          style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
@@ -268,7 +312,7 @@
        id="g60751-0-0-6-1-4"
        inkscape:label="Node"
        style="display:inline"
-       transform="translate(404.09369,-0.59858933)">
+       transform="translate(461.05383,-0.59858933)">
       <rect
          style="fill:#333333;fill-opacity:1;stroke:#1e1e1e;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect13965-1-0-2-0-7"
@@ -295,7 +339,7 @@
     <g
        id="g57026-2-8-7-7-5"
        inkscape:label="Arrow"
-       transform="translate(313.39782,-0.59858933)"
+       transform="translate(370.35796,-0.59858933)"
        style="display:inline">
       <path
          style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
@@ -310,7 +354,7 @@
        id="g57026"
        inkscape:label="Arrow"
        style="display:inline"
-       transform="translate(-5.4027094,-0.01441488)">
+       transform="translate(-22.545268,-0.01441488)">
       <path
          style="display:inline;fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          d="m 244.36048,37.443753 -1.7634,1.711523 1.65265,1.604036"
