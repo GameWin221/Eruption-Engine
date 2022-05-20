@@ -54,7 +54,9 @@ namespace en
 		pipelineInfo.pushConstantRanges = m_PushConstantRanges;
 		pipelineInfo.useVertexBindings  = m_UseVertexBindings;
 		pipelineInfo.enableDepthTest	= m_EnableDepthTest;
+		pipelineInfo.enableDepthWrite	= m_EnableDepthWrite;
 		pipelineInfo.blendEnable		= m_BlendEnable;
+		pipelineInfo.compareOp			= m_CompareOp;
 		pipelineInfo.cullMode			= m_CullMode;
 		pipelineInfo.polygonMode		= m_PolygonMode;
 
@@ -160,7 +162,10 @@ namespace en
 
 		m_UseVertexBindings = pipeline.useVertexBindings;
 		m_EnableDepthTest	= pipeline.enableDepthTest;
+		m_EnableDepthWrite	= pipeline.enableDepthWrite;
 		m_BlendEnable		= pipeline.blendEnable;
+
+		m_CompareOp = pipeline.compareOp;
 
 		m_CullMode	  = pipeline.cullMode;
 		m_PolygonMode = pipeline.polygonMode;
@@ -249,8 +254,8 @@ namespace en
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType				   = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		depthStencil.depthTestEnable	   = pipeline.enableDepthTest;
-		depthStencil.depthWriteEnable	   = VK_TRUE;
-		depthStencil.depthCompareOp		   = VK_COMPARE_OP_LESS;
+		depthStencil.depthWriteEnable	   = pipeline.enableDepthWrite;
+		depthStencil.depthCompareOp		   = pipeline.compareOp;
 		depthStencil.depthBoundsTestEnable = VK_FALSE;
 		depthStencil.minDepthBounds		   = 0.0f;
 		depthStencil.maxDepthBounds		   = 1.0f;
