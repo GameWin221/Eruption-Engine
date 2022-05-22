@@ -182,6 +182,9 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Framebuffer.cpp" />
     <ClCompile Include="Source\Renderer\PipelineInput.cpp" />
@@ -253,6 +256,10 @@
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
+    <ClInclude Include="Source\Editor\EditorCommons.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Framebuffer.hpp" />
     <ClInclude Include="Source\Renderer\PipelineInput.hpp" />

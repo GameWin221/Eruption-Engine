@@ -244,11 +244,11 @@ namespace en
 			const glm::vec3  lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 			const float      lightRad = light.m_Radius * (float)light.m_Active;
 
-			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
-				continue;
-
 			if (lightBuffer.position != lightPos || lightBuffer.color != lightCol || lightBuffer.radius != lightRad)
 				lightsChanged = true;
+
+			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
+				continue;
 
 			lightBuffer.position = lightPos;
 			lightBuffer.color    = lightCol;
