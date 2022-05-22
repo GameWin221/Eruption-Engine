@@ -64,8 +64,6 @@ namespace en
 
 		Scene* GetScene() { return m_Scene; };
 
-		std::array<PointLight, MAX_LIGHTS>& GetPointLights();
-
 		int m_DebugMode = 0;
 		std::function<void()> m_ImGuiRenderCallback;
 
@@ -97,7 +95,10 @@ namespace en
 			struct LightsBufferObject
 			{
 				PointLight::Buffer lights[MAX_LIGHTS];
-				glm::vec3 ambientLight;
+
+				alignas(4) uint32_t activePointLights;
+
+				alignas(16) glm::vec3 ambientLight;
 			} LBO;
 
 			struct LightsCameraInfo
@@ -106,9 +107,9 @@ namespace en
 				int debugMode;
 			} camera;
 
-			std::array<PointLight, MAX_LIGHTS> pointLights;
-
 			std::unique_ptr<MemoryBuffer> buffer;
+
+			uint32_t lastLightsSize = 0U;
 
 		} m_Lights;
 

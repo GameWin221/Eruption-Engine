@@ -82,18 +82,6 @@ namespace en
 		InitImGui();
 
 		EN_SUCCESS("Created the renderer Vulkan backend");
-
-		m_Lights.pointLights[0].m_Position = glm::vec3(3, 2, 0.5);
-		m_Lights.pointLights[0].m_Color    = glm::vec3(0.4, 1.0, 0.4);
-		m_Lights.pointLights[0].m_Active   = true;
-
-		m_Lights.pointLights[1].m_Position = glm::vec3(-2, 2, 2);
-		m_Lights.pointLights[1].m_Color    = glm::vec3(1, 0.4, 0.4);
-		m_Lights.pointLights[1].m_Active   = true;
-
-		m_Lights.pointLights[2].m_Position = glm::vec3(0.4, 1.7, -2);
-		m_Lights.pointLights[2].m_Color    = glm::vec3(0.2, 0.2, 1.0);
-		m_Lights.pointLights[2].m_Active   = true;
 	}
 	void VulkanRendererBackend::BindScene(Scene* scene)
 	{
@@ -238,16 +226,19 @@ namespace en
 
 		bool lightsChanged = false;
 
-		// Prepare lights and check if at least one value was changed. If so, update the buffer on the GPU
-		if (m_Lights.LBO.ambientLight != m_Scene->m_AmbientColor)
+		if (m_Lights.LBO.ambientLight != m_Scene->m_AmbientColor || m_Lights.lastLightsSize != m_Scene->GetAllPointLights().size())
 			lightsChanged = true;
 
 		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
 
-		for (int i = 0; i < MAX_LIGHTS; i++)
+		m_Lights.lastLightsSize = m_Scene->GetAllPointLights().size();
+
+		int activePointLights = 0;
+
+		for (int i = 0; i < m_Scene->GetAllPointLights().size(); i++)
 		{
-			PointLight::Buffer& lightBuffer = m_Lights.LBO.lights[i];
-			PointLight& light = m_Lights.pointLights[i];
+			PointLight::Buffer& lightBuffer = m_Lights.LBO.lights[activePointLights];
+			PointLight& light = m_Scene->GetAllPointLights()[i];
 
 			const glm::vec3& lightPos = light.m_Position;
 			const glm::vec3  lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
@@ -256,16 +247,32 @@ namespace en
 			if (lightBuffer.position != lightPos || lightBuffer.color != lightCol || lightBuffer.radius != lightRad)
 				lightsChanged = true;
 
+			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
+				continue;
+
 			lightBuffer.position = lightPos;
 			lightBuffer.color    = lightCol;
 			lightBuffer.radius   = lightRad;
+
+			activePointLights++;
 		}
+
+		m_Lights.LBO.activePointLights = activePointLights;
 
 		m_Lights.camera.viewPos   = m_MainCamera->m_Position;
 		m_Lights.camera.debugMode = m_DebugMode;
 		
 		if (lightsChanged)
-			m_Lights.buffer->MapMemory( &m_Lights.LBO, m_Lights.buffer->GetSize());
+		{
+			for (int i = activePointLights; i < MAX_LIGHTS; i++)
+			{
+				PointLight::Buffer& lightBuffer = m_Lights.LBO.lights[i];
+				lightBuffer.color = glm::vec3(0.0);
+				lightBuffer.position = glm::vec3(0.0);
+				lightBuffer.radius = 0.0f;
+			}
+			m_Lights.buffer->MapMemory(&m_Lights.LBO, m_Lights.buffer->GetSize());
+		}
 
 		m_LightingPipeline->Bind(m_CommandBuffer, m_HDRFramebuffer->m_Framebuffer, m_Swapchain.extent);
 
@@ -439,11 +446,6 @@ namespace en
 			m_MainCamera = camera;
 		else
 			m_MainCamera = g_DefaultCamera;
-	}
-
-	std::array<PointLight, MAX_LIGHTS>& VulkanRendererBackend::GetPointLights()
-	{
-		return m_Lights.pointLights;
 	}
 
 	void VulkanRendererBackend::CreateSwapchain()

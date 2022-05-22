@@ -33,8 +33,6 @@ namespace en
 		void SetUIRenderCallback(std::function<void()> callback);
 		void SetDebugMode(int& mode);
 		
-		std::array<PointLight, MAX_LIGHTS>& GetPointLights();
-		
 	private:
 		VulkanRendererBackend m_Backend;
 	};

@@ -21,6 +21,8 @@ layout(binding = 3) uniform UBO
 {
     PointLight lights[MAX_LIGHTS];
 
+    uint activePointLights;
+
     vec3 ambient;
 
 } lightsBuffer;
@@ -78,17 +80,14 @@ void main()
     vec3 ambient = color * lightsBuffer.ambient;
     vec3 lighting = ambient;
 
-    for(int i = 0; i < MAX_LIGHTS; i++)
+    for(int i = 0; i < lightsBuffer.activePointLights; i++)
     {
-        if(lightsBuffer.lights[i].color != vec3(0))
-        {
-            float dist = length(position - lightsBuffer.lights[i].position);
+        float dist = length(position - lightsBuffer.lights[i].position);
 
-            if(dist < lightsBuffer.lights[i].radius)
-                lighting += CalculateLight(i, color, specular, shininess, position, normal, dist);
-        }
+        if(dist < lightsBuffer.lights[i].radius)
+            lighting += CalculateLight(i, color, specular, shininess, position, normal, dist);
     }
-
+    
     vec3 result = vec3(0);
     
     switch(camera.debugMode)
@@ -118,6 +117,6 @@ void main()
             result = vec3(depth);
             break;
     }
-
+    
     FragColor = vec4(result, 1.0);
 }

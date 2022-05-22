@@ -81,9 +81,4 @@ namespace en
 	{
 		m_Backend.m_DebugMode = mode;
 	}
-
-	std::array<PointLight, MAX_LIGHTS>& Renderer::GetPointLights()
-	{
-		return m_Backend.GetPointLights();
-	}
 }
