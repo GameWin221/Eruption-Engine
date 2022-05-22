@@ -171,7 +171,7 @@ namespace en
 
     std::vector<Mesh*> AssetManager::GetAllMeshes()
     {
-        std::vector< Mesh*> meshes(m_Meshes.size());
+        std::vector<Mesh*> meshes(m_Meshes.size());
 
         for (int i = 0; const auto & meshPair : m_Meshes)
             meshes[i++] = meshPair.second.get();

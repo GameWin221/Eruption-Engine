@@ -111,7 +111,7 @@ namespace en
 
 	void EditorLayer::BeginRender()
 	{
-		if(m_BackendAPI == "Vulkan") 
+		//if(m_BackendAPI == "Vulkan") 
 			ImGui_ImplVulkan_NewFrame();
 		//else if(m_BackendAPI == "DirectX") 
 			//ImGui_ImplDirectXVulkan_NewFrame();

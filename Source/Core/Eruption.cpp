@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.5.3";
+	windowInfo.title	  = "Eruption Engine v0.5.4";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -114,7 +114,7 @@ void Eruption::CreateExampleScene()
 
 	en::SceneObject* m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->m_Position = glm::vec3(0, 0.5f, -0.3);
-	m_Skull->m_Rotation = glm::vec3(90.0f, 45.0f, -90.0f);
+	m_Skull->m_Rotation = glm::vec3(45.0f, 90.0f, 0.0f);
 
 	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->m_Scale = glm::vec3(0.01f);
