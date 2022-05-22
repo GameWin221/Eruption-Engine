@@ -59,7 +59,7 @@ namespace en
 
 		void TextCentered(std::string text);
 
-		bool ShowImageButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos);
+		bool ButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos);
 
 		void BeginRender();
 		void DrawDockspace();

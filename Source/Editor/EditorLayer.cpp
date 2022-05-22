@@ -55,9 +55,6 @@ namespace en
 		if(m_ShowCameraMenu)
 			DrawCameraMenu();
 
-		if (m_ShowAssetMenu)
-			DrawAssetMenu();
-
 		if (m_ShowDebugMenu)
 			DrawDebugMenu();
 
@@ -66,6 +63,9 @@ namespace en
 
 		if (m_ShowInspector)
 			DrawInspector();
+
+		if (m_ShowAssetMenu)
+			DrawAssetMenu();
 
 		// Asset Editors
 		if (m_ChosenMaterial && m_ShowAssetEditor)
@@ -81,32 +81,6 @@ namespace en
 			CreatingMaterial();
 
 		EndRender();
-	}
-
-	void EditorLayer::TextCentered(std::string text)
-	{
-		float fontSize = ImGui::GetFontSize() * text.size() / 2;
-
-		ImGui::SameLine(ImGui::GetWindowSize().x / 2 - fontSize + (fontSize / 2));
-
-		ImGui::Text(text.c_str());
-	}
-
-	bool EditorLayer::ShowImageButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos)
-	{
-		bool pressed = false;
-
-		const ImageUVs UVs = m_Atlas->GetImageUVs(imagePos.x, imagePos.y);
-
-		ImGui::BeginChild("Material", ImVec2(size.x + 10.0f, size.y+10.0f), false, ImGuiWindowFlags_NoCollapse);
-
-		pressed = ImGui::ImageButton(m_Atlas->m_DescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
-
-		TextCentered(label);
-
-		ImGui::EndChild();
-
-		return pressed;
 	}
 
 	void EditorLayer::BeginRender()
@@ -350,7 +324,7 @@ namespace en
 
 					ImGui::PushID((name + "Mesh").c_str());
 
-					if (ShowImageButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(2, 0)) && !m_IsCreatingMaterial)
+					if (ButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(2, 0)) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
 						m_ChosenTexture = nullptr;
@@ -368,7 +342,7 @@ namespace en
 
 					ImGui::PushID((name + "Texture").c_str());
 
-					if (ShowImageButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(1, 0)) && !m_IsCreatingMaterial)
+					if (ButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(1, 0)) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = nullptr;
 						m_ChosenTexture = texture;
@@ -386,7 +360,7 @@ namespace en
 
 					ImGui::PushID((name + "Material").c_str());
 
-					if (ShowImageButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(0, 0)) && !m_IsCreatingMaterial)
+					if (ButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(0, 0)) && !m_IsCreatingMaterial)
 					{
 						m_ChosenMaterial = material;
 						m_ChosenTexture = nullptr;
@@ -987,5 +961,31 @@ namespace en
 
 
 		ImGui::PopStyleColor();
+	}
+
+	void EditorLayer::TextCentered(std::string text)
+	{
+		float fontSize = ImGui::GetFontSize() * text.size() / 2;
+
+		ImGui::SameLine(ImGui::GetWindowSize().x / 2 - fontSize + (fontSize / 2));
+
+		ImGui::Text(text.c_str());
+	}
+
+	bool EditorLayer::ButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos)
+	{
+		bool pressed = false;
+
+		const ImageUVs UVs = m_Atlas->GetImageUVs(imagePos.x, imagePos.y);
+
+		ImGui::BeginChild("Material", ImVec2(size.x + 10.0f, size.y + 10.0f), false, ImGuiWindowFlags_NoCollapse);
+
+		pressed = ImGui::ImageButton(m_Atlas->m_DescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
+
+		TextCentered(label);
+
+		ImGui::EndChild();
+
+		return pressed;
 	}
 }
