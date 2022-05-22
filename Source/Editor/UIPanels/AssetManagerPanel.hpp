@@ -31,7 +31,7 @@ namespace en
 		Texture*  m_ChosenTexture  = nullptr;
 		Mesh*	  m_ChosenMesh	   = nullptr;
 
-		const ImColor m_AssetEditorBG = ImColor(140, 40, 140, 255);
+		const ImColor m_AssetEditorBG = ImColor(40, 40, 40, 255);
 
 		bool m_ShowAssetEditor = false;
 		bool m_AssetEditorInit = false;
