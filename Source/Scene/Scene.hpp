@@ -4,6 +4,7 @@
 #define EN_SCENE_HPP
 
 #include <Scene/SceneObject.hpp>
+#include <Renderer/Lights/PointLight.hpp>
 
 namespace en
 {
@@ -19,6 +20,10 @@ namespace en
 
 		void RenameSceneObject(std::string oldName, std::string newName);
 
+		void CreatePointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.0f), float intensity = 5.0f, float radius = 10.0f);
+		void DeletePointLight(uint32_t index);
+
+		std::vector<PointLight>& GetAllPointLights() { return m_PointLights; };
 
 		glm::vec3 m_AmbientColor = glm::vec3(0.04f, 0.04f, 0.075f);
 
@@ -29,6 +34,7 @@ namespace en
 
 	private:
 		std::unordered_map<std::string, std::unique_ptr<SceneObject>> m_SceneObjects;
+		std::vector<PointLight> m_PointLights;
 	};
 }
 

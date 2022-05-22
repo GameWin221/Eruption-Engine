@@ -21,6 +21,8 @@ layout(binding = 3) uniform UBO
 {
     PointLight lights[MAX_LIGHTS];
 
+    uint activePointLights;
+
     vec3 ambient;
 
 } lightsBuffer;
@@ -78,7 +80,7 @@ void main()
     vec3 ambient = color * lightsBuffer.ambient;
     vec3 lighting = ambient;
 
-    for(int i = 0; i < MAX_LIGHTS; i++)
+    for(int i = 0; i < lightsBuffer.activePointLights; i++)
     {
         if(lightsBuffer.lights[i].color != vec3(0))
         {

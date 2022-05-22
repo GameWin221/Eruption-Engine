@@ -62,6 +62,21 @@ namespace en
         }
     }
 
+    void Scene::CreatePointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius)
+    {
+        if (m_PointLights.size() + 1 >= MAX_LIGHTS)
+        {
+            EN_WARN("Failed to create a new light because you've reached the MAX_LIGHTS limit (" + std::to_string(MAX_LIGHTS) + ")!")
+            return;
+        }
+
+        m_PointLights.emplace_back(position, color, intensity, radius);
+    }
+    void Scene::DeletePointLight(uint32_t index)
+    {
+        m_PointLights.erase(m_PointLights.begin() + index);
+    }
+
     std::vector<SceneObject*> Scene::GetAllSceneObjects()
     {
         std::vector<SceneObject*> allSceneObjects(m_SceneObjects.size());

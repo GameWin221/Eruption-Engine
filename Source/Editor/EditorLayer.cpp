@@ -214,44 +214,38 @@ namespace en
 	{
 		ImGui::Begin("Lights Menu", nullptr, m_CommonFlags);
 		
-		std::array<PointLight, MAX_LIGHTS>& lights = m_Renderer->GetPointLights();
+		if (ImGui::Button("Add New Light"))
+			m_Renderer->GetScene()->CreatePointLight(glm::vec3(0.0));
 
-		static bool posInit = false, colInit = false;
+		auto& lights = m_Renderer->GetScene()->GetAllPointLights();
 
 		static float pos[MAX_LIGHTS][3];
 		static float col[MAX_LIGHTS][3];
-
-		// Initialise positions and colors if aren't initialised yet
-		if (!posInit)
-		{
-			for (int i = 0; auto & position : pos)
-			{
-				position[0] = lights[i].m_Position.x;
-				position[1] = lights[i].m_Position.y;
-				position[2] = lights[i].m_Position.z;
-				i++;
-			}
-			posInit = true;
-		}
-		if (!colInit)
-		{
-			for (int i = 0; auto & color : col)
-			{
-				color[0] = lights[i].m_Color.x;
-				color[1] = lights[i].m_Color.y;
-				color[2] = lights[i].m_Color.z;
-				i++;
-			}
-			colInit = true;
-		}
-
-		for (int i = 0; i < MAX_LIGHTS; i++)
+		
+		for (int i = 0; i < lights.size(); i++)
 		{
 			std::string label = "Light " + std::to_string(i);
 
 			if (ImGui::CollapsingHeader(label.c_str()))
 			{
 				ImGui::PushID(&lights[i]);
+
+				if (ImGui::Button("Delete"))
+				{
+					m_Renderer->GetScene()->DeletePointLight(i);
+					ImGui::PopID();
+					continue;
+				}
+
+				SPACE();
+
+				pos[i][0] = lights[i].m_Position.x;
+				pos[i][1] = lights[i].m_Position.y;
+				pos[i][2] = lights[i].m_Position.z;
+
+				col[i][0] = lights[i].m_Color.r;
+				col[i][1] = lights[i].m_Color.g;
+				col[i][2] = lights[i].m_Color.b;
 
 				ImGui::DragFloat3 ("Position" , pos[i], 0.1f);
 				ImGui::ColorEdit3 ("Color"    , col[i], ImGuiColorEditFlags_Float);
@@ -267,7 +261,7 @@ namespace en
 				SPACE();
 			}
 		}
-
+		
 		ImGui::End();
 	}
 	void EditorLayer::DrawAssetMenu()

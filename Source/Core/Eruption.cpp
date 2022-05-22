@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.5.4";
+	windowInfo.title	  = "Eruption Engine v0.5.5";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -118,6 +118,10 @@ void Eruption::CreateExampleScene()
 
 	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->m_Scale = glm::vec3(0.01f);
+
+	m_ExampleScene->CreatePointLight(glm::vec3( 3.0, 2.0, 0.5), glm::vec3(0.4, 1.0, 0.4));
+	m_ExampleScene->CreatePointLight(glm::vec3(-2.0, 2.0, 2.0), glm::vec3(1.0, 0.4, 0.4));
+	m_ExampleScene->CreatePointLight(glm::vec3( 0.4, 1.7,-2.0), glm::vec3(0.2, 0.2, 1.0));
 
 	m_Renderer->BindScene(m_ExampleScene);
 }

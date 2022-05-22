@@ -10,7 +10,7 @@ public:
 	PointLight() {};
 	~PointLight() {};
 
-	bool m_Active = false;
+	bool m_Active = true;
 
 	glm::vec3 m_Position = glm::vec3(0.0);
 	glm::vec3 m_Color	 = glm::vec3(1.0);
