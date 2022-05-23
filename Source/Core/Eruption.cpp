@@ -32,9 +32,12 @@ void Eruption::Init()
 	en::CameraInfo cameraInfo{};
 	cameraInfo.dynamicallyScaled = true;
 	cameraInfo.fov = 70.0f;
-	cameraInfo.position = glm::vec3(0, 1, 0);
+	cameraInfo.position = glm::vec3(3.333f, 2.762f, 0.897f);
 
 	m_Camera = new en::Camera(cameraInfo);
+	m_Camera->m_Yaw = -161.6f;
+	m_Camera->m_Pitch = -30.3f;
+
 
 	m_Renderer->SetMainCamera(m_Camera);
 
