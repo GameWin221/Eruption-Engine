@@ -54,7 +54,7 @@ namespace en
         EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
-    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float metalness, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture)
+    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -62,10 +62,11 @@ namespace en
             return false;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(nameID, color, metalness, normalStrength, albedoTexture, roughnessTexture, normalTexture);
+        m_Materials[nameID] = std::make_unique<Material>(nameID, color, metalnessVal, roughnessVal, normalStrength, albedoTexture, roughnessTexture, normalTexture);
 
         EN_LOG("Created a material (Name: \"" + nameID + "\", Color: "           + std::to_string(color.x) + ", " + std::to_string(color.y) + ", " + std::to_string(color.z) + 
-                                                           ", Metalness: "       + std::to_string(metalness)      +
+                                                           ", MetalnessVal: "    + std::to_string(metalnessVal)      +
+                                                           ", RoughlnessVal: "   + std::to_string(roughnessVal)      +
                                                            ", Normal Strength: " + std::to_string(normalStrength) + 
                                                            ", Albedo: "          + ((albedoTexture)    ? albedoTexture   ->m_Name : "No Texture") +
                                                            ", Roughness: "       + ((roughnessTexture) ? roughnessTexture->m_Name : "No Texture") +
@@ -250,6 +251,9 @@ namespace en
             float metalness = 0.0f;
             material->Get(AI_MATKEY_METALLIC_FACTOR , metalness);
 
+            float roughness = 0.0f;
+            material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+
             aiString diffusePath;
             material->GetTexture(aiTextureType_DIFFUSE, 0, &diffusePath);
             bool hasDiffuseTex = (diffusePath.length > 0);
@@ -265,6 +269,9 @@ namespace en
             if (hasMetallicTex)
                 metalness = 0.0f;
 
+            if (hasRoughnessTex)
+                roughness = 1.0f;
+
             aiString normalPath;
             material->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
             bool hasNormalTex = (normalPath.length > 0);
@@ -274,10 +281,10 @@ namespace en
             if(hasNormalTex  ) LoadTexture(std::string(normalPath  .C_Str()), directory + std::string(normalPath  .C_Str()), { TextureFormat::NonColor });
 
             Texture* diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()))   : Texture::GetWhiteSRGBTexture();
-            Texture* roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetGreyNonSRGBTexture();
+            Texture* roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteSRGBTexture();
             Texture* normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()))    : Texture::GetNormalTexture();
 
-            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, 1.0f, diffuseTexture, roughnessTexture, normalTexture);
+            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, roughness, 1.0f, diffuseTexture, roughnessTexture, normalTexture);
 
             materials.emplace_back(GetMaterial(name.C_Str()));
         }

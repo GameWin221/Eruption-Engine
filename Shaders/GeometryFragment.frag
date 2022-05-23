@@ -11,7 +11,8 @@ layout(location = 2) out vec4 gNormal;
 
 layout(set = 1, binding = 1) uniform MatBufferObject {
     vec3 color;
-    float metalness;
+    float metalnessVal;
+    float roughnessVal;
     float normalMultiplier;
 } mbo;
 
@@ -36,9 +37,9 @@ void main()
     //gPosition - RGB: frag position     , A: metalness
     //gNormal   - RGB: world space normal, A: nothing
 
-    gColor = vec4(texture(albedoTexture, fTexcoord).rgb * mbo.color, texture(roughnessTexture, fTexcoord).g);
+    gColor = vec4(texture(albedoTexture, fTexcoord).rgb * mbo.color, texture(roughnessTexture, fTexcoord).g * mbo.roughnessVal);
 
-    gPosition = vec4(fPosition, mbo.metalness);
+    gPosition = vec4(fPosition, mbo.metalnessVal);
 
     gNormal = vec4(TangentToWorld(), 1.0f);
 }

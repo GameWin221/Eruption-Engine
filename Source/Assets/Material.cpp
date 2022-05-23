@@ -10,8 +10,8 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(std::string name, glm::vec3 color, float metalness, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture)
-		: m_Name(name), m_Color(color), m_Metalness(metalness), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Normal(normalTexture)
+	Material::Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture)
+		: m_Name(name), m_Color(color), m_MetalnessVal(metalnessVal), m_RoughnessVal(roughnessVal), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Normal(normalTexture)
 	{
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
@@ -21,7 +21,8 @@ namespace en
 		CreateDescriptorSet();
 
 		m_MatBuffer.color = m_Color;
-		m_MatBuffer.metalness = m_Metalness;
+		m_MatBuffer.metalnessVal = m_MetalnessVal;
+		m_MatBuffer.roughnessVal = m_RoughnessVal;
 		m_MatBuffer.normalStrength = m_NormalStrength;
 		m_Buffer->MapMemory(&m_MatBuffer, m_Buffer->GetSize());
 	}
@@ -33,7 +34,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetGreyNonSRGBTexture(), Texture::GetNormalTexture());
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetWhiteSRGBTexture(), Texture::GetNormalTexture());
 
 		return g_DefaultMaterial;
 	}
@@ -56,15 +57,10 @@ namespace en
 
 	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
-		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.metalness != m_Metalness || m_MatBuffer.normalStrength != m_NormalStrength);
+		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.metalnessVal != m_MetalnessVal || m_MatBuffer.roughnessVal != m_RoughnessVal || m_MatBuffer.normalStrength != m_NormalStrength);
 
 		if (materialChanged)
-		{
-			m_MatBuffer.color = m_Color;
-			m_MatBuffer.metalness = m_Metalness;
-			m_MatBuffer.normalStrength = m_NormalStrength;
-			m_Buffer->MapMemory( &m_MatBuffer, m_Buffer->GetSize());
-		}
+			UpdateBuffer();
 		
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1U, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
@@ -127,10 +123,24 @@ namespace en
 			descriptorWrites[3].descriptorCount = 1;
 			descriptorWrites[3].pImageInfo = &normalImageInfo;
 
+			UpdateBuffer();
+
 			vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
 			m_UpdateQueued = false;
 		}
+	}
+	void Material::UpdateBuffer()
+	{
+		m_MatBuffer.color		   = m_Color;
+		m_MatBuffer.metalnessVal   = m_MetalnessVal;
+		m_MatBuffer.roughnessVal   = m_RoughnessVal;
+		m_MatBuffer.normalStrength = m_NormalStrength;
+
+		if (m_Roughness != Texture::GetWhiteSRGBTexture())
+			m_MatBuffer.roughnessVal = 1.0f;
+
+		m_Buffer->MapMemory(&m_MatBuffer, m_Buffer->GetSize());
 	}
 
 	VkDescriptorSetLayout& Material::GetLayout()

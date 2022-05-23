@@ -13,13 +13,14 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Material(std::string name, glm::vec3 color, float metalness, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture);
+		Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture);
 		~Material();
 
 		glm::vec3 m_Color;
 
 		float m_NormalStrength;
-		float m_Metalness;
+		float m_MetalnessVal;
+		float m_RoughnessVal;
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
 
@@ -41,6 +42,8 @@ namespace en
 		void UpdateDescriptorSet();
 		void CreateDescriptorSet();
 
+		void UpdateBuffer();
+
 		bool m_UpdateQueued = false;
 
 		std::string m_Name;
@@ -56,7 +59,8 @@ namespace en
 		struct MatBuffer
 		{
 			alignas(4) glm::vec3 color = glm::vec3(1.0f);
-			alignas(4) float metalness = 0.0f;
+			alignas(4) float metalnessVal = 0.0f;
+			alignas(4) float roughnessVal = 0.75f;
 			alignas(4) float normalStrength = 1.0f;
 		} m_MatBuffer;
 	};

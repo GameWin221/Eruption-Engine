@@ -183,6 +183,7 @@ namespace en
 
 			static int chosenAlbedoIndex = 0;
 			static int chosenRoughnessIndex = 0;
+			static int chosenMetalnessIndex = 0;
 			static int chosenNormalIndex = 0;
 
 			if (m_AssetEditorInit)
@@ -239,10 +240,6 @@ namespace en
 				col[2] = m_ChosenMaterial->m_Color.z;
 			}
 
-
-			ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_Metalness, 0.01f, 0.0f, 1.0);
-			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
-
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
 			std::vector<const char*> textureNames(allTextures.size() + 1);
@@ -280,12 +277,17 @@ namespace en
 				if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
 				{
 					if (chosenRoughnessIndex == 0)
-						m_ChosenMaterial->SetRoughnessTexture(Texture::GetGreyNonSRGBTexture());
+						m_ChosenMaterial->SetRoughnessTexture(Texture::GetWhiteSRGBTexture());
 					else
 						m_ChosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 				}
 				ImGui::PopID();
 			}
+
+			if (chosenRoughnessIndex == 0)
+				ImGui::DragFloat("Roughness: ", &m_ChosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0);
+
+			ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0);
 
 			SPACE();
 
@@ -303,6 +305,9 @@ namespace en
 				}
 				ImGui::PopID();
 			}
+
+			if(chosenNormalIndex != 0)
+				ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
 		}
 
 		ImGui::End();
@@ -439,6 +444,7 @@ namespace en
 		{
 			static float col[3] = { 1.0f, 1.0f, 1.0f };
 			static float metalness = 0.0f;
+			static float roughness = 0.0f;
 
 			static float normalStrength = 1.0f;
 
@@ -447,9 +453,6 @@ namespace en
 			ImGui::InputText("Name: ", name, 86);
 
 			ImGui::ColorEdit3("Color: ", col);
-
-			ImGui::DragFloat("Metalness: ", &metalness, 0.5f, 1.0f, 512.0f);
-			ImGui::DragFloat("Normal Strength: ", &normalStrength, 0.02f, 0.0f, 1.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -480,7 +483,12 @@ namespace en
 			ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size());
 			ImGui::PopID();
 
+			if(chosenRoughnessIndex == 0)
+				ImGui::DragFloat("Roughness: ", &roughness, 0.01f, 0.0f, 1.0f);
+
 			SPACE();
+
+			ImGui::DragFloat("Metalness: ", &metalness, 0.01f, 0.0f, 1.0f);
 
 			// Normal texture
 			ImGui::PushID("Normal");
@@ -490,6 +498,8 @@ namespace en
 			ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size());
 			ImGui::PopID();
 
+			if(chosenNormalIndex != 0)
+				ImGui::DragFloat("Normal Strength: ", &normalStrength, 0.02f, 0.0f, 1.0f);
 
 			if (ImGui::Button("Save", { 100, 100 }))
 			{
@@ -499,11 +509,11 @@ namespace en
 					EN_WARN("Enter a valid material name!")
 				else
 				{
-					Texture* albedo = ((chosenAlbedoIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
-					Texture* rougness = ((chosenRoughnessIndex == 0) ? Texture::GetGreyNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
-					Texture* normal = ((chosenNormalIndex == 0) ? Texture::GetNormalTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
+					Texture* albedo   = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
+					Texture* rougness = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
+					Texture* normal   = ((chosenNormalIndex    == 0) ? Texture::GetNormalTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
 
-					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, normalStrength, albedo, rougness, normal);
+					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, roughness, normalStrength, albedo, rougness, normal);
 
 					m_MatCounter++;
 
