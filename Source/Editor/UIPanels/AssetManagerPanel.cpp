@@ -182,7 +182,7 @@ namespace en
 			static char name[86];
 
 			static int chosenAlbedoIndex = 0;
-			static int chosenSpecularIndex = 0;
+			static int chosenRoughnessIndex = 0;
 			static int chosenNormalIndex = 0;
 
 			if (m_AssetEditorInit)
@@ -192,7 +192,7 @@ namespace en
 				const auto& textures = m_AssetManager->GetAllTextures();
 
 				chosenAlbedoIndex = 0;
-				chosenSpecularIndex = 0;
+				chosenRoughnessIndex = 0;
 				chosenNormalIndex = 0;
 
 				for (int i = 0; i < textures.size(); i++)
@@ -203,9 +203,9 @@ namespace en
 					}
 
 				for (int i = 0; i < textures.size(); i++)
-					if (textures[i]->GetName() == m_ChosenMaterial->GetSpecularTexture()->GetName())
+					if (textures[i]->GetName() == m_ChosenMaterial->GetRoughnessTexture()->GetName())
 					{
-						chosenSpecularIndex = i + 1;
+						chosenRoughnessIndex = i + 1;
 						break;
 					}
 
@@ -240,9 +240,8 @@ namespace en
 			}
 
 
-			ImGui::DragFloat("Shininess: ", &m_ChosenMaterial->m_Shininess, 0.5f, 1.0f, 512.0f);
+			ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_Metalness, 0.01f, 0.0f, 1.0);
 			ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
-			ImGui::DragFloat("Specular Strength: ", &m_ChosenMaterial->m_SpecularStrength, 0.02f, 0.0f, 1.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -273,17 +272,17 @@ namespace en
 
 			SPACE();
 
-			// Specular texture
+			// Roughness texture
 			{
-				ImGui::PushID("Specular");
-				ImGui::Text("Specular texture: ");
+				ImGui::PushID("Roughness");
+				ImGui::Text("Roughness texture: ");
 
-				if (ImGui::Combo("Textures", &chosenSpecularIndex, textureNames.data(), textureNames.size()))
+				if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
 				{
-					if (chosenSpecularIndex == 0)
-						m_ChosenMaterial->SetSpecularTexture(Texture::GetGreyNonSRGBTexture());
+					if (chosenRoughnessIndex == 0)
+						m_ChosenMaterial->SetRoughnessTexture(Texture::GetGreyNonSRGBTexture());
 					else
-						m_ChosenMaterial->SetSpecularTexture(m_AssetManager->GetTexture(allTextures[chosenSpecularIndex - 1]->GetName()));
+						m_ChosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 				}
 				ImGui::PopID();
 			}
@@ -439,10 +438,9 @@ namespace en
 		if (ImGui::Begin("Creating a new material", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
 			static float col[3] = { 1.0f, 1.0f, 1.0f };
-			static float shininess = 48.0f;
+			static float metalness = 0.0f;
 
 			static float normalStrength = 1.0f;
-			static float specularStrength = 1.0f;
 
 			static char name[86];
 
@@ -450,9 +448,8 @@ namespace en
 
 			ImGui::ColorEdit3("Color: ", col);
 
-			ImGui::DragFloat("Shininess: ", &shininess, 0.5f, 1.0f, 512.0f);
+			ImGui::DragFloat("Metalness: ", &metalness, 0.5f, 1.0f, 512.0f);
 			ImGui::DragFloat("Normal Strength: ", &normalStrength, 0.02f, 0.0f, 1.0f);
-			ImGui::DragFloat("Specular Strength: ", &specularStrength, 0.02f, 0.0f, 1.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -475,12 +472,12 @@ namespace en
 
 			SPACE();
 
-			// Specular texture
-			ImGui::PushID("Specular");
-			ImGui::Text("Choose new specular texture: ");
+			// Roughness texture
+			ImGui::PushID("Roughness");
+			ImGui::Text("Choose new roughness texture: ");
 
-			static int chosenSpecularIndex = 0;
-			ImGui::Combo("Textures", &chosenSpecularIndex, textureNames.data(), textureNames.size());
+			static int chosenRoughnessIndex = 0;
+			ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size());
 			ImGui::PopID();
 
 			SPACE();
@@ -503,10 +500,10 @@ namespace en
 				else
 				{
 					Texture* albedo = ((chosenAlbedoIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
-					Texture* specular = ((chosenSpecularIndex == 0) ? Texture::GetGreyNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenSpecularIndex - 1]->GetName()));
+					Texture* rougness = ((chosenRoughnessIndex == 0) ? Texture::GetGreyNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 					Texture* normal = ((chosenNormalIndex == 0) ? Texture::GetNormalTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
 
-					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), shininess, normalStrength, specularStrength, albedo, specular, normal);
+					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, normalStrength, albedo, rougness, normal);
 
 					m_MatCounter++;
 

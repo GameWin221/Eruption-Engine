@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.5.5";
+	windowInfo.title	  = "Eruption Engine v0.6.0";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -101,10 +101,10 @@ void Eruption::CreateExampleScene()
 	m_AssetManager->LoadMesh("SkullModel", "Models/Skull/Skull.gltf"  );
 
 	m_AssetManager->LoadTexture("SkullAlbedo", "Models/Skull/SkullAlbedo.jpg");
-	m_AssetManager->LoadTexture("SkullSpecular", "Models/Skull/SkullSpecular.jpg", { en::TextureFormat::NonColor });
+	m_AssetManager->LoadTexture("SkullRoughness", "Models/Skull/SkullRoughness.jpg", { en::TextureFormat::NonColor });
 	m_AssetManager->LoadTexture("SkullNormal", "Models/Skull/SkullNormal.jpg", { en::TextureFormat::NonColor });
 
-	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 40.0f, 1.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"), m_AssetManager->GetTexture("SkullSpecular"), m_AssetManager->GetTexture("SkullNormal"));
+	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 0.0f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"), m_AssetManager->GetTexture("SkullRoughness"), m_AssetManager->GetTexture("SkullNormal"));
 
 	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial");
 
@@ -117,12 +117,12 @@ void Eruption::CreateExampleScene()
 	m_Skull->m_Rotation = glm::vec3(45.0f, 90.0f, 0.0f);
 
 	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
-	m_Sponza->m_Scale = glm::vec3(0.01f);
+	m_Sponza->m_Scale = glm::vec3(1.2f);
 
 	m_ExampleScene->CreatePointLight(glm::vec3(10.9, 1.4, 0.5), glm::vec3(0.4, 1.0, 0.4));
 	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4));
 	m_ExampleScene->CreatePointLight(glm::vec3(-6.8, 1.0,-1.0), glm::vec3(0.2, 0.2, 1.0));
-	m_ExampleScene->CreatePointLight(glm::vec3( 1.2, 0.1,-1.0), glm::vec3(1.0)		    );
+	m_ExampleScene->CreatePointLight(glm::vec3( 1.2, 2.0,-1.0), glm::vec3(1.0)		    );
 
 	m_ExampleScene->m_AmbientColor = glm::vec3(0.027f, 0.027f, 0.055f);
 

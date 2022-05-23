@@ -10,8 +10,8 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(std::string name, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) 
-		: m_Name(name), m_Albedo(albedoTexture), m_Specular(specularTexture), m_Normal(normalTexture), m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength), m_SpecularStrength(specularStrength)
+	Material::Material(std::string name, glm::vec3 color, float metalness, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture)
+		: m_Name(name), m_Color(color), m_Metalness(metalness), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Normal(normalTexture)
 	{
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
@@ -19,6 +19,11 @@ namespace en
 		m_Buffer = std::make_unique<MemoryBuffer>(sizeof(m_MatBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		CreateDescriptorSet();
+
+		m_MatBuffer.color = m_Color;
+		m_MatBuffer.metalness = m_Metalness;
+		m_MatBuffer.normalStrength = m_NormalStrength;
+		m_Buffer->MapMemory(&m_MatBuffer, m_Buffer->GetSize());
 	}
 	Material::~Material()
 	{
@@ -28,7 +33,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 1.0f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetGreyNonSRGBTexture(), Texture::GetNormalTexture());
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetGreyNonSRGBTexture(), Texture::GetNormalTexture());
 
 		return g_DefaultMaterial;
 	}
@@ -38,9 +43,9 @@ namespace en
 		m_Albedo = texture;
 		m_UpdateQueued = true;
 	}
-	void Material::SetSpecularTexture(Texture* texture)
+	void Material::SetRoughnessTexture(Texture* texture)
 	{
-		m_Specular = texture;
+		m_Roughness = texture;
 		m_UpdateQueued = true;
 	}
 	void Material::SetNormalTexture(Texture* texture)
@@ -51,14 +56,13 @@ namespace en
 
 	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
-		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.shininess != m_Shininess || m_MatBuffer.normalStrength != m_NormalStrength || m_MatBuffer.m_SpecularStrength != m_SpecularStrength);
+		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.metalness != m_Metalness || m_MatBuffer.normalStrength != m_NormalStrength);
 
 		if (materialChanged)
 		{
 			m_MatBuffer.color = m_Color;
-			m_MatBuffer.shininess = m_Shininess;
+			m_MatBuffer.metalness = m_Metalness;
 			m_MatBuffer.normalStrength = m_NormalStrength;
-			m_MatBuffer.m_SpecularStrength = m_SpecularStrength;
 			m_Buffer->MapMemory( &m_MatBuffer, m_Buffer->GetSize());
 		}
 		
@@ -82,8 +86,8 @@ namespace en
 
 			VkDescriptorImageInfo specularImageInfo{};
 			specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			specularImageInfo.imageView = m_Specular->m_ImageView;
-			specularImageInfo.sampler = m_Specular->m_ImageSampler;
+			specularImageInfo.imageView = m_Roughness->m_ImageView;
+			specularImageInfo.sampler = m_Roughness->m_ImageSampler;
 
 			VkDescriptorImageInfo normalImageInfo{};
 			normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
