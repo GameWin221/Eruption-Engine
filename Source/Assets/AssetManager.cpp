@@ -54,7 +54,7 @@ namespace en
         EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
-    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture)
+    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -62,17 +62,16 @@ namespace en
             return false;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(nameID, color, shininess, normalStrength, specularStrength, albedoTexture, specularTexture, normalTexture);
+        m_Materials[nameID] = std::make_unique<Material>(nameID, color, metalnessVal, roughnessVal, normalStrength, albedoTexture, roughnessTexture, normalTexture, metalnessTexture);
 
-        EN_LOG("Created a material (Name: \"" + nameID + "\", Color: " + std::to_string(color.x) + ", " +
-                                                                         std::to_string(color.y) + ", " +
-                                                                         std::to_string(color.z) + 
-                                                       ", Shininess: " + std::to_string(shininess) + 
-                                                       ", Normal Strength: "+ std::to_string(normalStrength) + 
-                                                       ", Specular Strength: "+ std::to_string(specularStrength) + 
-                                                       ", Albedo: "    + ((albedoTexture)   ? albedoTexture   ->m_Name : "No Texture") +
-                                                       ", Specular: "  + ((specularTexture) ?  specularTexture->m_Name : "No Texture") +
-                                                       ", Normal: "    + ((normalTexture)   ?  normalTexture  ->m_Name : "No Texture"));
+        EN_LOG("Created a material (Name: \"" + nameID + "\", Color: "           + std::to_string(color.x) + ", " + std::to_string(color.y) + ", " + std::to_string(color.z) + 
+                                                           ", MetalnessVal: "    + std::to_string(metalnessVal)      +
+                                                           ", RoughlnessVal: "   + std::to_string(roughnessVal)      +
+                                                           ", Normal Strength: " + std::to_string(normalStrength) + 
+                                                           ", Albedo: "          + ((albedoTexture)    ? albedoTexture   ->m_Name : "No Texture") +
+                                                           ", Roughness: "       + ((roughnessTexture) ? roughnessTexture->m_Name : "No Texture") +
+                                                           ", Metalness: "       + ((metalnessTexture) ? metalnessTexture->m_Name : "No Texture") +
+                                                           ", Normal: "          + ((normalTexture)    ?  normalTexture  ->m_Name : "No Texture"));
         return true;
     }
     void AssetManager::DeleteMaterial(std::string nameID)
@@ -245,38 +244,50 @@ namespace en
             if (ContainsMaterial(name.C_Str())) continue;
 
             aiColor3D color;
-            material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+            material->Get(AI_MATKEY_BASE_COLOR, color);
             bool hasColor = (color.r > 0.0f && color.g > 0.0f && color.b > 0.0f);
 
             if (!hasColor) color = aiColor3D(1.0f);
 
-            float shininess;
-            material->Get(AI_MATKEY_SHININESS, shininess);
-            bool hasShininess = (shininess > 0.0f);
+            float metalness = 0.0f;
+            material->Get(AI_MATKEY_METALLIC_FACTOR , metalness);
 
-            if (!hasShininess) shininess = 48.0f;
+            float roughness = 0.0f;
+            material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
 
             aiString diffusePath;
             material->GetTexture(aiTextureType_DIFFUSE, 0, &diffusePath);
             bool hasDiffuseTex = (diffusePath.length > 0);
 
-            aiString specularPath;
-            material->GetTexture(aiTextureType_SPECULAR, 0, &specularPath);
-            bool hasSpecularTex = (specularPath.length > 0);
+            aiString roughnessPath;
+            material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &roughnessPath);
+            bool hasRoughnessTex = (roughnessPath.length > 0);
   
+            aiString metallicPath;
+            material->GetTexture(aiTextureType_METALNESS, 0, &metallicPath);
+            bool hasMetallicTex = (metallicPath.length > 0);
+
+            if (hasMetallicTex)
+                metalness = 1.0f;
+
+            if (hasRoughnessTex)
+                roughness = 1.0f;
+
             aiString normalPath;
             material->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
             bool hasNormalTex = (normalPath.length > 0);
 
-            if(hasDiffuseTex ) LoadTexture(std::string(diffusePath .C_Str()), directory + std::string(diffusePath .C_Str()), { TextureFormat::Color    });
-            if(hasSpecularTex) LoadTexture(std::string(specularPath.C_Str()), directory + std::string(specularPath.C_Str()), { TextureFormat::NonColor });
-            if(hasNormalTex  ) LoadTexture(std::string(normalPath  .C_Str()), directory + std::string(normalPath  .C_Str()), { TextureFormat::NonColor });
+            if(hasDiffuseTex  )  LoadTexture(std::string(diffusePath  .C_Str()), directory + std::string(diffusePath .C_Str()) , { TextureFormat::Color    });
+            if(hasRoughnessTex)  LoadTexture(std::string(roughnessPath.C_Str()), directory + std::string(roughnessPath.C_Str()), { TextureFormat::NonColor });
+            if(hasNormalTex   )  LoadTexture(std::string(normalPath   .C_Str()), directory + std::string(normalPath  .C_Str()) , { TextureFormat::NonColor });
+            if(hasMetallicTex )  LoadTexture(std::string(metallicPath .C_Str()), directory + std::string(metallicPath.C_Str()) , { TextureFormat::NonColor });
 
-            Texture* diffuseTexture  = (hasDiffuseTex ) ? GetTexture(std::string(diffusePath.C_Str())) : Texture::GetWhiteSRGBTexture();
-            Texture* specularTexture = (hasSpecularTex) ? GetTexture(std::string(specularPath.C_Str())): Texture::GetGreyNonSRGBTexture();
-            Texture* normalTexture   = (hasNormalTex  ) ? GetTexture(std::string(normalPath.C_Str()))  : Texture::GetNormalTexture();
+            Texture* diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : Texture::GetWhiteSRGBTexture();
+            Texture* roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteSRGBTexture();
+            Texture* normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : Texture::GetNormalTexture();
+            Texture* metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : Texture::GetWhiteSRGBTexture();
 
-            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), shininess, 1.0f, 1.0f, diffuseTexture, specularTexture, normalTexture);
+            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, roughness, 1.0f, diffuseTexture, roughnessTexture, normalTexture, metalnessTexture);
 
             materials.emplace_back(GetMaterial(name.C_Str()));
         }

@@ -10,8 +10,8 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(std::string name, glm::vec3 color, float shininess, float normalStrength, float specularStrength, Texture* albedoTexture, Texture* specularTexture, Texture* normalTexture) 
-		: m_Name(name), m_Albedo(albedoTexture), m_Specular(specularTexture), m_Normal(normalTexture), m_Color(color), m_Shininess(shininess), m_NormalStrength(normalStrength), m_SpecularStrength(specularStrength)
+	Material::Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
+		: m_Name(name), m_Color(color), m_MetalnessVal(metalnessVal), m_RoughnessVal(roughnessVal), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Metalness(metalnessTexture), m_Normal(normalTexture)
 	{
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
 			CreateMatDescriptorPool();
@@ -19,6 +19,8 @@ namespace en
 		m_Buffer = std::make_unique<MemoryBuffer>(sizeof(m_MatBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		CreateDescriptorSet();
+
+		UpdateBuffer();
 	}
 	Material::~Material()
 	{
@@ -28,7 +30,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 32.0f, 1.0f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetGreyNonSRGBTexture(), Texture::GetNormalTexture());
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetWhiteSRGBTexture(), Texture::GetWhiteSRGBTexture(), Texture::GetNormalTexture());
 
 		return g_DefaultMaterial;
 	}
@@ -38,9 +40,14 @@ namespace en
 		m_Albedo = texture;
 		m_UpdateQueued = true;
 	}
-	void Material::SetSpecularTexture(Texture* texture)
+	void Material::SetRoughnessTexture(Texture* texture)
 	{
-		m_Specular = texture;
+		m_Roughness = texture;
+		m_UpdateQueued = true;
+	}
+	void Material::SetMetalnessTexture(Texture* texture)
+	{
+		m_Metalness = texture;
 		m_UpdateQueued = true;
 	}
 	void Material::SetNormalTexture(Texture* texture)
@@ -51,16 +58,10 @@ namespace en
 
 	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
 	{
-		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.shininess != m_Shininess || m_MatBuffer.normalStrength != m_NormalStrength || m_MatBuffer.m_SpecularStrength != m_SpecularStrength);
+		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.metalnessVal != m_MetalnessVal || m_MatBuffer.roughnessVal != m_RoughnessVal || m_MatBuffer.normalStrength != m_NormalStrength);
 
 		if (materialChanged)
-		{
-			m_MatBuffer.color = m_Color;
-			m_MatBuffer.shininess = m_Shininess;
-			m_MatBuffer.normalStrength = m_NormalStrength;
-			m_MatBuffer.m_SpecularStrength = m_SpecularStrength;
-			m_Buffer->MapMemory( &m_MatBuffer, m_Buffer->GetSize());
-		}
+			UpdateBuffer();
 		
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1U, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
@@ -82,15 +83,20 @@ namespace en
 
 			VkDescriptorImageInfo specularImageInfo{};
 			specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			specularImageInfo.imageView = m_Specular->m_ImageView;
-			specularImageInfo.sampler = m_Specular->m_ImageSampler;
+			specularImageInfo.imageView = m_Roughness->m_ImageView;
+			specularImageInfo.sampler = m_Roughness->m_ImageSampler;
 
 			VkDescriptorImageInfo normalImageInfo{};
 			normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			normalImageInfo.imageView = m_Normal->m_ImageView;
 			normalImageInfo.sampler = m_Normal->m_ImageSampler;
 
-			std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+			VkDescriptorImageInfo metalnessImageInfo{};
+			metalnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			metalnessImageInfo.imageView = m_Metalness->m_ImageView;
+			metalnessImageInfo.sampler = m_Metalness->m_ImageSampler;
+
+			std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[0].dstSet = m_DescriptorSet;
 			descriptorWrites[0].dstBinding = 1;
@@ -123,10 +129,35 @@ namespace en
 			descriptorWrites[3].descriptorCount = 1;
 			descriptorWrites[3].pImageInfo = &normalImageInfo;
 
+			descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[4].dstSet = m_DescriptorSet;
+			descriptorWrites[4].dstBinding = 5;
+			descriptorWrites[4].dstArrayElement = 0;
+			descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[4].descriptorCount = 1;
+			descriptorWrites[4].pImageInfo = &metalnessImageInfo;
+
+			UpdateBuffer();
+
 			vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
 			m_UpdateQueued = false;
 		}
+	}
+	void Material::UpdateBuffer()
+	{
+		m_MatBuffer.color		   = m_Color;
+		m_MatBuffer.metalnessVal   = m_MetalnessVal;
+		m_MatBuffer.roughnessVal   = m_RoughnessVal;
+		m_MatBuffer.normalStrength = m_NormalStrength;
+
+		if (m_Roughness != Texture::GetWhiteSRGBTexture())
+			m_MatBuffer.roughnessVal = 1.0f;
+
+		if (m_Metalness != Texture::GetWhiteSRGBTexture())
+			m_MatBuffer.metalnessVal = 1.0f;
+
+		m_Buffer->MapMemory(&m_MatBuffer, m_Buffer->GetSize());
 	}
 
 	VkDescriptorSetLayout& Material::GetLayout()
@@ -147,33 +178,41 @@ namespace en
 		matBufferLayoutBinding.descriptorCount = 1;
 		matBufferLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding albedoSamplerLayoutBinding{};
-		albedoSamplerLayoutBinding.binding = 2;
-		albedoSamplerLayoutBinding.descriptorCount = 1;
-		albedoSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		albedoSamplerLayoutBinding.pImmutableSamplers = nullptr;
-		albedoSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding albedoLayoutBinding{};
+		albedoLayoutBinding.binding = 2;
+		albedoLayoutBinding.descriptorCount = 1;
+		albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		albedoLayoutBinding.pImmutableSamplers = nullptr;
+		albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding specularSamplerLayoutBinding{};
-		specularSamplerLayoutBinding.binding = 3;
-		specularSamplerLayoutBinding.descriptorCount = 1;
-		specularSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		specularSamplerLayoutBinding.pImmutableSamplers = nullptr;
-		specularSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding specularLayoutBinding{};
+		specularLayoutBinding.binding = 3;
+		specularLayoutBinding.descriptorCount = 1;
+		specularLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		specularLayoutBinding.pImmutableSamplers = nullptr;
+		specularLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding normalSamplerLayoutBinding{};
-		normalSamplerLayoutBinding.binding = 4;
-		normalSamplerLayoutBinding.descriptorCount = 1;
-		normalSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		normalSamplerLayoutBinding.pImmutableSamplers = nullptr;
-		normalSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding normalLayoutBinding{};
+		normalLayoutBinding.binding = 4;
+		normalLayoutBinding.descriptorCount = 1;
+		normalLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		normalLayoutBinding.pImmutableSamplers = nullptr;
+		normalLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings =
+		VkDescriptorSetLayoutBinding metalnessLayoutBinding{};
+		metalnessLayoutBinding.binding = 5;
+		metalnessLayoutBinding.descriptorCount = 1;
+		metalnessLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		metalnessLayoutBinding.pImmutableSamplers = nullptr;
+		metalnessLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::array<VkDescriptorSetLayoutBinding, 5> bindings =
 		{
 			matBufferLayoutBinding,
-			albedoSamplerLayoutBinding,
-			specularSamplerLayoutBinding,
-			normalSamplerLayoutBinding
+			albedoLayoutBinding,
+			specularLayoutBinding,
+			normalLayoutBinding,
+			metalnessLayoutBinding
 		};
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -184,7 +223,7 @@ namespace en
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &g_MatDescriptorSetLayout) != VK_SUCCESS)
 			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor set layout!");
 
-		std::array<VkDescriptorPoolSize, 4> poolSizes{};
+		std::array<VkDescriptorPoolSize, 5> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = 1U;
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -193,6 +232,8 @@ namespace en
 		poolSizes[2].descriptorCount = 1U;
 		poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		poolSizes[3].descriptorCount = 1U;
+		poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[4].descriptorCount = 1U;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

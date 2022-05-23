@@ -11,30 +11,36 @@ layout(location = 2) out vec4 gNormal;
 
 layout(set = 1, binding = 1) uniform MatBufferObject {
     vec3 color;
-    float shininess;
-    float normalStrength;
-    float specularStrength;
+    float metalnessVal;
+    float roughnessVal;
+    float normalMultiplier;
 } mbo;
 
 layout(set = 1, binding = 2) uniform sampler2D albedoTexture;
-layout(set = 1, binding = 3) uniform sampler2D specularTexture;
+layout(set = 1, binding = 3) uniform sampler2D roughnessTexture;
 layout(set = 1, binding = 4) uniform sampler2D normalTexture;
+layout(set = 1, binding = 5) uniform sampler2D metalnessTexture;
 
-vec3 NormalMapping()
+vec3 TangentToWorld()
 {
     vec3 normalMap = texture(normalTexture, fTexcoord).xyz;
     normalMap = normalize(2.0 * normalMap - 1.0);
     
     vec3 result = normalize(fTBN * normalMap);
-    result = mix(fNormal, result, mbo.normalStrength);
+    result = mix(fNormal, result, mbo.normalMultiplier);
 
     return result;
 }
 void main() 
 {
-    gColor = vec4(texture(albedoTexture, fTexcoord).rgb * mbo.color, texture(specularTexture, fTexcoord).r * mbo.specularStrength);
+    /// Output ///
+    //gColor    - RGB: albedo            , A: roughness 
+    //gPosition - RGB: frag position     , A: metalness
+    //gNormal   - RGB: world space normal, A: nothing
 
-    gPosition = vec4(fPosition, mbo.shininess);
+    gColor = vec4(texture(albedoTexture, fTexcoord).rgb * mbo.color, texture(roughnessTexture, fTexcoord).g * mbo.roughnessVal);
 
-    gNormal = vec4(NormalMapping(), 1.0f);
+    gPosition = vec4(fPosition, texture(metalnessTexture, fTexcoord).b * mbo.metalnessVal);
+
+    gNormal = vec4(TangentToWorld(), 1.0f);
 }
