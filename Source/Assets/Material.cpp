@@ -20,11 +20,7 @@ namespace en
 
 		CreateDescriptorSet();
 
-		m_MatBuffer.color = m_Color;
-		m_MatBuffer.metalnessVal = m_MetalnessVal;
-		m_MatBuffer.roughnessVal = m_RoughnessVal;
-		m_MatBuffer.normalStrength = m_NormalStrength;
-		m_Buffer->MapMemory(&m_MatBuffer, m_Buffer->GetSize());
+		UpdateBuffer();
 	}
 	Material::~Material()
 	{

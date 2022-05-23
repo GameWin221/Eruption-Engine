@@ -462,7 +462,7 @@ namespace en
 		{
 			static float col[3] = { 1.0f, 1.0f, 1.0f };
 			static float metalness = 0.0f;
-			static float roughness = 0.0f;
+			static float roughness = 0.75f;
 
 			static float normalStrength = 1.0f;
 
@@ -487,7 +487,7 @@ namespace en
 			ImGui::Text("Choose new albedo texture: ");
 
 			static int chosenAlbedoIndex = 0;
-			ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size());
+			ImGui::Combo("", &chosenAlbedoIndex, textureNames.data(), textureNames.size());
 			ImGui::PopID();
 
 
@@ -498,26 +498,37 @@ namespace en
 			ImGui::Text("Choose new roughness texture: ");
 
 			static int chosenRoughnessIndex = 0;
-			ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size());
+			ImGui::Combo("", &chosenRoughnessIndex, textureNames.data(), textureNames.size());
 			ImGui::PopID();
 
 			if(chosenRoughnessIndex == 0)
-				ImGui::DragFloat("Roughness: ", &roughness, 0.01f, 0.0f, 1.0f);
+				ImGui::DragFloat("Roughness Value", &roughness, 0.01f, 0.0f, 1.0f);
 
 			SPACE();
-
-			ImGui::DragFloat("Metalness: ", &metalness, 0.01f, 0.0f, 1.0f);
 
 			// Normal texture
 			ImGui::PushID("Normal");
 			ImGui::Text("Choose new normal texture: ");
 
 			static int chosenNormalIndex = 0;
-			ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size());
+			ImGui::Combo("", &chosenNormalIndex, textureNames.data(), textureNames.size());
 			ImGui::PopID();
 
 			if(chosenNormalIndex != 0)
-				ImGui::DragFloat("Normal Strength: ", &normalStrength, 0.02f, 0.0f, 1.0f);
+				ImGui::DragFloat("Normal Strength", &normalStrength, 0.02f, 0.0f, 1.0f);
+
+			SPACE();
+
+			// Normal texture
+			ImGui::PushID("Metalness");
+			ImGui::Text("Choose new normal texture: ");
+
+			static int chosenMetalnessIndex = 0;
+			ImGui::Combo("", &chosenMetalnessIndex, textureNames.data(), textureNames.size());
+			ImGui::PopID();
+
+			if(chosenMetalnessIndex == 0)
+				ImGui::DragFloat("Metalness Value", &metalness, 0.01f, 0.0f, 1.0f);
 
 			if (ImGui::Button("Save", { 100, 100 }))
 			{
@@ -527,11 +538,18 @@ namespace en
 					EN_WARN("Enter a valid material name!")
 				else
 				{
-					Texture* albedo   = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
-					Texture* rougness = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
-					Texture* normal   = ((chosenNormalIndex    == 0) ? Texture::GetNormalTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
+					Texture* albedoTex    = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
+					Texture* roughnessTex = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
+					Texture* normalTex    = ((chosenNormalIndex    == 0) ? Texture::GetNormalTexture()    : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
+					Texture* metalnessTex = ((chosenMetalnessIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 
-					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, roughness, normalStrength, albedo, rougness, normal);
+					if (roughnessTex != Texture::GetWhiteSRGBTexture())
+						roughness = 1.0f;
+
+					if (metalnessTex != Texture::GetWhiteSRGBTexture())
+						metalness = 1.0f;
+
+					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, roughness, normalStrength, albedoTex, roughnessTex, normalTex, metalnessTex);
 
 					m_MatCounter++;
 
