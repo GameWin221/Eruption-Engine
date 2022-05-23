@@ -181,10 +181,10 @@ namespace en
 
 			static char name[86];
 
-			static int chosenAlbedoIndex = 0;
+			static int chosenAlbedoIndex	= 0;
 			static int chosenRoughnessIndex = 0;
+			static int chosenNormalIndex	= 0;
 			static int chosenMetalnessIndex = 0;
-			static int chosenNormalIndex = 0;
 
 			if (m_AssetEditorInit)
 			{
@@ -192,9 +192,10 @@ namespace en
 
 				const auto& textures = m_AssetManager->GetAllTextures();
 
-				chosenAlbedoIndex = 0;
+				chosenAlbedoIndex	 = 0;
 				chosenRoughnessIndex = 0;
-				chosenNormalIndex = 0;
+				chosenNormalIndex	 = 0;
+				chosenMetalnessIndex = 0;
 
 				for (int i = 0; i < textures.size(); i++)
 					if (textures[i]->GetName() == m_ChosenMaterial->GetAlbedoTexture()->GetName())
@@ -214,6 +215,13 @@ namespace en
 					if (textures[i]->GetName() == m_ChosenMaterial->GetNormalTexture()->GetName())
 					{
 						chosenNormalIndex = i + 1;
+						break;
+					}
+
+				for (int i = 0; i < textures.size(); i++)
+					if (textures[i]->GetName() == m_ChosenMaterial->GetMetalnessTexture()->GetName())
+					{
+						chosenMetalnessIndex = i + 1;
 						break;
 					}
 
@@ -253,61 +261,71 @@ namespace en
 			ImGui::Spacing();
 
 			// Albedo texture
+			ImGui::PushID("Albedo");
+			ImGui::Text("Albedo texture: ");
+
+			if (ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size()))
 			{
-				ImGui::PushID("Albedo");
-				ImGui::Text("Albedo texture: ");
-
-				if (ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size()))
-				{
-					if (chosenAlbedoIndex == 0)
-						m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
-					else
-						m_ChosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
-				}
-				ImGui::PopID();
+				if (chosenAlbedoIndex == 0)
+					m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
+				else
+					m_ChosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
 			}
-
+			ImGui::PopID();
+			
 			SPACE();
 
 			// Roughness texture
-			{
-				ImGui::PushID("Roughness");
-				ImGui::Text("Roughness texture: ");
+			ImGui::PushID("Roughness");
+			ImGui::Text("Roughness texture: ");
 
-				if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
-				{
-					if (chosenRoughnessIndex == 0)
-						m_ChosenMaterial->SetRoughnessTexture(Texture::GetWhiteSRGBTexture());
-					else
-						m_ChosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
-				}
-				ImGui::PopID();
+			if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
+			{
+				if (chosenRoughnessIndex == 0)
+					m_ChosenMaterial->SetRoughnessTexture(Texture::GetWhiteSRGBTexture());
+				else
+					m_ChosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 			}
+			ImGui::PopID();
 
 			if (chosenRoughnessIndex == 0)
 				ImGui::DragFloat("Roughness: ", &m_ChosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0);
 
-			ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0);
-
 			SPACE();
 
 			// Normal texture
+			ImGui::PushID("Normal");
+			ImGui::Text("Normal texture: ");
+
+			if (ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size()))
 			{
-				ImGui::PushID("Normal");
-				ImGui::Text("Normal texture: ");
-
-				if (ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size()))
-				{
-					if (chosenNormalIndex == 0)
-						m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
-					else
-						m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
-				}
-				ImGui::PopID();
+				if (chosenNormalIndex == 0)
+					m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
+				else
+					m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
 			}
+			ImGui::PopID();
+			
+			if (chosenNormalIndex != 0)
+				ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.01f, 0.0f, 1.0f);
 
-			if(chosenNormalIndex != 0)
-				ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.02f, 0.0f, 1.0f);
+			SPACE();
+
+			// Metalness texture
+			ImGui::PushID("Metalness");
+			ImGui::Text("Metalness texture: ");
+
+			if (ImGui::Combo("Textures", &chosenMetalnessIndex, textureNames.data(), textureNames.size()))
+			{
+				if (chosenMetalnessIndex == 0)
+					m_ChosenMaterial->SetMetalnessTexture(Texture::GetWhiteSRGBTexture());
+				else
+					m_ChosenMaterial->SetMetalnessTexture(m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
+			}
+			ImGui::PopID();
+
+			if(chosenMetalnessIndex == 0)
+				ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0);
 		}
 
 		ImGui::End();

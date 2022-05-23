@@ -13,7 +13,7 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture);
+		Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture);
 		~Material();
 
 		glm::vec3 m_Color;
@@ -30,10 +30,12 @@ namespace en
 
 		void SetAlbedoTexture(Texture* texture);
 		void SetRoughnessTexture(Texture* texture);
+		void SetMetalnessTexture(Texture* texture);
 		void SetNormalTexture(Texture* texture);
 
 		const Texture* GetAlbedoTexture()    const { return m_Albedo;    };
 		const Texture* GetRoughnessTexture() const { return m_Roughness; };
+		const Texture* GetMetalnessTexture() const { return m_Metalness; };
 		const Texture* GetNormalTexture()    const { return m_Normal;    };
 
 		const std::string& GetName() const { return m_Name; };
@@ -50,6 +52,7 @@ namespace en
 
 		Texture* m_Albedo;
 		Texture* m_Roughness;
+		Texture* m_Metalness;
 		Texture* m_Normal;
 
 		std::unique_ptr<MemoryBuffer> m_Buffer;
