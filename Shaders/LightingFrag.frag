@@ -14,16 +14,33 @@ layout(binding = 2) uniform sampler2D gNormal;
 
 struct PointLight
 {
-    vec3 position;
+    vec4 positionRadius;
     vec3 color;
-    float radius;
+};
+struct Spotlight
+{
+    vec3 position;
+    float innerCutoff;
+    vec3 direction;
+    float outerCutoff;
+    vec3 color;
+    float range;
+};
+struct DirLight
+{
+    vec3 direction;
+    vec3 color;
 };
 
 layout(binding = 3) uniform UBO 
 {
-    PointLight lights[MAX_LIGHTS];
+    PointLight pLights[MAX_POINT_LIGHTS];
+    Spotlight  sLights[MAX_SPOT_LIGHTS];
+    DirLight   dLights[MAX_DIR_LIGHTS];
 
     uint activePointLights;
+    uint activeSpotlights;
+    uint activeDirLights;
 
     vec3 ambient;
 
@@ -35,8 +52,6 @@ layout(push_constant) uniform LightsCameraInfo
     int debugMode;
 } camera;
 
-
-
 float WhenNotEqual(float x, float y) {
     return abs(sign(x - y));
 }
@@ -45,7 +60,6 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }  
-
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
     float a      = roughness*roughness;
@@ -59,7 +73,6 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 	
     return num / denom;
 }
-
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
@@ -80,9 +93,60 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-vec3 CalculateLight(PointLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float dist)
+vec3 CalculatePointLight(PointLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float dist)
 {
-    float attenuation = max(1.0 - dist*dist/(light.radius*light.radius), 0.0); 
+    float attenuation = max(1.0 - dist*dist/(light.positionRadius.w*light.positionRadius.w), 0.0); 
+    attenuation *= attenuation;
+
+    vec3 lightDir = normalize(light.positionRadius.xyz - position); 
+    vec3 H = normalize(lightDir + viewDir);
+
+    float cosTheta = max(dot(normal, lightDir), 0.0);
+    vec3  radiance  = light.color * attenuation * cosTheta;
+
+    float NDF = DistributionGGX(normal, H, roughness);       
+    float G   = GeometrySmith(normal, viewDir, lightDir, roughness);    
+    vec3  F   = FresnelSchlick(max(dot(H, viewDir), 0.0), F0);
+
+    vec3 kD = vec3(1.0) - F;
+    kD *= 1.0 - metalness;	
+
+    vec3 numerator    = NDF * G * F;
+    float denominator = 4.0 * max(dot(normal, viewDir), 0.0) * max(dot(normal, lightDir), 0.0)  + 0.0001;
+    vec3 specular     = numerator / denominator;  
+
+    float NdotL = max(dot(normal, lightDir), 0.0);        
+
+    return (kD * albedo / PI + specular) * radiance * NdotL;
+}
+vec3 CalculateDirLight(DirLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal)
+{
+    vec3 lightDir = normalize(light.direction); 
+    vec3 H = normalize(lightDir + viewDir);
+
+    float cosTheta = max(dot(normal, lightDir), 0.0);
+    vec3  radiance  = light.color * cosTheta;
+
+    float NDF = DistributionGGX(normal, H, roughness);       
+    float G   = GeometrySmith(normal, viewDir, lightDir, roughness);    
+    vec3  F   = FresnelSchlick(max(dot(H, viewDir), 0.0), F0);
+
+    vec3 kD = vec3(1.0) - F;
+    kD *= 1.0 - metalness;	
+
+    vec3 numerator    = NDF * G * F;
+    float denominator = 4.0 * max(dot(normal, viewDir), 0.0) * max(dot(normal, lightDir), 0.0)  + 0.0001;
+    vec3 specular     = numerator / denominator;  
+
+    float NdotL = max(dot(normal, lightDir), 0.0);        
+
+    return (kD * albedo / PI + specular) * radiance * NdotL;
+}
+vec3 CalculateSpotLight(Spotlight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float theta)
+{
+    float dist = length(position - light.position);
+
+    float attenuation = max(1.0 - dist*dist/(light.range*light.range), 0.0); 
     attenuation *= attenuation;
 
     vec3 lightDir = normalize(light.position - position); 
@@ -95,8 +159,7 @@ vec3 CalculateLight(PointLight light, vec3 albedo, float roughness, float metaln
     float G   = GeometrySmith(normal, viewDir, lightDir, roughness);    
     vec3  F   = FresnelSchlick(max(dot(H, viewDir), 0.0), F0);
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
+    vec3 kD = vec3(1.0) - F;
     kD *= 1.0 - metalness;	
 
     vec3 numerator    = NDF * G * F;
@@ -104,6 +167,8 @@ vec3 CalculateLight(PointLight light, vec3 albedo, float roughness, float metaln
     vec3 specular     = numerator / denominator;  
 
     float NdotL = max(dot(normal, lightDir), 0.0);        
+
+    //float intensity = theta*theta;// * (1.0/light.directionOuterCutoff.w);
 
     return (kD * albedo / PI + specular) * radiance * NdotL;
 }
@@ -132,10 +197,28 @@ void main()
 
     for(int i = 0; i < lightsBuffer.activePointLights; i++)
     {
-        float dist = length(position - lightsBuffer.lights[i].position);
+        float dist = length(position - lightsBuffer.pLights[i].positionRadius.xyz);
 
-        if(dist < lightsBuffer.lights[i].radius)
-            lighting += CalculateLight(lightsBuffer.lights[i], albedo, roughness, metalness, F0, viewDir, position, normal, dist);
+        if(dist < lightsBuffer.pLights[i].positionRadius.w)
+            lighting += CalculatePointLight(lightsBuffer.pLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, dist);
+    }
+    for(int i = 0; i < lightsBuffer.activeSpotlights; i++)
+    {
+        vec3 lightToSurfaceDir = normalize(position - lightsBuffer.sLights[i].position);
+
+        float innerCutoff = 1.0-lightsBuffer.sLights[i].innerCutoff;
+        float outerCutoff = 1.0-lightsBuffer.sLights[i].outerCutoff;
+
+        float theta     = dot(normalize(lightsBuffer.sLights[i].direction), lightToSurfaceDir);
+        float epsilon   = innerCutoff - outerCutoff;
+        float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);    
+
+        if(theta > outerCutoff) 
+            lighting += CalculateSpotLight(lightsBuffer.sLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, theta) * intensity;
+    }
+    for(int i = 0; i < lightsBuffer.activeDirLights; i++)
+    {
+        lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal);
     }
     
     vec3 result = vec3(0.0f);

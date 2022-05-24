@@ -21,12 +21,16 @@ namespace en
 		void Render();
 
 	private:
-		SceneObject* m_LastChosenObject		= nullptr;
-		PointLight* m_LastChosenPointLight = nullptr;
+		void* m_LastChosen = nullptr;
 
 		SceneHierarchyPanel* m_SceneHierarchy = nullptr;
 		Renderer*			 m_Renderer		  = nullptr;
 		AssetManager*		 m_AssetManager   = nullptr;
+
+		void InspectSceneObject();
+		void InspectPointLight();
+		void InspectSpotlight();
+		void InspectDirLight();
 	};
 }
 
