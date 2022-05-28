@@ -135,6 +135,9 @@
     <ClCompile Include="Source\Renderer\Lights\Lights.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -272,6 +275,9 @@
     <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -282,6 +288,8 @@
     <None Include="Shaders\TonemapFrag.frag" />
     <None Include="Shaders\DepthFragment.frag" />
     <None Include="Shaders\DepthVertex.vert" />
+    <None Include="Shaders\FXAA.frag" />
+    <None Include="Shaders\SMAA.frag" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />

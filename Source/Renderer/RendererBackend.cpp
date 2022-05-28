@@ -7,11 +7,10 @@ namespace en
 
 	VulkanRendererBackend* g_CurrentBackend;
 
-	void VulkanRendererBackend::Init(RendererInfo& rendererInfo)
+	void VulkanRendererBackend::Init()
 	{
 		m_Ctx		   = &Context::GetContext();
 		m_Window	   = &Window::GetMainWindow();
-		m_RendererInfo = m_RendererInfo;
 
 		g_CurrentBackend = this;
 
@@ -22,6 +21,8 @@ namespace en
 			g_DefaultCamera = new Camera(cameraInfo);
 
 		m_MainCamera = g_DefaultCamera;
+
+		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
 		glfwSetFramebufferSizeCallback(m_Window->m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
 
@@ -67,9 +68,13 @@ namespace en
 
         EN_SUCCESS("Created PP pipeline!")
 
+		InitAntialiasingPipeline();
+
+		EN_SUCCESS("Created Antialiasing pipeline!");
+
 		CreateSwapchainFramebuffers();
 
-        EN_SUCCESS("Created swapchain framebuffers!")
+		EN_SUCCESS("Created swapchain framebuffers!")
 
 		CreateSyncObjects();
 
@@ -77,7 +82,7 @@ namespace en
 
 		CreateCameraMatricesBuffer();
 
-        EN_SUCCESS("Created camera matrices buffer!")
+		EN_SUCCESS("Created camera matrices buffer!")
 
 		InitImGui();
 
@@ -100,26 +105,35 @@ namespace en
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
+		m_GBuffer->m_Attachments[3] = Framebuffer::Attachment{};
+
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
+
+		m_ImGui.Destroy();
 
 		vkDestroyFence(m_Ctx->m_LogicalDevice, m_SubmitFence, nullptr);
 
-		vkDestroyRenderPass(m_Ctx->m_LogicalDevice, m_ImGui.renderPass, nullptr);
-
-		m_ImGui.Destroy();
+		vkFreeCommandBuffers(m_Ctx->m_LogicalDevice, m_Ctx->m_CommandPool, 1U, &m_CommandBuffer);
 	}
 
 	void VulkanRendererBackend::WaitForGPUIdle()
 	{
 		vkWaitForFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence, VK_TRUE, UINT64_MAX);
 	}
+
 	void VulkanRendererBackend::BeginRender()
 	{
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline->m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
 		m_SkipFrame = false;
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || m_FramebufferResized)
+		if (m_ReloadQueued)
+		{
+			ReloadBackendImpl();
+			m_SkipFrame = true;
+			return;
+		}
+		else if (result == VK_ERROR_OUT_OF_DATE_KHR || m_FramebufferResized)
 		{
 			RecreateFramebuffer();
 			m_SkipFrame = true;
@@ -128,10 +142,10 @@ namespace en
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to acquire swap chain image!");
 
-		
-		vkResetFences(m_Ctx->m_LogicalDevice, 1, &m_SubmitFence);
 
-		vkResetCommandBuffer(m_CommandBuffer, 0);
+		vkResetFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence);
+
+		vkResetCommandBuffer(m_CommandBuffer, 0U);
 
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -349,7 +363,17 @@ namespace en
 		
 		static std::vector<VkClearValue> clearValue = { m_BlackClearValue };
 
-		m_TonemappingPipeline->Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
+		static VkFramebuffer targetFramebuffer;
+		
+		if (m_PostProcessParams.antialiasingMode != AntialiasingMode::None)
+		{
+			Helpers::TransitionImageLayout(m_AliasedFramebuffer->m_Attachments[0].image, m_AliasedFramebuffer->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
+			targetFramebuffer = m_AliasedFramebuffer->m_Framebuffer;
+		}
+		else
+			targetFramebuffer = m_Swapchain.framebuffers[m_ImageIndex];
+		
+		m_TonemappingPipeline->Bind(m_CommandBuffer, targetFramebuffer, m_Swapchain.extent, clearValue);
 
 		m_PostProcessParams.exposure.value = m_MainCamera->m_Exposure;
 
@@ -360,6 +384,25 @@ namespace en
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
 		m_TonemappingPipeline->Unbind(m_CommandBuffer);
+	}
+	void VulkanRendererBackend::AntialiasPass()
+	{
+		if (m_SkipFrame || !m_Scene || m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
+
+		static std::vector<VkClearValue> clearValue = { m_BlackClearValue };
+
+		m_AntialiasingPipeline->Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
+
+		m_AntialiasingInput->Bind(m_CommandBuffer, m_AntialiasingPipeline->m_Layout);
+
+		m_PostProcessParams.antialiasing.texelSizeX = 1.0f / static_cast<float>(m_Swapchain.extent.width );
+		m_PostProcessParams.antialiasing.texelSizeY = 1.0f / static_cast<float>(m_Swapchain.extent.height);
+
+		vkCmdPushConstants(m_CommandBuffer, m_AntialiasingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Antialiasing), &m_PostProcessParams.antialiasing);
+
+		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
+
+		m_AntialiasingPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::ImGuiPass()
 	{
@@ -459,10 +502,6 @@ namespace en
 
 		m_GBuffer->m_Attachments[3] = Framebuffer::Attachment{};
 
-		m_GBuffer->Destroy();
-		m_DepthBuffer->Destroy();
-		m_HDRFramebuffer->Destroy();
-
 		CreateSwapchain();
 
 		CreateDepthBufferAttachments();
@@ -487,16 +526,101 @@ namespace en
 
 		m_TonemappingPipeline->Resize(m_Swapchain.extent);
 
+		CreateAliasedFramebuffer();
+
+		if (m_PostProcessParams.antialiasingMode != AntialiasingMode::None)
+		{
+			UpdateAntialiasingInput();
+
+			m_AntialiasingPipeline->Resize(m_Swapchain.extent);
+		}
+
 		CreateSwapchainFramebuffers();
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.imageViews.size());
 
 		m_FramebufferResized = false;
 	}
-
 	void VulkanRendererBackend::ReloadBackend()
 	{
-		g_CurrentBackend->m_FramebufferResized = true;
+		m_ReloadQueued = true;
+	}
+	void VulkanRendererBackend::ReloadBackendImpl()
+	{
+		int width = 0, height = 0;
+		glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
+		while (width == 0 || height == 0)
+		{
+			glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
+			glfwWaitEvents();
+		}
+
+		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
+
+		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
+
+		m_GBuffer->m_Attachments[3] = Framebuffer::Attachment{};
+
+		m_LightingInput.reset();
+		m_TonemappingInput.reset();
+		m_AntialiasingInput.reset();
+
+		m_DepthPipeline.reset();
+
+		m_GeometryPipeline.reset();
+
+		m_LightingPipeline.reset();
+		m_LightingInput.reset();
+
+		m_TonemappingPipeline.reset();
+		m_TonemappingInput.reset();
+
+		m_AntialiasingPipeline.reset();
+		m_AntialiasingInput.reset();
+
+		m_CameraMatrices.reset();
+
+		m_DepthBuffer.reset();
+		m_GBuffer.reset();
+		m_HDRFramebuffer.reset();
+		m_AliasedFramebuffer.reset();
+
+		vkResetCommandBuffer(m_CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+		vkResetFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence);
+
+		glfwSetFramebufferSizeCallback(m_Window->m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
+
+		CreateSwapchain();
+
+		CreateDepthBufferAttachments();
+
+		CreateGBufferAttachments();
+
+		CreateCommandBuffer();
+
+		InitDepthPipeline();
+
+		InitGeometryPipeline();
+
+		CreateDepthBufferHandle();
+
+		CreateGBufferHandle();
+
+		InitLightingPipeline();
+
+		InitTonemappingPipeline();
+
+		InitAntialiasingPipeline();
+
+		CreateSwapchainFramebuffers();
+
+		CreateSyncObjects();
+
+		CreateCameraMatricesBuffer();
+
+		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.imageViews.size());
+
+		m_ReloadQueued = false;
 	}
 
 	void VulkanRendererBackend::SetMainCamera(Camera* camera)
@@ -512,7 +636,7 @@ namespace en
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_Ctx->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode   = m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+		VkPresentModeKHR   presentMode   = (m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
 		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -528,7 +652,7 @@ namespace en
 		createInfo.imageFormat	    = surfaceFormat.format;
 		createInfo.imageColorSpace  = surfaceFormat.colorSpace;
 		createInfo.imageExtent	    = extent;
-		createInfo.imageArrayLayers = 1;
+		createInfo.imageArrayLayers = 1U;
 		createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_Ctx->m_PhysicalDevice);
@@ -577,12 +701,12 @@ namespace en
 		{
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass		= m_TonemappingPipeline->m_RenderPass;
-			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.renderPass		= (m_PostProcessParams.antialiasingMode != AntialiasingMode::None) ? m_AntialiasingPipeline->m_RenderPass : m_TonemappingPipeline->m_RenderPass;
+			framebufferInfo.attachmentCount = 1U;
 			framebufferInfo.pAttachments	= &m_Swapchain.imageViews[i];
 			framebufferInfo.width			= m_Swapchain.extent.width;
 			framebufferInfo.height			= m_Swapchain.extent.height;
-			framebufferInfo.layers			= 1;
+			framebufferInfo.layers			= 1U;
 
 			if (vkCreateFramebuffer(m_Ctx->m_LogicalDevice, &framebufferInfo, nullptr, &m_Swapchain.framebuffers[i]) != VK_SUCCESS)
 				EN_ERROR("VulkanRendererBackend::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
@@ -595,8 +719,7 @@ namespace en
 	}
 	void VulkanRendererBackend::CreateDepthBufferAttachments()
 	{
-		if (!m_DepthBuffer)
-			m_DepthBuffer = std::make_unique<Framebuffer>();
+		m_DepthBuffer = std::make_unique<Framebuffer>();
 
 		Framebuffer::AttachmentInfo depth{};
 		depth.format = FindDepthFormat();
@@ -719,7 +842,8 @@ namespace en
 			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
-		m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		if(!m_Lights.buffer)
+			m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		UpdateLightingInput();
 
@@ -768,10 +892,18 @@ namespace en
 	{
 		m_TonemappingPipeline = std::make_unique<Pipeline>();
 
-		std::vector<Pipeline::Attachment> attachments = 
-		{
-			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
-		};
+		std::vector<Pipeline::Attachment> attachments;
+
+		if(m_PostProcessParams.antialiasingMode != AntialiasingMode::None)
+			attachments = 
+			{
+				{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
+			};
+		else
+			attachments =
+			{
+				{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
+			};
 
 		UpdateTonemappingInput();
 
@@ -800,6 +932,83 @@ namespace en
 		m_TonemappingPipeline->CreateSyncSemaphore();
 	}
 
+	void VulkanRendererBackend::UpdateAntialiasingInput()
+	{
+		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
+
+		PipelineInput::ImageInfo aliasedImage{};
+		aliasedImage.imageView	  = m_AliasedFramebuffer->m_Attachments[0].imageView;
+		aliasedImage.imageSampler = m_AliasedFramebuffer->m_Sampler;
+		aliasedImage.index = 0U;
+
+		std::vector<PipelineInput::ImageInfo> imageInfos = { aliasedImage };
+
+		if (!m_AntialiasingInput)
+			m_AntialiasingInput = std::make_unique<PipelineInput>(imageInfos);
+		else
+			m_AntialiasingInput->UpdateDescriptorSet(imageInfos);
+	}
+	void VulkanRendererBackend::InitAntialiasingPipeline()
+	{
+		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
+
+		std::vector<Pipeline::Attachment> attachments =
+		{
+			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
+		};
+
+		CreateAliasedFramebuffer();
+
+		UpdateAntialiasingInput();
+
+		m_AntialiasingPipeline = std::make_unique<Pipeline>();
+
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = attachments;
+
+		m_AntialiasingPipeline->CreateRenderPass(renderPassInfo);
+
+		VkPushConstantRange antialiasingPushConstant{};
+		antialiasingPushConstant.offset = 0U;
+		antialiasingPushConstant.size = sizeof(PostProcessingParams::Antialiasing);
+		antialiasingPushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::string fragmentSource = "Shaders/";
+
+		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::FXAA)
+			fragmentSource.append("FXAA.spv");
+		else if(m_PostProcessParams.antialiasingMode == AntialiasingMode::SMAA)
+			fragmentSource.append("SMAA.spv");
+
+		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
+		Shader fShader(fragmentSource, ShaderType::Fragment);
+
+		Pipeline::PipelineInfo pipelineInfo{};
+		pipelineInfo.vShader = &vShader;
+		pipelineInfo.fShader = &fShader;
+		pipelineInfo.extent  = m_Swapchain.extent;
+		pipelineInfo.descriptorLayouts  = { m_AntialiasingInput->m_DescriptorLayout };
+		pipelineInfo.pushConstantRanges = { antialiasingPushConstant };
+		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+
+		m_AntialiasingPipeline->CreatePipeline(pipelineInfo);
+		m_AntialiasingPipeline->CreateSyncSemaphore();
+	}
+	void VulkanRendererBackend::CreateAliasedFramebuffer()
+	{
+		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
+
+		m_AliasedFramebuffer = std::make_unique<Framebuffer>();
+
+		Framebuffer::AttachmentInfo aliasedImage{};
+		aliasedImage.format			  = m_Swapchain.imageFormat;
+		aliasedImage.imageFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		m_AliasedFramebuffer->CreateSampler();
+		m_AliasedFramebuffer->CreateAttachments({ aliasedImage }, m_Swapchain.extent.width, m_Swapchain.extent.height);
+		m_AliasedFramebuffer->CreateFramebuffer(m_TonemappingPipeline->m_RenderPass);
+	}
+
 	void VulkanRendererBackend::CreateCommandBuffer()
 	{
 		VkCommandBufferAllocateInfo allocInfo{};
@@ -818,8 +1027,7 @@ namespace en
 	}
 	void VulkanRendererBackend::CreateGBufferAttachments()
 	{
-		if(!m_GBuffer)
-			m_GBuffer = std::make_unique<Framebuffer>();
+		m_GBuffer = std::make_unique<Framebuffer>();
 
 		Framebuffer::AttachmentInfo albedo{};
 		albedo.format = m_Swapchain.imageFormat;
@@ -844,8 +1052,7 @@ namespace en
 
 	void VulkanRendererBackend::CreateLightingHDRFramebuffer()
 	{
-		if (!m_HDRFramebuffer)
-			m_HDRFramebuffer = std::make_unique<Framebuffer>();
+		m_HDRFramebuffer = std::make_unique<Framebuffer>();
 
 		Framebuffer::AttachmentInfo attachment{};
 		attachment.format = VK_FORMAT_R16G16B16A16_SFLOAT;

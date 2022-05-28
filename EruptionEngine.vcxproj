@@ -182,6 +182,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
@@ -256,6 +257,7 @@
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
@@ -306,6 +308,7 @@
     <None Include="EruptionEngine.ini" />
     <None Include="Shaders\DepthFragment.frag" />
     <None Include="Shaders\DepthVertex.vert" />
+    <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\GeometryFragment.frag">
       <FileType>Document</FileType>
     </None>
@@ -323,6 +326,7 @@
     <None Include="Shaders\FullscreenTriVert.vert">
       <FileType>Document</FileType>
     </None>
+    <None Include="Shaders\SMAA.frag" />
     <None Include="Shaders\TonemapFrag.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

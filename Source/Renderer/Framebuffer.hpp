@@ -28,7 +28,7 @@ namespace en
 			void Destroy();
 		};
 
-		void CreateSampler();
+		void CreateSampler(VkFilter framebufferFiltering = VK_FILTER_LINEAR);
 		void CreateFramebuffer(VkRenderPass& renderPass);
 		void CreateAttachments(std::vector<AttachmentInfo> attachmentInfos, uint32_t sizeX, uint32_t sizeY);
 

@@ -18,15 +18,15 @@ namespace en
 		vkDestroyImage(ctx.m_LogicalDevice, image, nullptr);
 	}
 
-	void Framebuffer::CreateSampler()
+	void Framebuffer::CreateSampler(VkFilter framebufferFiltering)
 	{
 		UseContext();
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.magFilter = framebufferFiltering;
+		samplerInfo.minFilter = framebufferFiltering;
 
 		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;

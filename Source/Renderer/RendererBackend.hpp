@@ -29,18 +29,12 @@
 
 namespace en
 {
-	struct RendererInfo
-	{
-		VkPolygonMode     polygonMode = VK_POLYGON_MODE_FILL;
-		VkCullModeFlags   cullMode    = VK_CULL_MODE_BACK_BIT;
-	};
-
 	class VulkanRendererBackend
 	{
 	public:
 		~VulkanRendererBackend();
 
-		void Init(RendererInfo& rendererInfo);
+		void Init();
 
 		void BindScene(Scene* scene);
 		void UnbindScene();
@@ -51,15 +45,16 @@ namespace en
 
 		void BeginRender();
 
+		void ReloadBackend();
+
 		void DepthPass();
 		void GeometryPass();
 		void LightingPass();
 		void PostProcessPass();
+		void AntialiasPass();
 		void ImGuiPass();
 
 		void EndRender();
-
-		void ReloadBackend();
 
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera() { return m_MainCamera; };
@@ -67,7 +62,38 @@ namespace en
 		Scene* GetScene() { return m_Scene; };
 
 		int m_DebugMode = 0;
+
 		std::function<void()> m_ImGuiRenderCallback;
+
+		enum struct AntialiasingMode : int
+		{
+			FXAA = 0,
+			SMAA = 1,
+			None = 2
+		};
+
+		struct PostProcessingParams
+		{
+			struct Exposure
+			{
+				float value = 1.0f;
+			} exposure;
+
+			AntialiasingMode antialiasingMode = AntialiasingMode::None;
+
+			struct Antialiasing
+			{
+				float fxaaSpanMax = 5.0;
+				float fxaaReduceMin = 0.0078125f;
+				float fxaaReduceMult = 0.16f;
+
+				float fxaaPower = 1.0f;
+
+				float texelSizeX = 1.0f / 1920.0f;
+				float texelSizeY = 1.0f / 1080.0f;
+			} antialiasing;
+
+		} m_PostProcessParams;
 
 	private:
 		struct Swapchain
@@ -100,17 +126,17 @@ namespace en
 				Spotlight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
 				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
 
-				alignas(4) uint32_t activePointLights;
-				alignas(4) uint32_t activeSpotlights;
-				alignas(4) uint32_t activeDirLights;
+				alignas(4) uint32_t activePointLights = 0U;
+				alignas(4) uint32_t activeSpotlights = 0U;
+				alignas(4) uint32_t activeDirLights = 0U;
 
-				alignas(16) glm::vec3 ambientLight;
+				alignas(16) glm::vec3 ambientLight = glm::vec3(0.0f);
 			} LBO;
 
 			struct LightsCameraInfo
 			{
-				glm::vec3 viewPos;
-				int debugMode;
+				glm::vec3 viewPos = glm::vec3(0.0f);
+				int debugMode = 0;
 			} camera;
 
 			std::unique_ptr<MemoryBuffer> buffer;
@@ -120,23 +146,15 @@ namespace en
 			uint32_t lastDirLightsSize = 0U;
 
 		} m_Lights;
-
-		struct PostProcessingParams
-		{
-			struct Exposure 
-			{ 
-				float value = 1.0f;
-			} exposure;
-		} m_PostProcessParams;
 		
 		struct ImGuiVK
 		{
-			VkDescriptorPool descriptorPool;
-			VkRenderPass	 renderPass;
+			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+			VkRenderPass	 renderPass = VK_NULL_HANDLE;
 
-			VkCommandPool commandPool;
+			VkCommandPool commandPool = VK_NULL_HANDLE;
 
-			std::vector<VkCommandBuffer> commandBuffers;
+			std::vector<VkCommandBuffer> commandBuffers{};
 
 			void Destroy()
 			{
@@ -159,25 +177,27 @@ namespace en
 
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
 
-		std::unique_ptr<Pipeline> m_TonemappingPipeline;
-		std::unique_ptr<PipelineInput> m_TonemappingInput;
-
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 		std::unique_ptr<PipelineInput> m_LightingInput;
 
+		std::unique_ptr<Pipeline> m_TonemappingPipeline;
+		std::unique_ptr<PipelineInput> m_TonemappingInput;
+
+		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
+		std::unique_ptr<PipelineInput> m_AntialiasingInput;
+
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
 		std::unique_ptr<Framebuffer> m_DepthBuffer;
 		std::unique_ptr<Framebuffer> m_GBuffer;
+		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
+		std::unique_ptr<Framebuffer> m_AliasedFramebuffer;
 
 		VkCommandBuffer m_CommandBuffer;
 		
 		VkFence	m_SubmitFence;
 
 		const VkClearValue m_BlackClearValue{};
-
-		RendererInfo m_RendererInfo;
 
 		// References to existing objects
 		Context* m_Ctx;
@@ -186,14 +206,17 @@ namespace en
 
 		Scene* m_Scene = nullptr;
 
-		uint32_t m_ImageIndex;
+		uint32_t m_ImageIndex = 0U;
 
+		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
 		bool m_VSync = true;
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
+
+		void ReloadBackendImpl();
 
 		void CreateSwapchain();
 
@@ -215,6 +238,10 @@ namespace en
 
 		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
+
+		void UpdateAntialiasingInput();
+		void InitAntialiasingPipeline();
+		void CreateAliasedFramebuffer();
 
 		void CreateSwapchainFramebuffers();
 

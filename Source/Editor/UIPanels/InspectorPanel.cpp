@@ -7,7 +7,7 @@ void en::InspectorPanel::Render()
 {
 	ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
 
-	ImGui::Begin("Inspector");
+	ImGui::Begin("Inspector", nullptr, EditorCommons::CommonFlags);
 
 	if (m_SceneHierarchy->m_ChosenObject)
 		InspectSceneObject();

@@ -5,5 +5,7 @@
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\TonemapFrag.frag -o %~dp0\TonemapFrag.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\DepthFragment.frag -o %~dp0\DepthFragment.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\DepthVertex.vert -o %~dp0\DepthVertex.spv
+%VULKAN_SDK%/Bin/glslc.exe %~dp0\FXAA.frag -o %~dp0\FXAA.spv
+%VULKAN_SDK%/Bin/glslc.exe %~dp0\SMAA.frag -o %~dp0\SMAA.spv
 
 pause

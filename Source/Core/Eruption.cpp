@@ -15,11 +15,7 @@ void Eruption::Init()
 
 	m_Context = new en::Context;
 
-	en::RendererInfo rendererInfo{};
-	rendererInfo.polygonMode = VK_POLYGON_MODE_FILL;
-	rendererInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-
-	m_Renderer = new en::Renderer(rendererInfo);
+	m_Renderer = new en::Renderer;
 
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;
@@ -65,7 +61,10 @@ void Eruption::Update()
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
 	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
-		m_Editor->m_Visible = !m_Editor->m_Visible;
+		m_Editor->SetVisibility(!m_Editor->GetVisibility());
+
+	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
+		m_Renderer->ReloadRenderer();
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{

@@ -23,6 +23,10 @@ namespace en
 	{
 		UseContext();
 		vkFreeDescriptorSets(ctx.m_LogicalDevice, g_CameraDescriptorPool, 1U, &m_DescriptorSet);
+		vkDestroyDescriptorSetLayout(ctx.m_LogicalDevice, g_CameraDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(ctx.m_LogicalDevice, g_CameraDescriptorPool, nullptr);
+
+		g_CameraDescriptorPool = VK_NULL_HANDLE;
 	}
 
 	void CameraMatricesBuffer::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
@@ -50,7 +54,7 @@ namespace en
 		allocInfo.pSetLayouts		 = &g_CameraDescriptorSetLayout;
 
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
-			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
+			EN_ERROR("CameraMatricesBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
 		VkDescriptorBufferInfo bufferInfo{};
 		bufferInfo.buffer = m_Buffer->GetHandle();

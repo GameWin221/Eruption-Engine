@@ -10,7 +10,7 @@ namespace en
 		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
 
 
-		ImGui::Begin("Scene Hierarchy");
+		ImGui::Begin("Scene Hierarchy", nullptr, EditorCommons::CommonFlags);
 
 		if (ImGui::CollapsingHeader("Scene Properties", ImGuiTreeNodeFlags_DefaultOpen))
 		{
