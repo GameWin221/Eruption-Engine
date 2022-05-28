@@ -30,19 +30,19 @@ void main()
 	dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
 	dir.y =  ((lumaNW + lumaSE) - (lumaNE + lumaSE));
 
-	float dirReduce = min((lumaNW + lumaNE + lumaSW + lumaSE) * (parameters.fxaaReduceMult * 0.25), parameters.fxaaReduceMin);
+	float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (parameters.fxaaReduceMult * 0.25), parameters.fxaaReduceMin);
 	float invDirAdjusment = 1.0/(min(abs(dir.x), abs(dir.y)) + dirReduce);
 	
 	dir = min(vec2(parameters.fxaaSpanMax), max(vec2(-parameters.fxaaSpanMax), dir * invDirAdjusment)) * parameters.texelSize;
 
 	dir *= parameters.power;
 
-	vec3 result1 = 0.5 * (texture(AliasedImage, fTexcoord + (dir * (1.0/3.0 - 0.5))).rgb + 
-						  texture(AliasedImage, fTexcoord + (dir * (2.0/3.0 - 0.5))).rgb);
+	vec3 result1 = 0.5 * (texture(AliasedImage, fTexcoord + dir * (1.0/3.0 - 0.5)).rgb + 
+						  texture(AliasedImage, fTexcoord + dir * (2.0/3.0 - 0.5)).rgb);
 
 	vec3 result2 = result1 * 0.5 + 0.25 * (
-						  texture(AliasedImage, fTexcoord + (dir * -0.5)).rgb + 
-						  texture(AliasedImage, fTexcoord + (dir *  0.5)).rgb);
+						  texture(AliasedImage, fTexcoord + dir * -0.5).rgb + 
+						  texture(AliasedImage, fTexcoord + dir *  0.5).rgb);
 
 	float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
 	float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
@@ -52,4 +52,6 @@ void main()
 		AntialiasedResult = vec4(result1, 1.0);
 	else
 		AntialiasedResult = vec4(result2, 1.0);
+
+	//AntialiasedResult = vec4(dir.x * 1.0 / parameters.texelSize.x, dir.y* 1.0 / parameters.texelSize.y, 0.0, 1.0);
 }
