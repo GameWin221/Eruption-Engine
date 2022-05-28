@@ -64,9 +64,9 @@ namespace en
 
     void Scene::CreatePointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius)
     {
-        if (m_PointLights.size() + 1 >= MAX_LIGHTS)
+        if (m_PointLights.size() + 1 >= MAX_POINT_LIGHTS)
         {
-            EN_WARN("Failed to create a new light because you've reached the MAX_LIGHTS limit (" + std::to_string(MAX_LIGHTS) + ")!")
+            EN_WARN("Failed to create a new PointLight because you've reached the MAX_POINT_LIGHTS limit (" + std::to_string(MAX_POINT_LIGHTS) + ")!")
             return;
         }
 
@@ -75,6 +75,36 @@ namespace en
     void Scene::DeletePointLight(uint32_t index)
     {
         m_PointLights.erase(m_PointLights.begin() + index);
+    }
+
+    void Scene::CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity)
+    {
+        if (m_Spotlights.size() + 1 >= MAX_SPOT_LIGHTS)
+        {
+            EN_WARN("Failed to create a new Spotlight because you've reached the MAX_SPOT_LIGHTS limit (" + std::to_string(MAX_SPOT_LIGHTS) + ")!")
+                return;
+        }
+
+        m_Spotlights.emplace_back(position, direction, color, innerCutoff, outerCutoff, range, intensity);
+    }
+    void Scene::DeleteSpotlight(uint32_t index)
+    {
+        m_Spotlights.erase(m_Spotlights.begin() + index);
+    }
+
+    void Scene::CreateDirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity)
+    {
+        if (m_DirectionalLights.size() + 1 >= MAX_DIR_LIGHTS)
+        {
+            EN_WARN("Failed to create a new DirectionalLight because you've reached the MAX_DIR_LIGHTS limit (" + std::to_string(MAX_DIR_LIGHTS) + ")!")
+                return;
+        }
+
+        m_DirectionalLights.emplace_back(direction, color, intensity);
+    }
+    void Scene::DeleteDirectionalLight(uint32_t index)
+    {
+        m_DirectionalLights.erase(m_DirectionalLights.begin() + index);
     }
 
     std::vector<SceneObject*> Scene::GetAllSceneObjects()

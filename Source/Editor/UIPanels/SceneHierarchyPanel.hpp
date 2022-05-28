@@ -25,9 +25,12 @@ namespace en
 		Renderer*	      m_Renderer  = nullptr;
 		EditorImageAtlas* m_Atlas	  = nullptr;
 
-		SceneObject* m_ChosenObject		= nullptr;
-		PointLight*  m_ChosenPointLight = nullptr;
-		uint32_t	 m_ChosenLightIndex = 0U;
+		SceneObject*	   m_ChosenObject	  = nullptr;
+
+		PointLight*		   m_ChosenPointLight = nullptr;
+		DirectionalLight*  m_ChosenDirLight   = nullptr;
+		Spotlight*		   m_ChosenSpotLight  = nullptr;
+		uint32_t		   m_ChosenLightIndex = 0U;
 
 		const ImVec4 m_ElementColor = ImVec4(0.55f, 0.37f, 0.3f, 0.6f);
 	};

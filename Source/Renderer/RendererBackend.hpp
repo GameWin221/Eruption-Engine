@@ -18,6 +18,8 @@
 #include <Renderer/Shader.hpp>
 
 #include <Renderer/Lights/PointLight.hpp>
+#include <Renderer/Lights/DirectionalLight.hpp>
+#include <Renderer/Lights/Spotlight.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
 
@@ -94,9 +96,13 @@ namespace en
 		{
 			struct LightsBufferObject
 			{
-				PointLight::Buffer lights[MAX_LIGHTS];
+				PointLight::Buffer		 pointLights[MAX_POINT_LIGHTS];
+				Spotlight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
+				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
 
 				alignas(4) uint32_t activePointLights;
+				alignas(4) uint32_t activeSpotlights;
+				alignas(4) uint32_t activeDirLights;
 
 				alignas(16) glm::vec3 ambientLight;
 			} LBO;
@@ -109,7 +115,9 @@ namespace en
 
 			std::unique_ptr<MemoryBuffer> buffer;
 
-			uint32_t lastLightsSize = 0U;
+			uint32_t lastPointLightsSize = 0U;
+			uint32_t lastSpotlightsSize = 0U;
+			uint32_t lastDirLightsSize = 0U;
 
 		} m_Lights;
 

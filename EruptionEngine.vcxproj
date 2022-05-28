@@ -187,6 +187,7 @@
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Framebuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Lights\Lights.cpp" />
     <ClCompile Include="Source\Renderer\PipelineInput.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
@@ -228,7 +229,6 @@
     <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Lights\PointLight.cpp" />
     <ClCompile Include="Source\Assets\AssetManager.cpp" />
     <ClCompile Include="External\STB\stb_image.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -256,6 +256,7 @@
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
     <ClInclude Include="Source\Editor\EditorCommons.hpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="Source\Common\Helpers.hpp" />
     <ClInclude Include="Source\Input\InputManager.hpp" />
     <ClInclude Include="Source\Editor\EditorLayer.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
