@@ -79,11 +79,11 @@ namespace en
 				float value = 1.0f;
 			} exposure;
 
-			AntialiasingMode antialiasingMode = AntialiasingMode::None;
+			AntialiasingMode antialiasingMode = AntialiasingMode::FXAA;
 
 			struct Antialiasing
 			{
-				float fxaaSpanMax = 5.0;
+				float fxaaSpanMax = 2.0;
 				float fxaaReduceMin = 0.0078125f;
 				float fxaaReduceMult = 0.16f;
 

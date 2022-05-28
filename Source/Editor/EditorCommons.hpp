@@ -13,7 +13,7 @@ namespace en
 	{
 		static constexpr ImGuiWindowFlags CommonFlags = ImGuiWindowFlags_None | ImGuiWindowFlags_NoCollapse;
 
-		static constexpr ImVec2 FreeWindowMinSize = ImVec2(500 , 190 );
+		static constexpr ImVec2 FreeWindowMinSize = ImVec2(500 , 200 );
 		static constexpr ImVec2 FreeWindowMaxSize = ImVec2(1920, 1080);
 
 		static const void TextCentered(std::string text)

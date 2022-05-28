@@ -268,12 +268,9 @@ namespace en
 
             float metalness = 0.0f;
             material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
-            if (hasMetallicTex) metalness = 1.0f;
-
 
             float roughness = 0.0f;
             material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
-            if (hasRoughnessTex) roughness = 1.0f;
 
             if(hasDiffuseTex  ) LoadTexture(std::string(diffusePath  .C_Str()), directory + std::string(diffusePath .C_Str()) , { TextureFormat::Color    });
             if(hasRoughnessTex) LoadTexture(std::string(roughnessPath.C_Str()), directory + std::string(roughnessPath.C_Str()), { TextureFormat::NonColor });

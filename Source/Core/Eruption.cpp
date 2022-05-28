@@ -131,6 +131,10 @@ void Eruption::CreateExampleScene()
 
 	m_ExampleScene->m_AmbientColor = glm::vec3(0.027f, 0.027f, 0.055f);
 
+	m_AssetManager->GetMaterial("BlueCurtains")->m_NormalStrength  = 0.6f;
+	m_AssetManager->GetMaterial("RedCurtains")->m_NormalStrength   = 0.6f;
+	m_AssetManager->GetMaterial("GreenCurtains")->m_NormalStrength = 0.6f;
+
 	m_Renderer->BindScene(m_ExampleScene);
 }
 
