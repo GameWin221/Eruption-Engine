@@ -10,22 +10,26 @@ namespace en
 {
 	enum struct TextureFormat
 	{
-		Color = VK_FORMAT_R8G8B8A8_SRGB,
+		Color    = VK_FORMAT_R8G8B8A8_SRGB,
 		NonColor = VK_FORMAT_R8G8B8A8_UNORM
 	};
 	struct MeshImportProperties
 	{
 		bool importMaterials = true;
-		bool overwrite = false;
+
+		bool importAlbedoTextures	  = true;
+		bool importRoughnessTextures  = true;
+		bool importMetalnessTextures  = true;
+		bool importNormalTextures     = true;
+
+		bool importColor = true;
 	};
 	struct TextureImportProperties
 	{
 		TextureFormat format = TextureFormat::Color;
+
 		bool flipped = false;
 	};
-	
-	const MeshImportProperties    g_DefaultMeshImportSettings{};
-	const TextureImportProperties g_DefaultTextureImportSettings{};
 
 	class AssetManager
 	{
@@ -34,13 +38,13 @@ namespace en
 
 		static AssetManager* Instance();
 
-		bool LoadMesh	(std::string nameID, std::string path, MeshImportProperties properties    = g_DefaultMeshImportSettings   );
-		bool LoadTexture(std::string nameID, std::string path, TextureImportProperties properties = g_DefaultTextureImportSettings);
+		bool LoadMesh	(std::string nameID, std::string path, MeshImportProperties properties    = MeshImportProperties{}   );
+		bool LoadTexture(std::string nameID, std::string path, TextureImportProperties properties = TextureImportProperties{});
 
 		void DeleteMesh   (std::string nameID);
 		void DeleteTexture(std::string nameID);
 
-		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float metalnessVal = 0.0f, float roughnessVal = 0.75f, float normalStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* roughnessTexture = Texture::GetWhiteSRGBTexture(), Texture* normalTexture = Texture::GetNormalTexture(), Texture* metalnessTexture = Texture::GetWhiteSRGBTexture());
+		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float metalnessVal = 0.0f, float roughnessVal = 0.75f, float normalStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* roughnessTexture = Texture::GetWhiteNonSRGBTexture(), Texture* normalTexture = Texture::GetWhiteNonSRGBTexture(), Texture* metalnessTexture = Texture::GetWhiteNonSRGBTexture());
 		void DeleteMaterial(std::string nameID);
 
 		bool ContainsMesh    (std::string nameID) { return m_Meshes   .contains(nameID); };
@@ -69,7 +73,7 @@ namespace en
 		std::unordered_map<std::string, std::unique_ptr<Texture>>  m_Textures;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
 
-		std::unique_ptr<Mesh> LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial);
+		std::unique_ptr<Mesh> LoadMeshFromFile(std::string& filePath, std::string& name, MeshImportProperties& importProperties);
 		void ProcessNode(aiNode* node, const aiScene* scene, std::vector<Material*> materials, Mesh* mesh);
 		void GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices);
 		void GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices);

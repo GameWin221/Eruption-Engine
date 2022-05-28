@@ -80,6 +80,9 @@ void en::InspectorPanel::InspectSceneObject()
 		bool deleted = false;
 
 		if (ImGui::Button("Delete"))
+			EditorCommons::OpenYesNoDecision();
+
+		if (EditorCommons::YesNoDecision())
 		{
 			m_Renderer->GetScene()->DeleteSceneObject(m_SceneHierarchy->m_ChosenObject->GetName());
 			deleted = true;
@@ -129,6 +132,9 @@ void en::InspectorPanel::InspectPointLight()
 	bool deleted = false;
 
 	if (ImGui::Button("Delete"))
+		EditorCommons::OpenYesNoDecision();
+
+	if (EditorCommons::YesNoDecision())
 	{
 		m_Renderer->GetScene()->DeletePointLight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;
@@ -170,6 +176,9 @@ void en::InspectorPanel::InspectSpotlight()
 	bool deleted = false;
 
 	if (ImGui::Button("Delete"))
+		EditorCommons::OpenYesNoDecision();
+
+	if (EditorCommons::YesNoDecision())
 	{
 		m_Renderer->GetScene()->DeletePointLight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;
@@ -227,6 +236,9 @@ void en::InspectorPanel::InspectDirLight()
 	bool deleted = false;
 
 	if (ImGui::Button("Delete"))
+		EditorCommons::OpenYesNoDecision();
+
+	if (EditorCommons::YesNoDecision())
 	{
 		m_Renderer->GetScene()->DeleteDirectionalLight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;

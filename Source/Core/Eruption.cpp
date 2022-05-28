@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.6.1";
+	windowInfo.title	  = "Eruption Engine v0.6.2";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -63,6 +63,9 @@ void Eruption::Update()
 		m_Input->SetCursorMode(en::CursorMode::Locked);
 	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
+
+	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
+		m_Editor->m_Visible = !m_Editor->m_Visible;
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{

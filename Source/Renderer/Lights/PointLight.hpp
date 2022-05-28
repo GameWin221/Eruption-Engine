@@ -20,7 +20,9 @@ namespace en
 
 		struct Buffer
 		{
-			alignas(16) glm::vec4 positionRadius = glm::vec4(0.0, 0.0, 0.0, 5.0f);
+			glm::vec3 position = glm::vec3(0.0);
+			float radius = 5.0f;
+
 			alignas(16) glm::vec3 color = glm::vec3(1.0);
 		};
 	};

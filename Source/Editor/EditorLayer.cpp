@@ -87,23 +87,26 @@ namespace en
 	{
 		BeginRender();
 
-		DrawDockspace();
+		if (m_Visible)
+		{
+			DrawDockspace();
 
-		// UI Panels
-		if (m_ShowCameraMenu)
-			DrawCameraMenu();
+			// UI Panels
+			if (m_ShowCameraMenu)
+				DrawCameraMenu();
 
-		if (m_ShowDebugMenu)
-			DrawDebugMenu();
+			if (m_ShowDebugMenu)
+				DrawDebugMenu();
 
-		if (m_ShowSceneMenu)
-			m_SceneHierarchyPanel->Render();
+			if (m_ShowSceneMenu)
+				m_SceneHierarchyPanel->Render();
 
-		if (m_ShowInspector)
-			m_InspectorPanel->Render();
+			if (m_ShowInspector)
+				m_InspectorPanel->Render();
 
-		if (m_ShowAssetMenu)
-			m_AssetManagerPanel->Render();
+			if (m_ShowAssetMenu)
+				m_AssetManagerPanel->Render();
+		}
 
 		EndRender();
 	}
@@ -200,6 +203,8 @@ namespace en
 
 			ImGui::MenuItem("Scene Menu", "", &m_ShowSceneMenu);
 			ImGui::MenuItem("Inspector", "", &m_ShowInspector);
+
+			ImGui::MenuItem("Toggle UI (Shift+I)", "", &m_Visible);
 
 			ImGui::EndMenu();
 		}

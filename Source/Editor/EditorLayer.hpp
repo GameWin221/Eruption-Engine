@@ -18,6 +18,8 @@ namespace en
 
 		void OnUIDraw();
 
+		bool m_Visible = true;
+
 	private:
 		Renderer* m_Renderer  = nullptr;
 		double*	  m_DeltaTime = nullptr;

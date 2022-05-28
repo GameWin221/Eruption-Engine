@@ -4,8 +4,6 @@
 namespace en
 {
 	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
-	std::array<unsigned char, 4> g_GreyTexturePixels = { 75, 75, 75, 255 };
-	std::array<unsigned char, 4> g_NormalTexturePixels = { 127, 127, 255, 255 };
 
 	Texture* g_WhiteTexture;
 	Texture* g_NormalTexture;
@@ -83,23 +81,16 @@ namespace en
 	Texture* Texture::GetWhiteSRGBTexture()
 	{
 		if (!g_WhiteTexture)
-			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), "DefaultWhite", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
+			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
 
 		return g_WhiteTexture;
 	}
-	Texture* Texture::GetGreyNonSRGBTexture()
+	Texture* Texture::GetWhiteNonSRGBTexture()
 	{
 		if (!g_GreyTexture)
-			g_GreyTexture = new Texture(g_GreyTexturePixels.data(), "DefaultGrey", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
+			g_GreyTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
 
 		return g_GreyTexture;
-	}
-	Texture* Texture::GetNormalTexture()
-	{
-		if (!g_NormalTexture)
-			g_NormalTexture = new Texture(g_NormalTexturePixels.data(), "DefaultNormal", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
-
-		return g_NormalTexture;
 	}
 
 	void Texture::CreateImageSampler()

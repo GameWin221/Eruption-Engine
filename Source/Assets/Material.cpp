@@ -30,7 +30,7 @@ namespace en
 	Material* Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 1.0f, Texture::GetWhiteSRGBTexture(), Texture::GetWhiteSRGBTexture(), Texture::GetWhiteSRGBTexture(), Texture::GetNormalTexture());
+			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 0.0f, Texture::GetWhiteSRGBTexture(), Texture::GetWhiteNonSRGBTexture(), Texture::GetWhiteNonSRGBTexture(), Texture::GetWhiteNonSRGBTexture());
 
 		return g_DefaultMaterial;
 	}
@@ -151,11 +151,14 @@ namespace en
 		m_MatBuffer.roughnessVal   = m_RoughnessVal;
 		m_MatBuffer.normalStrength = m_NormalStrength;
 
-		if (m_Roughness != Texture::GetWhiteSRGBTexture())
+		if (m_Roughness != Texture::GetWhiteNonSRGBTexture())
 			m_MatBuffer.roughnessVal = 1.0f;
 
-		if (m_Metalness != Texture::GetWhiteSRGBTexture())
+		if (m_Metalness != Texture::GetWhiteNonSRGBTexture())
 			m_MatBuffer.metalnessVal = 1.0f;
+
+		if (m_Normal == Texture::GetWhiteNonSRGBTexture())
+			m_MatBuffer.normalStrength = 0.0f;
 
 		m_Buffer->MapMemory(&m_MatBuffer, m_Buffer->GetSize());
 	}

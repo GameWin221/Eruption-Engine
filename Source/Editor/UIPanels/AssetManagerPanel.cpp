@@ -20,6 +20,12 @@ namespace en
 		else if (m_ChosenTexture && m_ShowAssetEditor)
 			EditingTexture(&m_ShowAssetEditor);
 
+		if (m_IsImportingMesh)
+			ImportingMesh(&m_IsImportingMesh);
+
+		if (m_IsImportingTexture)
+			ImportingTexture(&m_IsImportingTexture);
+
 		if (m_IsCreatingMaterial)
 			CreatingMaterial();
 	}
@@ -37,36 +43,12 @@ namespace en
 		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 		if (ImGui::Button("Import Mesh", buttonSize) && !m_IsCreatingMaterial)
-		{
-			auto file = pfd::open_file("Choose meshes to import...", DEFAULT_ASSET_PATH, { "Supported Mesh Formats", "*.gltf *.fbx *.obj" }, pfd::opt::multiselect);
-
-			const std::vector<std::string> filePaths = file.result();
-
-			for (const auto& path : filePaths)
-			{
-				std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
-				fileName = path.substr(path.find_last_of('\\') + 1, path.length());
-
-				m_AssetManager->LoadMesh(fileName, path);
-			}
-		}
+			m_IsImportingMesh = true;
 
 		ImGui::SameLine();
 
 		if (ImGui::Button("Import Texture", buttonSize) && !m_IsCreatingMaterial)
-		{
-			auto file = pfd::open_file("Choose textures to import...", DEFAULT_ASSET_PATH, { "Supported Texture Formats", "*.png *.jpg *.jpeg" }, pfd::opt::multiselect);
-
-			const std::vector<std::string> filePaths = file.result();
-
-			for (const auto& path : filePaths)
-			{
-				std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
-				fileName = path.substr(path.find_last_of('\\') + 1, path.length());
-
-				m_AssetManager->LoadTexture(fileName, path);
-			}
-		}
+			m_IsImportingTexture = true;
 
 		if (ImGui::Button("Create Material", buttonSize) && !m_IsCreatingMaterial)
 			m_IsCreatingMaterial = true;
@@ -168,6 +150,105 @@ namespace en
 		ImGui::EndChild();
 
 		ImGui::End();
+	}
+
+	void AssetManagerPanel::ImportingMesh(bool* open)
+	{
+		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_AssetEditorBG.Value);
+
+		if (ImGui::Begin("Mesh Importer", open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
+			static MeshImportProperties properties = MeshImportProperties{};
+
+			ImGui::Checkbox("Import Materials", &properties.importMaterials);
+
+			ImGui::Spacing();
+
+			if (properties.importMaterials)
+			{
+				ImGui::Checkbox("Import Color", &properties.importColor);
+
+				ImGui::Spacing();
+
+				ImGui::Checkbox("Albedo Textures", &properties.importAlbedoTextures);
+				ImGui::Checkbox("Roughness Textures", &properties.importRoughnessTextures);
+				ImGui::Checkbox("Metalness Textures", &properties.importMetalnessTextures);
+				ImGui::Checkbox("Normal Textures", &properties.importNormalTextures);
+			}
+
+			SPACE();
+
+			if (ImGui::Button("Select mesh to import...", ImVec2(200, 100)))
+			{
+				auto file = pfd::open_file("Choose meshes to import...", DEFAULT_ASSET_PATH, { "Supported Mesh Formats", "*.gltf *.fbx *.obj" }, pfd::opt::multiselect);
+
+				const std::vector<std::string> filePaths = file.result();
+
+				for (const auto& path : filePaths)
+				{
+					std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
+					fileName = path.substr(path.find_last_of('\\') + 1, path.length());
+
+					m_AssetManager->LoadMesh(fileName, path, properties);
+				}
+			}
+
+			ImGui::End();
+		}
+
+		ImGui::PopStyleColor();
+	}
+	void AssetManagerPanel::ImportingTexture(bool* open)
+	{
+		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_AssetEditorBG.Value);
+
+		if (ImGui::Begin("Texture Importer", open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
+			static TextureImportProperties properties = TextureImportProperties{};
+			
+			static int formatIndex = 0;
+
+			static std::vector<const char*> formats = {"Color (sRGB)", "Non-Color (XYZ)"};
+
+			if (ImGui::Combo("Textures", &formatIndex, formats.data(), formats.size()))
+			{
+				switch (formatIndex)
+				{
+					case 0:
+						properties.format = TextureFormat::Color;
+						break;
+					case 1:
+						properties.format = TextureFormat::NonColor;
+						break;
+					default:
+						EN_ERROR("AssetManagerPanel::ImportingTexture() - Invalid format index!");
+						break;
+				}
+			}
+
+			ImGui::Checkbox("Load Flipped", &properties.flipped);
+
+			if (ImGui::Button("Choose textures to importer...", ImVec2(200, 100)))
+			{
+				auto file = pfd::open_file("Choose textures to import...", DEFAULT_ASSET_PATH, { "Supported Texture Formats", "*.png *.jpg *.jpeg" }, pfd::opt::multiselect);
+
+				const std::vector<std::string> filePaths = file.result();
+
+				for (const auto& path : filePaths)
+				{
+					std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
+					fileName = path.substr(path.find_last_of('\\') + 1, path.length());
+
+					m_AssetManager->LoadTexture(fileName, path);
+				}
+			}
+
+			ImGui::End();
+		}
+
+		ImGui::PopStyleColor();
 	}
 
 	void AssetManagerPanel::EditingMaterial(bool* open)
@@ -282,7 +363,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenRoughnessIndex == 0)
-					m_ChosenMaterial->SetRoughnessTexture(Texture::GetWhiteSRGBTexture());
+					m_ChosenMaterial->SetRoughnessTexture(Texture::GetWhiteNonSRGBTexture());
 				else
 					m_ChosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 			}
@@ -300,7 +381,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenNormalIndex == 0)
-					m_ChosenMaterial->SetNormalTexture(Texture::GetNormalTexture());
+					m_ChosenMaterial->SetNormalTexture(Texture::GetWhiteNonSRGBTexture());
 				else
 					m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
 			}
@@ -318,7 +399,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenMetalnessIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenMetalnessIndex == 0)
-					m_ChosenMaterial->SetMetalnessTexture(Texture::GetWhiteSRGBTexture());
+					m_ChosenMaterial->SetMetalnessTexture(Texture::GetWhiteNonSRGBTexture());
 				else
 					m_ChosenMaterial->SetMetalnessTexture(m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 			}
@@ -538,15 +619,15 @@ namespace en
 					EN_WARN("Enter a valid material name!")
 				else
 				{
-					Texture* albedoTex    = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
-					Texture* roughnessTex = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
-					Texture* normalTex    = ((chosenNormalIndex    == 0) ? Texture::GetNormalTexture()    : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
-					Texture* metalnessTex = ((chosenMetalnessIndex == 0) ? Texture::GetWhiteSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
+					Texture* albedoTex    = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture()	 : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
+					Texture* roughnessTex = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
+					Texture* normalTex    = ((chosenNormalIndex    == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
+					Texture* metalnessTex = ((chosenMetalnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 
-					if (roughnessTex != Texture::GetWhiteSRGBTexture())
+					if (roughnessTex != Texture::GetWhiteNonSRGBTexture())
 						roughness = 1.0f;
 
-					if (metalnessTex != Texture::GetWhiteSRGBTexture())
+					if (metalnessTex != Texture::GetWhiteNonSRGBTexture())
 						metalness = 1.0f;
 
 					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, roughness, normalStrength, albedoTex, roughnessTex, normalTex, metalnessTex);

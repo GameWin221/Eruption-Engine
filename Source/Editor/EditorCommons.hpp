@@ -24,6 +24,29 @@ namespace en
 
 			ImGui::Text(text.c_str());
 		}
+
+		static void OpenYesNoDecision()
+		{
+			ImGui::OpenPopup("Decision");
+		}
+
+		static bool YesNoDecision()
+		{
+			bool decision = false;
+
+			if (ImGui::BeginPopup("Decision"))
+			{
+				ImGui::Text("Are you sure?");
+
+				decision = ImGui::Selectable("Yes");
+
+				ImGui::Selectable("No");
+
+				ImGui::EndPopup();
+			}
+
+			return decision;
+		}
 	}
 }
 

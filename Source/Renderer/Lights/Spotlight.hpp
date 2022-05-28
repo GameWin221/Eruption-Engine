@@ -25,9 +25,14 @@ namespace en
 
 		struct Buffer
 		{
-			alignas(16) glm::vec4 positionInnerCutoff  = glm::vec4(0.0, 0.0, 0.0, 0.2f);
-			alignas(16) glm::vec4 directionOuterCutoff = glm::vec4(0.0, 0.0, 0.0, 0.4f);
-			alignas(16) glm::vec4 colorRange	       = glm::vec4(1.0, 1.0, 1.0, 8.0);
+			glm::vec3 position = glm::vec3(0.0f);
+			float innerCutoff = 0.2f;
+
+			glm::vec3 direction = glm::vec3(0.0);
+			float outerCutoff = 0.4f;
+
+			glm::vec3 color = glm::vec3(1.0);
+			float range = 8.0f;
 		};
 	};
 }

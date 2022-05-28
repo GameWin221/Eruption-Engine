@@ -19,8 +19,8 @@ namespace en
 
 		struct CameraMatricesBufferObject
 		{
-			alignas(16) glm::mat4 view = glm::mat4(1.0f);
-			alignas(16) glm::mat4 proj = glm::mat4(1.0f);
+			glm::mat4 view = glm::mat4(1.0f);
+			glm::mat4 proj = glm::mat4(1.0f);
 		} m_Matrices;
 
 	private:
