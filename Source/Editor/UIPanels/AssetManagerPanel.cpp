@@ -316,17 +316,15 @@ namespace en
 			if (ImGui::Button("Save Name"))
 				m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
 
+			col[0] = m_ChosenMaterial->m_Color.r;
+			col[1] = m_ChosenMaterial->m_Color.y;
+			col[2] = m_ChosenMaterial->m_Color.z;
+
 			if (ImGui::ColorEdit3("Color: ", col))
 			{
-				m_ChosenMaterial->m_Color.r = col[0];
-				m_ChosenMaterial->m_Color.y = col[1];
-				m_ChosenMaterial->m_Color.z = col[2];
-			}
-			else
-			{
-				col[0] = m_ChosenMaterial->m_Color.r;
-				col[1] = m_ChosenMaterial->m_Color.y;
-				col[2] = m_ChosenMaterial->m_Color.z;
+				m_ChosenMaterial->m_Color.r = std::fmaxf(col[0], 0.0f);
+				m_ChosenMaterial->m_Color.y = std::fmaxf(col[1], 0.0f);
+				m_ChosenMaterial->m_Color.z = std::fmaxf(col[2], 0.0f);
 			}
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
@@ -370,7 +368,7 @@ namespace en
 			ImGui::PopID();
 
 			if (chosenRoughnessIndex == 0)
-				ImGui::DragFloat("Roughness: ", &m_ChosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0);
+				ImGui::DragFloat("Roughness: ", &m_ChosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			SPACE();
 
@@ -388,7 +386,7 @@ namespace en
 			ImGui::PopID();
 			
 			if (chosenNormalIndex != 0)
-				ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.01f, 0.0f, 1.0f);
+				ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			SPACE();
 
@@ -406,7 +404,7 @@ namespace en
 			ImGui::PopID();
 
 			if(chosenMetalnessIndex == 0)
-				ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0);
+				ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();
@@ -553,6 +551,10 @@ namespace en
 
 			ImGui::ColorEdit3("Color: ", col);
 
+			col[0] = std::fmaxf(col[0], 0.0f);
+			col[1] = std::fmaxf(col[2], 0.0f);
+			col[2] = std::fmaxf(col[3], 0.0f);
+
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
 			std::vector<const char*> textureNames(allTextures.size() + 1);
@@ -583,7 +585,7 @@ namespace en
 			ImGui::PopID();
 
 			if(chosenRoughnessIndex == 0)
-				ImGui::DragFloat("Roughness Value", &roughness, 0.01f, 0.0f, 1.0f);
+				ImGui::DragFloat("Roughness Value", &roughness, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			SPACE();
 
@@ -596,7 +598,7 @@ namespace en
 			ImGui::PopID();
 
 			if(chosenNormalIndex != 0)
-				ImGui::DragFloat("Normal Strength", &normalStrength, 0.02f, 0.0f, 1.0f);
+				ImGui::DragFloat("Normal Strength", &normalStrength, 0.02f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			SPACE();
 
@@ -609,7 +611,7 @@ namespace en
 			ImGui::PopID();
 
 			if(chosenMetalnessIndex == 0)
-				ImGui::DragFloat("Metalness Value", &metalness, 0.01f, 0.0f, 1.0f);
+				ImGui::DragFloat("Metalness Value", &metalness, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			if (ImGui::Button("Save", { 100, 100 }))
 			{

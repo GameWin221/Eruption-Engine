@@ -37,8 +37,10 @@ namespace en
 		M = GLFW_KEY_M,
 
 		Space  = GLFW_KEY_SPACE,
-		Ctrl   = GLFW_KEY_LEFT_CONTROL,
-		Shift  = GLFW_KEY_LEFT_SHIFT,
+		LCtrl  = GLFW_KEY_LEFT_CONTROL,
+		RCtrl  = GLFW_KEY_RIGHT_CONTROL,
+		LShift = GLFW_KEY_LEFT_SHIFT,
+		RShift = GLFW_KEY_RIGHT_SHIFT,
 		Tab    = GLFW_KEY_TAB,
 		Escape = GLFW_KEY_ESCAPE,
 
@@ -51,7 +53,12 @@ namespace en
 		Six   = GLFW_KEY_6,
 		Seven = GLFW_KEY_7,
 		Eight = GLFW_KEY_8,
-		Nine  = GLFW_KEY_9
+		Nine  = GLFW_KEY_9,
+
+		Up    = GLFW_KEY_UP,
+		Down  = GLFW_KEY_DOWN,
+		Right = GLFW_KEY_RIGHT,
+		Left  = GLFW_KEY_LEFT
 	};
 
 	enum struct Button
@@ -89,15 +96,17 @@ namespace en
 
 		float m_MouseSensitivity = 1.0f;
 
-		const glm::vec2   GetMousePosition() const;
-		const glm::vec2   GetMouseVelocity() const { return m_MouseVel * m_MouseSensitivity; };
-		const CursorMode& GetCursorMode()    const { return m_CursorMode; };
+		const glm::vec2   GetMousePosition()    const;
+		const glm::vec2   GetMouseVelocity()    const { return m_MouseVel * m_MouseSensitivity; };
+		const float		  GetScrollWheelDelta() const { return m_ScrollVel; };
+		const CursorMode& GetCursorMode()       const { return m_CursorMode; };
 
 	private:
 		CursorMode m_CursorMode;
 
 		glm::vec2 m_LastMousePos;
 		glm::vec2 m_MouseVel;
+		float m_ScrollVel;
 
 		// True / False - Down / Up
 		std::unordered_map<int, bool> m_LastKeyStates;

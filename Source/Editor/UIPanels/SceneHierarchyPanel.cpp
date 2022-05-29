@@ -22,7 +22,7 @@ namespace en
 
 			ImGui::Text("Ambient Color:");
 			if (ImGui::ColorEdit3("", col))
-				m_Renderer->GetScene()->m_AmbientColor = glm::vec3(col[0], col[1], col[2]);
+				m_Renderer->GetScene()->m_AmbientColor = glm::vec3(std::fmaxf(col[0], 0.0f), std::fmaxf(col[1], 0.0f), std::fmaxf(col[2], 0.0f));
 
 			SPACE();
 		}

@@ -60,30 +60,30 @@ void Eruption::Update()
 	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
+	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
 		m_Editor->SetVisibility(!m_Editor->GetVisibility());
 
-	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
+	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
 		m_Renderer->ReloadRenderer();
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
-		if (m_Input->IsKey(en::Key::W))
+		if (m_Input->IsKey(en::Key::W) || m_Input->IsKey(en::Key::Up))
 			m_Camera->m_Position += m_Camera->GetFront() * (float)m_DeltaTime;
 
-		else if (m_Input->IsKey(en::Key::S))
+		else if (m_Input->IsKey(en::Key::S) || m_Input->IsKey(en::Key::Down))
 			m_Camera->m_Position -= m_Camera->GetFront() * (float)m_DeltaTime;
 
-		if (m_Input->IsKey(en::Key::A))
+		if (m_Input->IsKey(en::Key::A) || m_Input->IsKey(en::Key::Left))
 			m_Camera->m_Position -= m_Camera->GetRight() * (float)m_DeltaTime;
 
-		else if (m_Input->IsKey(en::Key::D))
+		else if (m_Input->IsKey(en::Key::D) || m_Input->IsKey(en::Key::Right))
 			m_Camera->m_Position += m_Camera->GetRight() * (float)m_DeltaTime;
 
-		if (m_Input->IsKey(en::Key::Space))
+		if (m_Input->IsKey(en::Key::Space) || m_Input->IsKey(en::Key::RShift))
 			m_Camera->m_Position += m_Camera->GetUp() * (float)m_DeltaTime;
 
-		else if (m_Input->IsKey(en::Key::Ctrl))
+		else if (m_Input->IsKey(en::Key::LCtrl) || m_Input->IsKey(en::Key::RCtrl))
 			m_Camera->m_Position -= m_Camera->GetUp() * (float)m_DeltaTime;
 
 		m_Camera->m_Yaw   += m_Input->GetMouseVelocity().x;

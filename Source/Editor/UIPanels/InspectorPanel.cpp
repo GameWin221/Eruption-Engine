@@ -82,7 +82,7 @@ void en::InspectorPanel::InspectSceneObject()
 		if (ImGui::Button("Delete"))
 			EditorCommons::OpenYesNoDecision();
 
-		if (EditorCommons::YesNoDecision())
+		if (EditorCommons::YesNoDecision() || ImGui::IsKeyPressed(ImGuiKey_Delete, false))
 		{
 			m_Renderer->GetScene()->DeleteSceneObject(m_SceneHierarchy->m_ChosenObject->GetName());
 			deleted = true;
@@ -130,11 +130,11 @@ void en::InspectorPanel::InspectPointLight()
 	static float col[3];
 
 	bool deleted = false;
-
+	
 	if (ImGui::Button("Delete"))
 		EditorCommons::OpenYesNoDecision();
 
-	if (EditorCommons::YesNoDecision())
+	if (EditorCommons::YesNoDecision() || ImGui::IsKeyPressed(ImGuiKey_Delete, false))
 	{
 		m_Renderer->GetScene()->DeletePointLight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;
@@ -152,9 +152,13 @@ void en::InspectorPanel::InspectPointLight()
 
 	ImGui::DragFloat3("Position", pos, 0.1f);
 	ImGui::ColorEdit3("Color", col, ImGuiColorEditFlags_Float);
-	ImGui::DragFloat("Intensity", &m_SceneHierarchy->m_ChosenPointLight->m_Intensity, 0.1f, 0.0f, 2000.0f);
-	ImGui::DragFloat("Radius", &m_SceneHierarchy->m_ChosenPointLight->m_Radius, 0.1f, 0.0f, 50.0f);
+	ImGui::DragFloat("Intensity", &m_SceneHierarchy->m_ChosenPointLight->m_Intensity, 0.1f, 0.0f, 2000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+	ImGui::DragFloat("Radius", &m_SceneHierarchy->m_ChosenPointLight->m_Radius, 0.1f, 0.0f, 50.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 	ImGui::Checkbox("Active", &m_SceneHierarchy->m_ChosenPointLight->m_Active);
+
+	col[0] = std::fmaxf(col[0], 0.0f);
+	col[1] = std::fmaxf(col[1], 0.0f);
+	col[2] = std::fmaxf(col[2], 0.0f);
 
 	m_SceneHierarchy->m_ChosenPointLight->m_Position = glm::vec3(pos[0], pos[1], pos[2]);
 	m_SceneHierarchy->m_ChosenPointLight->m_Color = glm::vec3(col[0], col[1], col[2]);
@@ -178,7 +182,7 @@ void en::InspectorPanel::InspectSpotlight()
 	if (ImGui::Button("Delete"))
 		EditorCommons::OpenYesNoDecision();
 
-	if (EditorCommons::YesNoDecision())
+	if (EditorCommons::YesNoDecision() || ImGui::IsKeyPressed(ImGuiKey_Delete, false))
 	{
 		m_Renderer->GetScene()->DeleteSpotlight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;
@@ -202,8 +206,12 @@ void en::InspectorPanel::InspectSpotlight()
 	ImGui::DragFloat3("Direction", dir, 0.1f, -1.0f, 1.0f);
 	ImGui::ColorEdit3("Color", col, ImGuiColorEditFlags_Float);
 
-	ImGui::DragFloat("Intensity", &m_SceneHierarchy->m_ChosenSpotLight->m_Intensity, 0.1f, 0.0f, 2000.0f);
-	ImGui::DragFloat("Range", &m_SceneHierarchy->m_ChosenSpotLight->m_Range, 0.5f, 0.0f, 1000.0f);
+	col[0] = std::fmaxf(col[0], 0.0f);
+	col[1] = std::fmaxf(col[1], 0.0f);
+	col[2] = std::fmaxf(col[2], 0.0f);
+
+	ImGui::DragFloat("Intensity", &m_SceneHierarchy->m_ChosenSpotLight->m_Intensity, 0.1f, 0.0f, 2000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+	ImGui::DragFloat("Range", &m_SceneHierarchy->m_ChosenSpotLight->m_Range, 0.5f, 0.0f, 1000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 	outerAngle = m_SceneHierarchy->m_ChosenSpotLight->m_OuterCutoff * 180.0f;
 	innerAngle = m_SceneHierarchy->m_ChosenSpotLight->m_InnerCutoff * 180.0f;
@@ -220,7 +228,7 @@ void en::InspectorPanel::InspectSpotlight()
 	ImGui::Checkbox("Active", &m_SceneHierarchy->m_ChosenSpotLight->m_Active);
 
 	m_SceneHierarchy->m_ChosenSpotLight->m_Position  = glm::vec3(pos[0], pos[1], pos[2]);
-	m_SceneHierarchy->m_ChosenSpotLight->m_Direction = glm::vec3(dir[0], dir[1], dir[2]);
+	m_SceneHierarchy->m_ChosenSpotLight->m_Direction = glm::normalize(glm::vec3(dir[0], dir[1], dir[2]));
 	m_SceneHierarchy->m_ChosenSpotLight->m_Color	 = glm::vec3(col[0], col[1], col[2]);
 
 	if (deleted)
@@ -238,7 +246,7 @@ void en::InspectorPanel::InspectDirLight()
 	if (ImGui::Button("Delete"))
 		EditorCommons::OpenYesNoDecision();
 
-	if (EditorCommons::YesNoDecision())
+	if (EditorCommons::YesNoDecision() || ImGui::IsKeyPressed(ImGuiKey_Delete, false))
 	{
 		m_Renderer->GetScene()->DeleteDirectionalLight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;
@@ -256,10 +264,14 @@ void en::InspectorPanel::InspectDirLight()
 
 	ImGui::DragFloat3("Direction", dir, 0.1f, -1.0, 1.0);
 	ImGui::ColorEdit3("Color", col, ImGuiColorEditFlags_Float);
-	ImGui::DragFloat("Intensity", &m_SceneHierarchy->m_ChosenDirLight->m_Intensity, 0.1f, 0.0f, 2000.0f);
+	ImGui::DragFloat("Intensity", &m_SceneHierarchy->m_ChosenDirLight->m_Intensity, 0.1f, 0.0f, 2000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 	ImGui::Checkbox("Active", &m_SceneHierarchy->m_ChosenDirLight->m_Active);
 
-	m_SceneHierarchy->m_ChosenDirLight->m_Direction = glm::vec3(dir[0], dir[1], dir[2]);
+	col[0] = std::fmaxf(col[0], 0.0f);
+	col[1] = std::fmaxf(col[1], 0.0f);
+	col[2] = std::fmaxf(col[2], 0.0f);
+
+	m_SceneHierarchy->m_ChosenDirLight->m_Direction = glm::normalize(glm::vec3(dir[0], dir[1], dir[2]));
 	m_SceneHierarchy->m_ChosenDirLight->m_Color = glm::vec3(col[0], col[1], col[2]);
 
 	if (deleted)
