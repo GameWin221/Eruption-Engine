@@ -37,10 +37,15 @@ namespace en
 		bool m_AssetEditorInit = false;
 
 		bool m_IsCreatingMaterial = false;
+		bool m_IsImportingMesh = false;
+		bool m_IsImportingTexture = false;
 
 		uint32_t m_MatCounter = 0U;
 
 		void DrawAssetManager();
+
+		void ImportingMesh(bool* open);
+		void ImportingTexture(bool* open);
 
 		void EditingMaterial(bool* open);
 		void EditingMesh(bool* open);

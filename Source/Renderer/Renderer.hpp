@@ -10,15 +10,12 @@ namespace en
 	class Renderer
 	{
 	public:
-		Renderer(RendererInfo& rendererInfo);
+		Renderer();
 		~Renderer();
 		
+		Scene* GetScene();
 		void BindScene(Scene* scene);
 		void UnbindScene();
-
-		void SetVSync(bool vSync);
-
-		Scene* GetScene();
 
 		void WaitForGPUIdle();
 		void Render();
@@ -27,14 +24,16 @@ namespace en
 		Camera* GetMainCamera();
 
 		Renderer& GetRenderer();
-
 		void ReloadRenderer();
+
+		VulkanRendererBackend::PostProcessingParams& GetPPParams();
 
 		void SetUIRenderCallback(std::function<void()> callback);
 		void SetDebugMode(int& mode);
+		void SetVSync(bool vSync);
 		
 	private:
-		VulkanRendererBackend m_Backend;
+		std::unique_ptr<VulkanRendererBackend> m_Backend;
 	};
 }
 

@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.6.1";
+	windowInfo.title	  = "Eruption Engine v0.6.3";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -15,11 +15,7 @@ void Eruption::Init()
 
 	m_Context = new en::Context;
 
-	en::RendererInfo rendererInfo{};
-	rendererInfo.polygonMode = VK_POLYGON_MODE_FILL;
-	rendererInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-
-	m_Renderer = new en::Renderer(rendererInfo);
+	m_Renderer = new en::Renderer;
 
 	m_Input = new en::InputManager;
 	m_Input->m_MouseSensitivity = 0.1f;
@@ -63,6 +59,12 @@ void Eruption::Update()
 		m_Input->SetCursorMode(en::CursorMode::Locked);
 	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
+
+	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
+		m_Editor->SetVisibility(!m_Editor->GetVisibility());
+
+	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
+		m_Renderer->ReloadRenderer();
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
@@ -128,6 +130,10 @@ void Eruption::CreateExampleScene()
 	m_ExampleScene->CreatePointLight(glm::vec3( 1.2, 2.0,-1.0), glm::vec3(1.0)		    );
 
 	m_ExampleScene->m_AmbientColor = glm::vec3(0.027f, 0.027f, 0.055f);
+
+	m_AssetManager->GetMaterial("BlueCurtains")->m_NormalStrength  = 0.6f;
+	m_AssetManager->GetMaterial("RedCurtains")->m_NormalStrength   = 0.6f;
+	m_AssetManager->GetMaterial("GreenCurtains")->m_NormalStrength = 0.6f;
 
 	m_Renderer->BindScene(m_ExampleScene);
 }

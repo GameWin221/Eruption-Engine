@@ -22,15 +22,13 @@ namespace en
 
     bool AssetManager::LoadMesh(std::string nameID, std::string path, MeshImportProperties properties)
     {
-        if (properties.overwrite) m_Meshes.erase(nameID);
-
         if (m_Meshes.contains(nameID))
         {
             EN_WARN("AssetManager::LoadMesh() - Failed to load a mesh with name \"" + nameID + "\" from \"" + path + "\" because a model with that name already exists!");
             return false;
         }
 
-        m_Meshes[nameID] = LoadMeshFromFile(path, nameID, properties.importMaterials);
+        m_Meshes[nameID] = LoadMeshFromFile(path, nameID, properties);
         return true;
     }
     bool AssetManager::LoadTexture(std::string nameID, std::string path, TextureImportProperties properties)
@@ -151,7 +149,7 @@ namespace en
         if (!m_Textures.contains(nameID))
         {
             EN_WARN("AssetManager::GetTexture() - There's currently no loaded texture named \"" + nameID + "\"!");
-            return Texture::GetWhiteSRGBTexture();
+            return Texture::GetWhiteNonSRGBTexture();
         }
 
         return m_Textures.at(nameID).get();
@@ -202,7 +200,7 @@ namespace en
             material.second->UpdateDescriptorSet();
     }
 
-    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, std::string& name, bool& importMaterial)
+    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, std::string& name, MeshImportProperties& importProperties)
     {
         std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
         mesh->m_FilePath = filePath;
@@ -210,16 +208,16 @@ namespace en
         
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(filePath,
-            aiProcess_CalcTangentSpace |
-            aiProcess_GenSmoothNormals |
-            aiProcess_JoinIdenticalVertices |
-            aiProcess_ImproveCacheLocality |
+            aiProcess_CalcTangentSpace         |
+            aiProcess_GenSmoothNormals         |
+            aiProcess_JoinIdenticalVertices    |
+            aiProcess_ImproveCacheLocality     |
             aiProcess_RemoveRedundantMaterials |
-            aiProcess_Triangulate |
-            aiProcess_GenUVCoords |
-            aiProcess_SplitLargeMeshes |
-            aiProcess_FindDegenerates |
-            aiProcess_FindInvalidData |
+            aiProcess_Triangulate              |
+            aiProcess_GenUVCoords              |
+            aiProcess_SplitLargeMeshes         |
+            aiProcess_FindDegenerates          |
+            aiProcess_FindInvalidData          |
             aiProcess_FlipUVs
         );
 
@@ -229,7 +227,7 @@ namespace en
         std::string directory = mesh->m_FilePath.substr(0, std::min(mesh->m_FilePath.find_last_of('\\'), mesh->m_FilePath.find_last_of('/'))+1);
         std::vector<Material*> materials;
 
-        if(importMaterial)
+        if(importProperties.importMaterials)
         for (int i = 0; i < scene->mNumMaterials; i++)
         {
             aiMaterial* material = scene->mMaterials[i];
@@ -241,51 +239,48 @@ namespace en
                 name = aiString("New Material (" + std::to_string(g_MatIndex) + ")");
             }
 
-            if (ContainsMaterial(name.C_Str())) continue;
+            if (ContainsMaterial(name.C_Str()))
+            {
+                materials.emplace_back(GetMaterial(name.C_Str()));
+                continue;
+            }
+
+            aiString diffusePath;
+            material->GetTexture(aiTextureType_DIFFUSE, 0, &diffusePath);
+            bool hasDiffuseTex = (diffusePath.length > 0 && importProperties.importAlbedoTextures);
+
+            aiString roughnessPath;
+            material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &roughnessPath);
+            bool hasRoughnessTex = (roughnessPath.length > 0 && importProperties.importRoughnessTextures);
+  
+            aiString metallicPath;
+            material->GetTexture(aiTextureType_METALNESS, 0, &metallicPath);
+            bool hasMetallicTex = (metallicPath.length > 0 && importProperties.importMetalnessTextures);
+
+            aiString normalPath;
+            material->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
+            bool hasNormalTex = (normalPath.length > 0 && importProperties.importNormalTextures);
 
             aiColor3D color;
             material->Get(AI_MATKEY_BASE_COLOR, color);
             bool hasColor = (color.r > 0.0f && color.g > 0.0f && color.b > 0.0f);
-
-            if (!hasColor) color = aiColor3D(1.0f);
+            if (!hasColor || !importProperties.importColor) color = aiColor3D(1.0f);
 
             float metalness = 0.0f;
-            material->Get(AI_MATKEY_METALLIC_FACTOR , metalness);
+            material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
 
             float roughness = 0.0f;
             material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
 
-            aiString diffusePath;
-            material->GetTexture(aiTextureType_DIFFUSE, 0, &diffusePath);
-            bool hasDiffuseTex = (diffusePath.length > 0);
-
-            aiString roughnessPath;
-            material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &roughnessPath);
-            bool hasRoughnessTex = (roughnessPath.length > 0);
-  
-            aiString metallicPath;
-            material->GetTexture(aiTextureType_METALNESS, 0, &metallicPath);
-            bool hasMetallicTex = (metallicPath.length > 0);
-
-            if (hasMetallicTex)
-                metalness = 1.0f;
-
-            if (hasRoughnessTex)
-                roughness = 1.0f;
-
-            aiString normalPath;
-            material->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
-            bool hasNormalTex = (normalPath.length > 0);
-
-            if(hasDiffuseTex  )  LoadTexture(std::string(diffusePath  .C_Str()), directory + std::string(diffusePath .C_Str()) , { TextureFormat::Color    });
-            if(hasRoughnessTex)  LoadTexture(std::string(roughnessPath.C_Str()), directory + std::string(roughnessPath.C_Str()), { TextureFormat::NonColor });
-            if(hasNormalTex   )  LoadTexture(std::string(normalPath   .C_Str()), directory + std::string(normalPath  .C_Str()) , { TextureFormat::NonColor });
-            if(hasMetallicTex )  LoadTexture(std::string(metallicPath .C_Str()), directory + std::string(metallicPath.C_Str()) , { TextureFormat::NonColor });
+            if(hasDiffuseTex  ) LoadTexture(std::string(diffusePath  .C_Str()), directory + std::string(diffusePath .C_Str()) , { TextureFormat::Color    });
+            if(hasRoughnessTex) LoadTexture(std::string(roughnessPath.C_Str()), directory + std::string(roughnessPath.C_Str()), { TextureFormat::NonColor });
+            if(hasNormalTex   ) LoadTexture(std::string(normalPath   .C_Str()), directory + std::string(normalPath  .C_Str()) , { TextureFormat::NonColor });
+            if(hasMetallicTex ) LoadTexture(std::string(metallicPath .C_Str()), directory + std::string(metallicPath.C_Str()) , { TextureFormat::NonColor });
 
             Texture* diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : Texture::GetWhiteSRGBTexture();
-            Texture* roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteSRGBTexture();
-            Texture* normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : Texture::GetNormalTexture();
-            Texture* metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : Texture::GetWhiteSRGBTexture();
+            Texture* roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteNonSRGBTexture();
+            Texture* normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : Texture::GetWhiteNonSRGBTexture();
+            Texture* metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : Texture::GetWhiteNonSRGBTexture();
 
             CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, roughness, 1.0f, diffuseTexture, roughnessTexture, normalTexture, metalnessTexture);
 

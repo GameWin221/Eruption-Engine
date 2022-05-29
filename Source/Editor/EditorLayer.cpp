@@ -25,9 +25,10 @@ namespace en
 
 		m_Renderer->SetUIRenderCallback(std::bind(&EditorLayer::OnUIDraw, this));
 
-		m_AssetManagerPanel = std::make_unique<AssetManagerPanel  >(assetManager, m_Atlas.get());
+		m_AssetManagerPanel   = std::make_unique<AssetManagerPanel  >(assetManager, m_Atlas.get());
 		m_SceneHierarchyPanel = std::make_unique<SceneHierarchyPanel>(m_Renderer);
-		m_InspectorPanel = std::make_unique<InspectorPanel		>(m_SceneHierarchyPanel.get(), m_Renderer, assetManager);
+		m_InspectorPanel	  = std::make_unique<InspectorPanel		>(m_SceneHierarchyPanel.get(), m_Renderer, assetManager);
+		m_SettingsPanel  	  = std::make_unique<SettingsPanel		>(m_Renderer);
 
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
@@ -105,7 +106,20 @@ namespace en
 		if (m_ShowAssetMenu)
 			m_AssetManagerPanel->Render();
 
+		if (m_ShowSettingsMenu)
+			m_SettingsPanel->Render();
+
 		EndRender();
+	}
+
+	void EditorLayer::SetVisibility(bool visibility)
+	{
+		m_Visible = visibility;
+
+		if(m_Visible)
+			m_Renderer->SetUIRenderCallback(std::bind(&EditorLayer::OnUIDraw, this));
+		else
+			m_Renderer->SetUIRenderCallback(nullptr);
 	}
 
 	void EditorLayer::BeginRender()
@@ -200,6 +214,10 @@ namespace en
 
 			ImGui::MenuItem("Scene Menu", "", &m_ShowSceneMenu);
 			ImGui::MenuItem("Inspector", "", &m_ShowInspector);
+			ImGui::MenuItem("Settings", "", &m_ShowSettingsMenu);
+
+			if (ImGui::MenuItem("Toggle UI (Shift+I)", "", &m_Visible))
+				SetVisibility(m_Visible);
 
 			ImGui::EndMenu();
 		}
@@ -285,10 +303,6 @@ namespace en
 
 			ImGui::Text(("View: " + modeName).c_str());
 		}
-
-		static bool vSync = true;
-		if (ImGui::Checkbox("VSync", &vSync))
-			m_Renderer->SetVSync(vSync);
 
 		ImGui::End();
 	}

@@ -5,11 +5,13 @@ namespace en
 {
 	Renderer* g_CurrentRenderer;
 
-	Renderer::Renderer(RendererInfo& rendererInfo)
+	Renderer::Renderer()
 	{
 		g_CurrentRenderer = this;
 
-		m_Backend.Init(rendererInfo);
+		m_Backend = std::make_unique<VulkanRendererBackend>();
+
+		m_Backend->Init();
 
 		EN_SUCCESS("Created the renderer");
 	}
@@ -17,48 +19,49 @@ namespace en
 
 	void Renderer::BindScene(Scene* scene)
 	{
-		m_Backend.BindScene(scene);
+		m_Backend->BindScene(scene);
 	}
 	void Renderer::UnbindScene()
 	{
-		m_Backend.UnbindScene();
+		m_Backend->UnbindScene();
 	}
 
 	Scene* Renderer::GetScene()
 	{
-		return m_Backend.GetScene();
+		return m_Backend->GetScene();
 	}
 
 	void Renderer::WaitForGPUIdle()
 	{
-		m_Backend.WaitForGPUIdle();
+		m_Backend->WaitForGPUIdle();
 	}
 
 	void Renderer::Render()
 	{
-		m_Backend.BeginRender();
+		m_Backend->BeginRender();
 
-		m_Backend.DepthPass();
-		m_Backend.GeometryPass();
-		m_Backend.LightingPass();
-		m_Backend.PostProcessPass();
-		m_Backend.ImGuiPass();
+		m_Backend->DepthPass();
+		m_Backend->GeometryPass();
+		m_Backend->LightingPass();
+		m_Backend->PostProcessPass();
+		m_Backend->AntialiasPass();
+		m_Backend->ImGuiPass();
 
-		m_Backend.EndRender();
+		m_Backend->EndRender();
 	}
 
 	void Renderer::SetMainCamera(Camera* camera)
 	{
-		m_Backend.SetMainCamera(camera);
+		m_Backend->SetMainCamera(camera);
 	}
 	Camera* Renderer::GetMainCamera()
 	{
-		return m_Backend.GetMainCamera();
+		return m_Backend->GetMainCamera();
 	}
 
 	void Renderer::SetVSync(bool vSync)
 	{
-		m_Backend.SetVSync(vSync);
+		m_Backend->SetVSync(vSync);
 	}
 
 	Renderer& Renderer::GetRenderer()
@@ -71,14 +74,22 @@ namespace en
 
 	void Renderer::ReloadRenderer()
 	{
-		m_Backend.ReloadBackend();
+		EN_LOG("Reloading the renderer backend...");
+
+		m_Backend->ReloadBackend();
+
+		EN_SUCCESS("Succesfully reloaded the backend");
+	}
+	VulkanRendererBackend::PostProcessingParams& Renderer::GetPPParams()
+	{
+		return m_Backend->m_PostProcessParams;
 	}
 	void Renderer::SetUIRenderCallback(std::function<void()> callback)
 	{
-		m_Backend.m_ImGuiRenderCallback = callback;
+		m_Backend->m_ImGuiRenderCallback = callback;
 	}
 	void Renderer::SetDebugMode(int& mode)
 	{
-		m_Backend.m_DebugMode = mode;
+		m_Backend->m_DebugMode = mode;
 	}
 }

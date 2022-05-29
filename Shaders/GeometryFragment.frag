@@ -42,5 +42,5 @@ void main()
 
     gPosition = vec4(fPosition, texture(metalnessTexture, fTexcoord).b * mbo.metalnessVal);
 
-    gNormal = vec4(TangentToWorld(), 1.0f);
+    gNormal = vec4(normalize(TangentToWorld()), 1.0f);
 }
