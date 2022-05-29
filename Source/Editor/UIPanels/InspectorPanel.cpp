@@ -180,7 +180,7 @@ void en::InspectorPanel::InspectSpotlight()
 
 	if (EditorCommons::YesNoDecision())
 	{
-		m_Renderer->GetScene()->DeletePointLight(m_SceneHierarchy->m_ChosenLightIndex);
+		m_Renderer->GetScene()->DeleteSpotlight(m_SceneHierarchy->m_ChosenLightIndex);
 		deleted = true;
 	}
 
