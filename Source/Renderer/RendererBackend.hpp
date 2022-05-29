@@ -68,8 +68,8 @@ namespace en
 		enum struct AntialiasingMode : int
 		{
 			FXAA = 0,
-			SMAA = 1,
-			None = 2
+			//SMAA = 1,
+			None = 1
 		};
 
 		struct PostProcessingParams
@@ -83,9 +83,9 @@ namespace en
 
 			struct Antialiasing
 			{
-				float fxaaSpanMax = 2.0;
-				float fxaaReduceMin = 0.0078125f;
-				float fxaaReduceMult = 0.16f;
+				float fxaaSpanMax = 4.0f;
+				float fxaaReduceMin = 0.001f;
+				float fxaaReduceMult = 0.050f;
 
 				float fxaaPower = 1.0f;
 

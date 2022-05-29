@@ -977,8 +977,8 @@ namespace en
 
 		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::FXAA)
 			fragmentSource.append("FXAA.spv");
-		else if(m_PostProcessParams.antialiasingMode == AntialiasingMode::SMAA)
-			fragmentSource.append("SMAA.spv");
+		//else if(m_PostProcessParams.antialiasingMode == AntialiasingMode::SMAA)
+			//fragmentSource.append("SMAA.spv");
 
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
 		Shader fShader(fragmentSource, ShaderType::Fragment);

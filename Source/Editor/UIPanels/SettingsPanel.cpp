@@ -22,7 +22,7 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Antialiasing"))
 		{
-			static const std::vector<const char*> modes = { "FXAA", "SMAA", "None"};
+			static const std::vector<const char*> modes = { "FXAA", "None"};
 
 			if (ImGui::Combo("Antialiasing Mode", (int*)&postProcessing.antialiasingMode, modes.data(), modes.size()))
 				m_Renderer->ReloadRenderer();
@@ -34,10 +34,10 @@ namespace en
 				ImGui::DragFloat("FXAA Reduce Mult", &postProcessing.antialiasing.fxaaReduceMult, 0.01f, 0.0f, 1.0f);
 				ImGui::DragFloat("FXAA Power", &postProcessing.antialiasing.fxaaPower, 0.2f, 0.0f, 10.0f);
 			}
-			else if (postProcessing.antialiasingMode == VulkanRendererBackend::AntialiasingMode::SMAA)
-			{
-				ImGui::Text("This antialiasing mode doesn't work yet!");
-			}
+			//else if (postProcessing.antialiasingMode == VulkanRendererBackend::AntialiasingMode::SMAA)
+			//{
+			//	ImGui::Text("This antialiasing mode doesn't work yet!");
+			//}
 			else if (postProcessing.antialiasingMode == VulkanRendererBackend::AntialiasingMode::None)
 				ImGui::Text("Antialiasing is disabled.");
 			
