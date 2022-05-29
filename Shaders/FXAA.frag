@@ -79,7 +79,7 @@ void main()
 	float filtered = lumaMax - lumaMin;
 	filtered = clamp(filtered - (1.0 - cutoff), 0.0, 1.0);
 	filtered *= (1.0 / cutoff);
-	
+
 	// Outputting the result
 	#if (DEBUG_MODE == MODE_NONE)
 
