@@ -228,15 +228,15 @@ namespace en
 
 		std::array<VkDescriptorPoolSize, 5> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = 1U;
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 1U;
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[2].descriptorCount = 1U;
+		poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[3].descriptorCount = 1U;
+		poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[4].descriptorCount = 1U;
+		poolSizes[4].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

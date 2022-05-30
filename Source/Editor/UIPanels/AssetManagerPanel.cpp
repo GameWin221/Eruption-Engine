@@ -552,8 +552,8 @@ namespace en
 			ImGui::ColorEdit3("Color: ", col);
 
 			col[0] = std::fmaxf(col[0], 0.0f);
-			col[1] = std::fmaxf(col[2], 0.0f);
-			col[2] = std::fmaxf(col[3], 0.0f);
+			col[1] = std::fmaxf(col[1], 0.0f);
+			col[2] = std::fmaxf(col[2], 0.0f);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
