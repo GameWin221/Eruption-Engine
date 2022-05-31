@@ -604,7 +604,7 @@ namespace en
 
 			// Normal texture
 			ImGui::PushID("Metalness");
-			ImGui::Text("Choose new normal texture: ");
+			ImGui::Text("Choose new metalness texture: ");
 
 			static int chosenMetalnessIndex = 0;
 			ImGui::Combo("", &chosenMetalnessIndex, textureNames.data(), textureNames.size());

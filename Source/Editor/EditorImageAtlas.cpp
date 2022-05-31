@@ -5,7 +5,7 @@ namespace en
 {
 	EditorImageAtlas::EditorImageAtlas(std::string atlasPath, uint32_t xSize, int32_t ySize) : m_AtlasSize(xSize, ySize)
 	{
-		m_Texture = std::make_unique<Texture>(atlasPath, "EditorImageAtlas", VK_FORMAT_R8G8B8A8_SRGB);
+		m_Texture = std::make_unique<Texture>(atlasPath, "EditorImageAtlas", VK_FORMAT_R8G8B8A8_SRGB, false, false);
 
 		m_TextureSize = m_Texture->GetSize();
 

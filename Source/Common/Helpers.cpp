@@ -43,7 +43,7 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_CommandPool, 1, &commandBuffer);
         }
         
-        void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
+        void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels)
         {
             UseContext();
 
@@ -53,7 +53,7 @@ namespace en
             imageInfo.extent.width = width;
             imageInfo.extent.height = height;
             imageInfo.extent.depth = 1;
-            imageInfo.mipLevels = 1;
+            imageInfo.mipLevels = mipLevels;
             imageInfo.arrayLayers = 1;
             imageInfo.format = format;
             imageInfo.tiling = tiling;
@@ -78,7 +78,7 @@ namespace en
 
             vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
         }
-        void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags)
+        void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
         {
             UseContext();
 
@@ -89,14 +89,14 @@ namespace en
             viewInfo.format = format;
             viewInfo.subresourceRange.aspectMask = aspectFlags;
             viewInfo.subresourceRange.baseMipLevel = 0;
-            viewInfo.subresourceRange.levelCount = 1;
+            viewInfo.subresourceRange.levelCount = mipLevels;
             viewInfo.subresourceRange.baseArrayLayer = 0;
             viewInfo.subresourceRange.layerCount = 1;
 
             if (vkCreateImageView(ctx.m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
                 EN_ERROR("Failed to create texture image view!");
         }
-        void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer cmdBuffer)
+        void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, VkCommandBuffer cmdBuffer)
         {
             VkCommandBuffer commandBuffer;
 
@@ -114,7 +114,7 @@ namespace en
             barrier.image = image;
             barrier.subresourceRange.aspectMask = aspectFlags;
             barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.levelCount = mipLevels;
             barrier.subresourceRange.baseArrayLayer = 0;
             barrier.subresourceRange.layerCount = 1;
 
