@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.6.3";
+	windowInfo.title	  = "Eruption Engine v0.6.4";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -60,37 +60,49 @@ void Eruption::Update()
 	else if(m_Input->IsMouseButton(en::Button::Right, en::InputState::Released))
 		m_Input->SetCursorMode(en::CursorMode::Free);
 
-	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
+	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
 		m_Editor->SetVisibility(!m_Editor->GetVisibility());
 
-	if (m_Input->IsKey(en::Key::Shift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
+	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
 		m_Renderer->ReloadRenderer();
+
+	static float targetYaw = m_Camera->m_Yaw;
+	static float targetPitch = m_Camera->m_Pitch;
 
 	if (m_Input->GetCursorMode() == en::CursorMode::Locked)
 	{
-		if (m_Input->IsKey(en::Key::W))
+		if (m_Input->IsKey(en::Key::W) || m_Input->IsKey(en::Key::Up))
 			m_Camera->m_Position += m_Camera->GetFront() * (float)m_DeltaTime;
 
-		else if (m_Input->IsKey(en::Key::S))
+		else if (m_Input->IsKey(en::Key::S) || m_Input->IsKey(en::Key::Down))
 			m_Camera->m_Position -= m_Camera->GetFront() * (float)m_DeltaTime;
 
-		if (m_Input->IsKey(en::Key::A))
+		if (m_Input->IsKey(en::Key::A) || m_Input->IsKey(en::Key::Left))
 			m_Camera->m_Position -= m_Camera->GetRight() * (float)m_DeltaTime;
 
-		else if (m_Input->IsKey(en::Key::D))
+		else if (m_Input->IsKey(en::Key::D) || m_Input->IsKey(en::Key::Right))
 			m_Camera->m_Position += m_Camera->GetRight() * (float)m_DeltaTime;
 
-		if (m_Input->IsKey(en::Key::Space))
+		if (m_Input->IsKey(en::Key::Space) || m_Input->IsKey(en::Key::RShift))
 			m_Camera->m_Position += m_Camera->GetUp() * (float)m_DeltaTime;
 
-		else if (m_Input->IsKey(en::Key::Ctrl))
+		else if (m_Input->IsKey(en::Key::LCtrl) || m_Input->IsKey(en::Key::RCtrl))
 			m_Camera->m_Position -= m_Camera->GetUp() * (float)m_DeltaTime;
 
-		m_Camera->m_Yaw   += m_Input->GetMouseVelocity().x;
-		m_Camera->m_Pitch -= m_Input->GetMouseVelocity().y;
+		targetYaw += m_Input->GetMouseVelocity().x;
+		targetPitch -= m_Input->GetMouseVelocity().y;
+
+		// Clamping Pitch
+		if (targetPitch > 89.999f) targetPitch = 89.999f;
+		else if (targetPitch < -89.999f) targetPitch = -89.999f;
 	}
 
+	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, 30.0 * m_DeltaTime);
+	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, 30.0 * m_DeltaTime);
+
 	m_Input->UpdateInput();
+
+	m_Renderer->Update();
 
 	m_Renderer->WaitForGPUIdle();
 

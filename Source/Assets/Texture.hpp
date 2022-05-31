@@ -17,8 +17,8 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture = false);
-		Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size);
+		Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture = false, bool useMipMaps = true);
+		Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size, bool useMipMaps = true);
 		~Texture();
 
 		VkImage		m_Image;
@@ -35,7 +35,15 @@ namespace en
 		const std::string& GetName()     const { return m_Name;	    };
 
 	private:
+		void CreateImage(void* data);
 		void CreateImageSampler();
+		void GenerateMipMaps();
+
+		uint32_t GetMipLevels();
+
+		uint32_t m_MipLevels;
+
+		bool m_UsesMipMaps;
 
 		std::string m_Name;
 

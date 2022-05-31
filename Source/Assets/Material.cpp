@@ -67,82 +67,81 @@ namespace en
 	}
 	void Material::UpdateDescriptorSet()
 	{
-		if (m_UpdateQueued)
-		{
-			UseContext();
+		if (!m_UpdateQueued) return;
+		
+		UseContext();
 
-			VkDescriptorBufferInfo matInfo{};
-			matInfo.buffer = m_Buffer->GetHandle();
-			matInfo.offset = 0;
-			matInfo.range = sizeof(MatBuffer);
+		VkDescriptorBufferInfo matInfo{};
+		matInfo.buffer = m_Buffer->GetHandle();
+		matInfo.offset = 0;
+		matInfo.range = sizeof(MatBuffer);
 
-			VkDescriptorImageInfo albedoImageInfo{};
-			albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			albedoImageInfo.imageView = m_Albedo->m_ImageView;
-			albedoImageInfo.sampler = m_Albedo->m_ImageSampler;
+		VkDescriptorImageInfo albedoImageInfo{};
+		albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		albedoImageInfo.imageView = m_Albedo->m_ImageView;
+		albedoImageInfo.sampler = m_Albedo->m_ImageSampler;
 
-			VkDescriptorImageInfo specularImageInfo{};
-			specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			specularImageInfo.imageView = m_Roughness->m_ImageView;
-			specularImageInfo.sampler = m_Roughness->m_ImageSampler;
+		VkDescriptorImageInfo specularImageInfo{};
+		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		specularImageInfo.imageView = m_Roughness->m_ImageView;
+		specularImageInfo.sampler = m_Roughness->m_ImageSampler;
 
-			VkDescriptorImageInfo normalImageInfo{};
-			normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			normalImageInfo.imageView = m_Normal->m_ImageView;
-			normalImageInfo.sampler = m_Normal->m_ImageSampler;
+		VkDescriptorImageInfo normalImageInfo{};
+		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		normalImageInfo.imageView = m_Normal->m_ImageView;
+		normalImageInfo.sampler = m_Normal->m_ImageSampler;
 
-			VkDescriptorImageInfo metalnessImageInfo{};
-			metalnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			metalnessImageInfo.imageView = m_Metalness->m_ImageView;
-			metalnessImageInfo.sampler = m_Metalness->m_ImageSampler;
+		VkDescriptorImageInfo metalnessImageInfo{};
+		metalnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		metalnessImageInfo.imageView = m_Metalness->m_ImageView;
+		metalnessImageInfo.sampler = m_Metalness->m_ImageSampler;
 
-			std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
-			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[0].dstSet = m_DescriptorSet;
-			descriptorWrites[0].dstBinding = 1;
-			descriptorWrites[0].dstArrayElement = 0;
-			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[0].descriptorCount = 1;
-			descriptorWrites[0].pBufferInfo = &matInfo;
+		std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_DescriptorSet;
+		descriptorWrites[0].dstBinding = 1;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &matInfo;
 
-			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[1].dstSet = m_DescriptorSet;
-			descriptorWrites[1].dstBinding = 2;
-			descriptorWrites[1].dstArrayElement = 0;
-			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[1].descriptorCount = 1;
-			descriptorWrites[1].pImageInfo = &albedoImageInfo;
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_DescriptorSet;
+		descriptorWrites[1].dstBinding = 2;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = &albedoImageInfo;
 
-			descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[2].dstSet = m_DescriptorSet;
-			descriptorWrites[2].dstBinding = 3;
-			descriptorWrites[2].dstArrayElement = 0;
-			descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[2].descriptorCount = 1;
-			descriptorWrites[2].pImageInfo = &specularImageInfo;
+		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet = m_DescriptorSet;
+		descriptorWrites[2].dstBinding = 3;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].pImageInfo = &specularImageInfo;
 
-			descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[3].dstSet = m_DescriptorSet;
-			descriptorWrites[3].dstBinding = 4;
-			descriptorWrites[3].dstArrayElement = 0;
-			descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[3].descriptorCount = 1;
-			descriptorWrites[3].pImageInfo = &normalImageInfo;
+		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[3].dstSet = m_DescriptorSet;
+		descriptorWrites[3].dstBinding = 4;
+		descriptorWrites[3].dstArrayElement = 0;
+		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[3].descriptorCount = 1;
+		descriptorWrites[3].pImageInfo = &normalImageInfo;
 
-			descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[4].dstSet = m_DescriptorSet;
-			descriptorWrites[4].dstBinding = 5;
-			descriptorWrites[4].dstArrayElement = 0;
-			descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrites[4].descriptorCount = 1;
-			descriptorWrites[4].pImageInfo = &metalnessImageInfo;
+		descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[4].dstSet = m_DescriptorSet;
+		descriptorWrites[4].dstBinding = 5;
+		descriptorWrites[4].dstArrayElement = 0;
+		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[4].descriptorCount = 1;
+		descriptorWrites[4].pImageInfo = &metalnessImageInfo;
 
-			UpdateBuffer();
+		UpdateBuffer();
 
-			vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
-			m_UpdateQueued = false;
-		}
+		m_UpdateQueued = false;
 	}
 	void Material::UpdateBuffer()
 	{
@@ -228,15 +227,15 @@ namespace en
 
 		std::array<VkDescriptorPoolSize, 5> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = 1U;
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 1U;
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[2].descriptorCount = 1U;
+		poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[3].descriptorCount = 1U;
+		poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 		poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[4].descriptorCount = 1U;
+		poolSizes[4].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
