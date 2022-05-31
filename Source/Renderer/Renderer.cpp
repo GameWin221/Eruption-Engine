@@ -26,6 +26,11 @@ namespace en
 		m_Backend->UnbindScene();
 	}
 
+	void Renderer::Update()
+	{
+		m_Backend->UpdateLights();
+	}
+
 	Scene* Renderer::GetScene()
 	{
 		return m_Backend->GetScene();

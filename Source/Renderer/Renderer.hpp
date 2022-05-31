@@ -17,7 +17,10 @@ namespace en
 		void BindScene(Scene* scene);
 		void UnbindScene();
 
+		void Update();
+
 		void WaitForGPUIdle();
+
 		void Render();
 
 		void SetMainCamera(Camera* camera);

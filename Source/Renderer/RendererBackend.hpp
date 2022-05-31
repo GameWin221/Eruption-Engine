@@ -27,6 +27,9 @@
 #include <Renderer/PipelineInput.hpp>
 #include <Renderer/Framebuffer.hpp>
 
+#define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
+#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") << '\n';
+
 namespace en
 {
 	class VulkanRendererBackend
@@ -42,6 +45,8 @@ namespace en
 		void SetVSync(bool& vSync);
 
 		void WaitForGPUIdle();
+
+		void UpdateLights();
 
 		void BeginRender();
 
@@ -212,6 +217,8 @@ namespace en
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
 		bool m_VSync = true;
+
+		bool m_LightsChanged = false;
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();

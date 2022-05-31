@@ -121,6 +121,102 @@ namespace en
 		vkWaitForFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence, VK_TRUE, UINT64_MAX);
 	}
 
+	void VulkanRendererBackend::UpdateLights()
+	{
+		m_LightsChanged = false;
+
+		if (m_Lights.LBO.ambientLight != m_Scene->m_AmbientColor || m_Lights.lastPointLightsSize != m_Scene->GetAllPointLights().size() || m_Lights.lastSpotlightsSize != m_Scene->GetAllSpotlights().size() || m_Lights.lastDirLightsSize != m_Scene->GetAllDirectionalLights().size())
+			m_LightsChanged = true;
+
+		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
+
+		auto& pointLights = m_Scene->GetAllPointLights();
+		auto& spotLights  = m_Scene->GetAllSpotlights();
+		auto& dirLights  = m_Scene->GetAllDirectionalLights();
+		
+		m_Lights.lastPointLightsSize = pointLights.size();
+		m_Lights.lastSpotlightsSize  = spotLights.size();
+		m_Lights.lastDirLightsSize   = dirLights.size();
+
+		m_Lights.LBO.activePointLights = 0U;
+		m_Lights.LBO.activeSpotlights = 0U;
+		m_Lights.LBO.activeDirLights = 0U;
+
+		m_Lights.camera.viewPos = m_MainCamera->m_Position;
+		m_Lights.camera.debugMode = m_DebugMode;
+
+		for (int i = 0; i < m_Lights.lastPointLightsSize; i++)
+		{
+			PointLight::Buffer& lightBuffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
+			PointLight& light = pointLights[i];
+
+			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+			const float     lightRad = light.m_Radius * (float)light.m_Active;
+
+			if (lightBuffer.position != light.m_Position || lightBuffer.radius != lightRad || lightBuffer.color != lightCol)
+				m_LightsChanged = true;
+
+			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
+				continue;
+
+			lightBuffer.position = light.m_Position;
+			lightBuffer.color = lightCol;
+			lightBuffer.radius = lightRad;
+
+			m_Lights.LBO.activePointLights++;
+		}
+		for (int i = 0; i < m_Lights.lastSpotlightsSize; i++)
+		{
+			Spotlight::Buffer& lightBuffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotlights];
+			Spotlight& light = spotLights[i];
+
+			const glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
+
+			if (lightBuffer.position != light.m_Position || lightBuffer.innerCutoff != light.m_InnerCutoff || lightBuffer.direction != light.m_Direction || lightBuffer.outerCutoff != light.m_OuterCutoff || lightBuffer.color != lightColor || lightBuffer.range != light.m_Range)
+				m_LightsChanged = true;
+
+			if (light.m_Range == 0.0f || light.m_Color == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
+				continue;
+
+			lightBuffer.position = light.m_Position;
+			lightBuffer.range = light.m_Range;
+			lightBuffer.outerCutoff = light.m_OuterCutoff;
+			lightBuffer.innerCutoff = light.m_InnerCutoff;
+			lightBuffer.direction = light.m_Direction;
+			lightBuffer.color = lightColor;
+
+			m_Lights.LBO.activeSpotlights++;
+		}
+		for (int i = 0; i < m_Lights.lastDirLightsSize; i++)
+		{
+			DirectionalLight::Buffer& lightBuffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
+			DirectionalLight& light = dirLights[i];
+
+			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+
+			if (lightBuffer.direction != light.m_Direction || lightBuffer.color != lightCol)
+				m_LightsChanged = true;
+
+			if (lightCol == glm::vec3(0.0))
+				continue;
+
+			lightBuffer.direction = light.m_Direction;
+			lightBuffer.color = lightCol;
+
+			m_Lights.LBO.activeDirLights++;
+		}
+
+		if (m_LightsChanged)
+		{
+			// Reset unused lights
+			memset(m_Lights.LBO.pointLights + m_Lights.LBO.activePointLights, 0, MAX_POINT_LIGHTS - m_Lights.LBO.activePointLights);
+			memset(m_Lights.LBO.spotLights  + m_Lights.LBO.activeSpotlights , 0, MAX_SPOT_LIGHTS  - m_Lights.LBO.activeSpotlights );
+			memset(m_Lights.LBO.dirLights   + m_Lights.LBO.activeDirLights  , 0, MAX_DIR_LIGHTS   - m_Lights.LBO.activeDirLights  );
+			
+			m_Lights.buffer->MapMemory(&m_Lights.LBO, m_Lights.buffer->GetSize());
+		}
+	}
+
 	void VulkanRendererBackend::BeginRender()
 	{
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline->m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
@@ -237,115 +333,6 @@ namespace en
 		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[2].image, m_GBuffer->m_Attachments[2].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffer);
 		
 		Helpers::TransitionImageLayout(m_HDRFramebuffer->m_Attachments[0].image, m_HDRFramebuffer->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffer);
-
-		bool lightsChanged = false;
-
-		if (m_Lights.LBO.ambientLight != m_Scene->m_AmbientColor || m_Lights.lastPointLightsSize != m_Scene->GetAllPointLights().size() || m_Lights.lastSpotlightsSize != m_Scene->GetAllSpotlights().size() || m_Lights.lastDirLightsSize != m_Scene->GetAllDirectionalLights().size())
-			lightsChanged = true;
-
-		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
-
-		m_Lights.lastPointLightsSize = m_Scene->GetAllPointLights().size();
-		m_Lights.lastSpotlightsSize = m_Scene->GetAllSpotlights().size();
-		m_Lights.lastDirLightsSize = m_Scene->GetAllDirectionalLights().size();
-
-		m_Lights.LBO.activePointLights = 0U;
-		m_Lights.LBO.activeSpotlights  = 0U;
-		m_Lights.LBO.activeDirLights = 0U;
-
-		for (int i = 0; i < m_Scene->GetAllPointLights().size(); i++)
-		{
-			PointLight::Buffer& lightBuffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
-			PointLight& light = m_Scene->GetAllPointLights()[i];
-
-			const glm::vec3 lightPos = light.m_Position;
-			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
-			const float     lightRad = light.m_Radius * (float)light.m_Active;
-
-			if (lightBuffer.position != lightPos || lightBuffer.radius != lightRad || lightBuffer.color != lightCol)
-				lightsChanged = true;
-
-			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
-				continue;
-
-			lightBuffer.position = lightPos;
-			lightBuffer.color    = lightCol;
-			lightBuffer.radius   = lightRad;
-
-			m_Lights.LBO.activePointLights++;
-		}
-		for (int i = 0; i < m_Scene->GetAllSpotlights().size(); i++)
-		{
-			Spotlight::Buffer& lightBuffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotlights];
-			Spotlight& light = m_Scene->GetAllSpotlights()[i];
-
-			glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
-
-			if (lightBuffer.position != light.m_Position || lightBuffer.innerCutoff != light.m_InnerCutoff || lightBuffer.direction != light.m_Direction || lightBuffer.outerCutoff != light.m_OuterCutoff || lightBuffer.color != lightColor || lightBuffer.range != light.m_Range)
-				lightsChanged = true;
-
-			if (light.m_Range == 0.0f || light.m_Color == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
-				continue;
-
-			lightBuffer.position	= light.m_Position;
-			lightBuffer.range		= light.m_Range;
-			lightBuffer.outerCutoff = light.m_OuterCutoff;
-			lightBuffer.innerCutoff = light.m_InnerCutoff;
-			lightBuffer.direction   = light.m_Direction;
-			lightBuffer.color	    = lightColor;
-
-			m_Lights.LBO.activeSpotlights++;
-		}
-		for (int i = 0; i < m_Scene->GetAllDirectionalLights().size(); i++)
-		{
-			DirectionalLight::Buffer& lightBuffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
-			DirectionalLight& light = m_Scene->GetAllDirectionalLights()[i];
-
-			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
-
-			if (lightBuffer.direction != light.m_Direction || lightBuffer.color != lightCol)
-				lightsChanged = true;
-
-			if (lightCol == glm::vec3(0.0))
-				continue;
-
-			lightBuffer.direction = light.m_Direction;
-			lightBuffer.color = lightCol;
-
-			m_Lights.LBO.activeDirLights++;
-		}
-
-		m_Lights.camera.viewPos   = m_MainCamera->m_Position;
-		m_Lights.camera.debugMode = m_DebugMode;
-		
-		if (lightsChanged)
-		{
-			for (uint32_t i = m_Lights.LBO.activePointLights; i < MAX_POINT_LIGHTS; i++)
-			{
-				PointLight::Buffer& lightBuffer = m_Lights.LBO.pointLights[i];
-				lightBuffer.color	 = glm::vec3(0.0);
-				lightBuffer.position = glm::vec4(0.0);
-				lightBuffer.radius   = 0.0f;
-			}
-			for (uint32_t i = m_Lights.LBO.activeSpotlights; i < MAX_SPOT_LIGHTS; i++)
-			{
-				Spotlight::Buffer& lightBuffer = m_Lights.LBO.spotLights[i];
-				lightBuffer.color		= glm::vec3(0.0);
-				lightBuffer.direction   = glm::vec3(0.0);
-				lightBuffer.outerCutoff = 0.0f;
-				lightBuffer.innerCutoff = 0.0f;
-				lightBuffer.position	= glm::vec3(0.0);
-				lightBuffer.range		= 0.0f;
-			}
-			for (uint32_t i = m_Lights.LBO.activeDirLights; i < MAX_DIR_LIGHTS; i++)
-			{
-				DirectionalLight::Buffer& lightBuffer = m_Lights.LBO.dirLights[i];
-				lightBuffer.color	  = glm::vec3(0.0);
-				lightBuffer.direction = glm::vec3(0.0);
-			}
-
-			m_Lights.buffer->MapMemory(&m_Lights.LBO, m_Lights.buffer->GetSize());
-		}
 
 		m_LightingPipeline->Bind(m_CommandBuffer, m_HDRFramebuffer->m_Framebuffer, m_Swapchain.extent);
 
