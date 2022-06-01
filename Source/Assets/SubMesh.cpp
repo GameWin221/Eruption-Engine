@@ -16,4 +16,8 @@ namespace en
 		m_VertexBuffer = std::make_unique<VertexBuffer>(vertices);
 		m_IndexBuffer  = std::make_unique<IndexBuffer>(indices);
 	}
+	void SubMesh::Draw(VkCommandBuffer& cmd)
+	{
+		vkCmdDrawIndexed(cmd, m_IndexBuffer->GetIndicesCount(), 1U, 0U, 0U, 0U);
+	}
 }

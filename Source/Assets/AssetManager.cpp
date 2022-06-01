@@ -15,7 +15,11 @@ namespace en
         EN_SUCCESS("Created the asset manager");
         g_AssetManagerInstance = this;
     }
-    AssetManager* AssetManager::Instance()
+    AssetManager::~AssetManager()
+    {
+        g_AssetManagerInstance = nullptr;
+    }
+    AssetManager* AssetManager::Get()
     {
         return g_AssetManagerInstance;
     }

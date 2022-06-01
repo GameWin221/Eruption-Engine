@@ -35,8 +35,9 @@ namespace en
 	{
 	public:
 		AssetManager();
+		~AssetManager();
 
-		static AssetManager* Instance();
+		static AssetManager* Get();
 
 		bool LoadMesh	(std::string nameID, std::string path, MeshImportProperties properties    = MeshImportProperties{}   );
 		bool LoadTexture(std::string nameID, std::string path, TextureImportProperties properties = TextureImportProperties{});

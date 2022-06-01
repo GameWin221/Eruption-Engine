@@ -180,10 +180,10 @@ namespace en
 
 		if (pipeline.useVertexBindings)
 		{
-			vertexInputInfo.vertexBindingDescriptionCount = 1U;
+			vertexInputInfo.vertexBindingDescriptionCount	= 1U;
 			vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-			vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-			vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+			vertexInputInfo.pVertexBindingDescriptions		= &bindingDescription;
+			vertexInputInfo.pVertexAttributeDescriptions	= attributeDescriptions.data();
 		}
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};

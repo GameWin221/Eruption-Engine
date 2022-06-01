@@ -69,12 +69,12 @@ namespace en
 		m_Backend->SetVSync(vSync);
 	}
 
-	Renderer& Renderer::GetRenderer()
+	Renderer* Renderer::Get()
 	{
 		if (!g_CurrentRenderer)
 			EN_ERROR("Renderer::GetRenderer() - g_CurrentRenderer was a nullptr!");
 
-		return *g_CurrentRenderer;
+		return g_CurrentRenderer;
 	}
 
 	void Renderer::ReloadRenderer()

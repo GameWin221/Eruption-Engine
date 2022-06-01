@@ -306,14 +306,14 @@ namespace en
 
 		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
 		{
-			SceneObject* object = sceneObjectPair.second.get();
+			auto& object = sceneObjectPair.second;
 
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
 			object->GetObjectData().Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout);
 
-			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
+			for (auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
 				if (!subMesh.m_Active) continue;
 
@@ -322,7 +322,7 @@ namespace en
 				subMesh.m_IndexBuffer ->Bind(m_CommandBuffer);
 				subMesh.m_Material    ->Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout);
 
-				vkCmdDrawIndexed(m_CommandBuffer, subMesh.m_IndexBuffer->GetIndicesCount(), 1, 0, 0, 0);
+				subMesh.Draw(m_CommandBuffer);
 			}
 		}
 
@@ -787,12 +787,17 @@ namespace en
 		objectPushConstant.size		  = sizeof(PerObjectData);
 		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		VkPushConstantRange materialPushConstant{};
+		materialPushConstant.offset = sizeof(PerObjectData);
+		materialPushConstant.size = 24U;
+		materialPushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		Pipeline::PipelineInfo pipelineInfo{};
 		pipelineInfo.vShader			= &vShader;
 		pipelineInfo.fShader			= &fShader;
 		pipelineInfo.extent				= m_Swapchain.extent;
 		pipelineInfo.descriptorLayouts  = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
-		pipelineInfo.pushConstantRanges = { objectPushConstant };
+		pipelineInfo.pushConstantRanges = { objectPushConstant, materialPushConstant };
 		pipelineInfo.enableDepthTest    = true;
 		pipelineInfo.enableDepthWrite   = false;
 		pipelineInfo.compareOp			= VK_COMPARE_OP_LESS_OR_EQUAL;

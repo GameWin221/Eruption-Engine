@@ -26,7 +26,7 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera();
 
-		Renderer& GetRenderer();
+		static Renderer* Get();
 		void ReloadRenderer();
 
 		VulkanRendererBackend::PostProcessingParams& GetPPParams();
@@ -34,7 +34,7 @@ namespace en
 		void SetUIRenderCallback(std::function<void()> callback);
 		void SetDebugMode(int& mode);
 		void SetVSync(bool vSync);
-		
+
 	private:
 		std::unique_ptr<VulkanRendererBackend> m_Backend;
 	};
