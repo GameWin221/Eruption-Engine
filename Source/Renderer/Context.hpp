@@ -3,8 +3,6 @@
 #ifndef EN_CONTEXT_HPP
 #define EN_CONTEXT_HPP
 
-#include <Common/Helpers.hpp>
-
 #include <Renderer/Window.hpp>
 
 struct SwapChainSupportDetails
@@ -30,9 +28,25 @@ namespace en
 		// Graphics
 		VkSurfaceKHR	 m_WindowSurface;
 		VkPhysicalDevice m_PhysicalDevice;
-		VkQueue			 m_GraphicsQueue;
-		VkQueue			 m_PresentQueue;
 		VkCommandPool    m_CommandPool;
+
+		VkCommandPool m_TransferCommandPool;
+
+		VkQueue	m_GraphicsQueue;
+		VkQueue	m_TransferQueue;
+		VkQueue	m_PresentQueue;
+
+		struct QueueFamilyIndices
+		{
+			std::optional<uint32_t> graphicsFamily;
+			std::optional<uint32_t> transferFamily;
+			std::optional<uint32_t> presentFamily;
+
+			bool IsComplete()
+			{
+				return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
+			}
+		} m_QueueFamilies;
 
 		static Context& GetContext();
 
@@ -45,6 +59,7 @@ namespace en
 		void VKCreateDebugMessenger();
 		void VKCreateWindowSurface();
 		void VKPickPhysicalDevice();
+		void VKFindQueueFamilies(VkPhysicalDevice& device);
 		void VKCreateLogicalDevice();
 
 		void VKCreateCommandPool();

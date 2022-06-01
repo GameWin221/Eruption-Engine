@@ -2,6 +2,7 @@
 #include "Framebuffer.hpp"
 
 #include <Renderer/Context.hpp>
+#include <Common/Helpers.hpp>
 
 namespace en
 {

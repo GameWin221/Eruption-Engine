@@ -79,11 +79,7 @@ namespace en
 
 	void Renderer::ReloadRenderer()
 	{
-		EN_LOG("Reloading the renderer backend...");
-
 		m_Backend->ReloadBackend();
-
-		EN_SUCCESS("Succesfully reloaded the backend");
 	}
 	VulkanRendererBackend::PostProcessingParams& Renderer::GetPPParams()
 	{

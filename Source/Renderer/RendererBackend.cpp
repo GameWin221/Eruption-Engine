@@ -1,6 +1,8 @@
 #include <Core/EnPch.hpp>
 #include "RendererBackend.hpp"
 
+#include <Common/Helpers.hpp>
+
 namespace en
 {
 	Camera* g_DefaultCamera;
@@ -87,6 +89,8 @@ namespace en
 		InitImGui();
 
 		EN_SUCCESS("Created the renderer Vulkan backend");
+
+		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 	}
 	void VulkanRendererBackend::BindScene(Scene* scene)
 	{
@@ -229,7 +233,7 @@ namespace en
 			m_SkipFrame = true;
 			return;
 		}
-		else if (result == VK_ERROR_OUT_OF_DATE_KHR || m_FramebufferResized)
+		else if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
 		{
 			RecreateFramebuffer();
 			m_SkipFrame = true;
@@ -527,6 +531,8 @@ namespace en
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.imageViews.size());
 
 		m_FramebufferResized = false;
+
+		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 	}
 	void VulkanRendererBackend::ReloadBackend()
 	{
@@ -534,6 +540,8 @@ namespace en
 	}
 	void VulkanRendererBackend::ReloadBackendImpl()
 	{
+		EN_LOG("Reloading the renderer backend...");
+
 		int width = 0, height = 0;
 		glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
 		while (width == 0 || height == 0)
@@ -608,6 +616,10 @@ namespace en
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain.imageViews.size());
 
 		m_ReloadQueued = false;
+
+		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
+
+		EN_SUCCESS("Succesfully reloaded the backend");
 	}
 
 	void VulkanRendererBackend::SetMainCamera(Camera* camera)
@@ -623,7 +635,7 @@ namespace en
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_Ctx->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode   = (m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
+		VkPresentModeKHR   presentMode   = m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
 		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -642,13 +654,12 @@ namespace en
 		createInfo.imageArrayLayers = 1U;
 		createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_Ctx->m_PhysicalDevice);
-		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+		uint32_t queueFamilyIndices[] = { m_Ctx->m_QueueFamilies.graphicsFamily.value(), m_Ctx->m_QueueFamilies.presentFamily.value() };
 
-		if (indices.graphicsFamily != indices.presentFamily)
+		if (m_Ctx->m_QueueFamilies.graphicsFamily != m_Ctx->m_QueueFamilies.presentFamily)
 		{
 			createInfo.imageSharingMode		 = VK_SHARING_MODE_CONCURRENT;
-			createInfo.queueFamilyIndexCount = 2;
+			createInfo.queueFamilyIndexCount = 2U;
 			createInfo.pQueueFamilyIndices	 = queueFamilyIndices;
 		}
 		else
@@ -1148,7 +1159,7 @@ namespace en
 		initInfo.Instance		 = m_Ctx->m_Instance;
 		initInfo.PhysicalDevice  = m_Ctx->m_PhysicalDevice;
 		initInfo.Device			 = m_Ctx->m_LogicalDevice;
-		initInfo.QueueFamily	 = Helpers::FindQueueFamilies(m_Ctx->m_PhysicalDevice).graphicsFamily.value();
+		initInfo.QueueFamily	 = m_Ctx->m_QueueFamilies.graphicsFamily.value();
 		initInfo.Queue			 = m_Ctx->m_GraphicsQueue;
 		initInfo.PipelineCache   = VK_NULL_HANDLE;
 		initInfo.DescriptorPool  = m_ImGui.descriptorPool;
@@ -1158,9 +1169,9 @@ namespace en
 		initInfo.CheckVkResultFn = ImGuiCheckResult;
 		ImGui_ImplVulkan_Init(&initInfo, m_ImGui.renderPass);
 
-		VkCommandBuffer cmd = Helpers::BeginSingleTimeCommands();
+		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
 		ImGui_ImplVulkan_CreateFontsTexture(cmd);
-		Helpers::EndSingleTimeCommands(cmd);
+		Helpers::EndSingleTimeGraphicsCommands(cmd);
 
 		m_ImGui.commandBuffers.resize(m_Swapchain.imageViews.size());
 

@@ -36,6 +36,7 @@ namespace en
 		vkDeviceWaitIdle(m_LogicalDevice);
 
 		vkDestroyCommandPool(m_LogicalDevice, m_CommandPool, nullptr);
+		vkDestroyCommandPool(m_LogicalDevice, m_TransferCommandPool, nullptr);
 
 		vkDestroyDevice(m_LogicalDevice, nullptr);
 
@@ -136,19 +137,46 @@ namespace en
 		if (m_PhysicalDevice == VK_NULL_HANDLE)
 			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
 	}
+	void Context::VKFindQueueFamilies(VkPhysicalDevice& device)
+	{
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+		int i = 0;
+		for (const auto& queueFamily : queueFamilies)
+		{
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				m_QueueFamilies.graphicsFamily = i;
+
+			if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+				m_QueueFamilies.transferFamily = i;
+
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_WindowSurface, &presentSupport);
+
+			if (presentSupport)
+				m_QueueFamilies.presentFamily = i;
+
+			if (m_QueueFamilies.IsComplete())
+				break;
+
+			i++;
+		}
+	}
 	void Context::VKCreateLogicalDevice()
 	{
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_PhysicalDevice);
-
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+		std::set<uint32_t> uniqueQueueFamilies = { m_QueueFamilies.graphicsFamily.value(), m_QueueFamilies.transferFamily.value(), m_QueueFamilies.presentFamily.value() };
 
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
 			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueCreateInfo.queueFamilyIndex = queueFamily;
-			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.queueCount = 1U;
 			queueCreateInfo.pQueuePriorities = &queuePriority;
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
@@ -175,13 +203,28 @@ namespace en
 		if (vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_LogicalDevice) != VK_SUCCESS)
 			EN_ERROR("Context.cpp::Context::VKCreateLogicalDevice() - Failed to create logical device!");
 
-		vkGetDeviceQueue(m_LogicalDevice, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
-		vkGetDeviceQueue(m_LogicalDevice, indices.presentFamily.value(), 0, &m_PresentQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.graphicsFamily.value(), 0U, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.transferFamily.value(), 0U, &m_TransferQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.presentFamily.value(), 0U, &m_PresentQueue);
 	}
 
 	void Context::VKCreateCommandPool()
 	{
-		Helpers::CreateCommandPool(m_CommandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		VkCommandPoolCreateInfo commandPoolCreateInfo = {};
+		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		commandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.graphicsFamily.value();
+		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		if (vkCreateCommandPool(m_LogicalDevice, &commandPoolCreateInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
+			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a command pool!");
+
+		VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {};
+		transferCommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		transferCommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.transferFamily.value();
+		transferCommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		if (vkCreateCommandPool(m_LogicalDevice, &transferCommandPoolCreateInfo, nullptr, &m_TransferCommandPool) != VK_SUCCESS)
+			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a transfer command pool!");
 	}
 
 	bool Context::CheckValidationLayerSupport()
@@ -255,7 +298,7 @@ namespace en
 	VKAPI_ATTR VkBool32 VKAPI_CALL Context::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 	{
 		std::string message;
-
+		
 		switch (messageSeverity)
 		{
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -272,14 +315,14 @@ namespace en
 			break;
 		}
 
-		std::cerr << message << " validation layer: " << pCallbackData->pMessage << '\n';
+		std::cerr << message << " validation: " << pCallbackData->pMessage << '\n';
 
 		return VK_FALSE;
 	}
 
 	bool Context::IsDeviceSuitable(VkPhysicalDevice& device)
 	{
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(device);
+		VKFindQueueFamilies(device);
 
 		bool extensionsSupported = CheckDeviceExtensionSupport(device);
 
@@ -314,7 +357,7 @@ namespace en
 		VkPhysicalDeviceFeatures supportedFeatures;
 		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-		return indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+		return m_QueueFamilies.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 	}
 	bool Context::CheckDeviceExtensionSupport(VkPhysicalDevice& device)
 	{

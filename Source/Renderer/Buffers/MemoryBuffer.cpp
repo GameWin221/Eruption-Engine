@@ -53,18 +53,22 @@ namespace en
     }
     void MemoryBuffer::CopyTo(MemoryBuffer* dstBuffer)
     {
-        VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeCommands();
+        UseContext();
+
+        VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
 
         VkBufferCopy copyRegion{};
         copyRegion.size = m_BufferSize;
 
         vkCmdCopyBuffer(commandBuffer, m_Buffer, dstBuffer->m_Buffer, 1U, &copyRegion);
 
-        Helpers::EndSingleTimeCommands(commandBuffer);
+        Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }
     void MemoryBuffer::CopyTo(VkImage& dstImage, uint32_t width, uint32_t height)
     {
-        VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeCommands();
+        UseContext();
+
+        VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
 
         VkBufferImageCopy region{};
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -79,6 +83,6 @@ namespace en
 
         vkCmdCopyBufferToImage(commandBuffer, m_Buffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
 
-        Helpers::EndSingleTimeCommands(commandBuffer);
+        Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }
 }

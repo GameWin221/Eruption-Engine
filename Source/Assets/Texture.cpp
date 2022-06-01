@@ -143,7 +143,7 @@ namespace en
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			throw std::runtime_error("Texture::GenerateMipMaps() - The specified image format does not support linear blitting!");
 
-		VkCommandBuffer cmd = Helpers::BeginSingleTimeCommands();
+		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -219,7 +219,7 @@ namespace en
 			0U, nullptr,
 			1U, &barrier);
 
-		Helpers::EndSingleTimeCommands(cmd);
+		Helpers::EndSingleTimeGraphicsCommands(cmd);
 	}
 	uint32_t Texture::GetMipLevels()
 	{
