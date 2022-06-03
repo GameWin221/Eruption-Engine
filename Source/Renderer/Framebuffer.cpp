@@ -14,9 +14,12 @@ namespace en
 	{
 		UseContext();
 
-		vkFreeMemory(ctx.m_LogicalDevice, imageMemory, nullptr);
-		vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
-		vkDestroyImage(ctx.m_LogicalDevice, image, nullptr);
+		if(imageMemory != VK_NULL_HANDLE)
+			vkFreeMemory(ctx.m_LogicalDevice, imageMemory, nullptr);
+		if (imageView != VK_NULL_HANDLE)
+			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
+		if (image != VK_NULL_HANDLE)
+			vkDestroyImage(ctx.m_LogicalDevice, image, nullptr);
 	}
 
 	void Framebuffer::CreateSampler(VkFilter framebufferFiltering)

@@ -8,10 +8,6 @@ layout(location = 0) in vec2 fTexcoord;
 
 layout(location = 0) out vec4 FragColor;
 
-layout(binding = 0) uniform sampler2D gColor;
-layout(binding = 1) uniform sampler2D gPosition;
-layout(binding = 2) uniform sampler2D gNormal;
-
 struct PointLight
 {
     vec4 positionRadius;
@@ -32,7 +28,7 @@ struct DirLight
     vec3 color;
 };
 
-layout(binding = 3) uniform UBO 
+layout(binding = 0) uniform UBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     Spotlight  sLights[MAX_SPOT_LIGHTS];

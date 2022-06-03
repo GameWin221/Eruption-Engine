@@ -61,20 +61,22 @@ namespace en
 				depthReference.layout	  = subpass.depthAttachment.refLayout;
 			}
 
-			VkSubpassDescription subpass{};
-			subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount	= static_cast<uint32_t>(references.size());
-			subpass.pColorAttachments		= references.data();
-			subpass.pDepthStencilAttachment = (hasDepthAttachment) ? &depthReference : nullptr;
-			subpassDescriptions.emplace_back(subpass);
+			VkSubpassDescription subpassDescription{};
+			subpassDescription.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpassDescription.colorAttachmentCount	= static_cast<uint32_t>(references.size());
+			subpassDescription.pColorAttachments		= references.data();
+			subpassDescription.pDepthStencilAttachment = (hasDepthAttachment) ? &depthReference : nullptr;
+			subpassDescriptions.emplace_back(subpassDescription);
 
 			VkSubpassDependency dependency{};
-			dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
-			dependency.dstSubpass	 = 0U;
-			dependency.srcAccessMask = 0U;
-			dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependency.srcSubpass	 = subpass.srcSubpass;
+			dependency.dstSubpass	 = subpass.dstSubpass;
+			dependency.srcAccessMask = subpass.srcAccessMask;
+			dependency.srcStageMask  = subpass.srcStageMask;
+
+			dependency.dstStageMask  = subpass.dstStageMask;
+			dependency.dstAccessMask = subpass.dstAccessMask;
+			dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			if (hasDepthAttachment)
 			{
@@ -132,7 +134,7 @@ namespace en
 	{
 		vkCmdEndRenderPass(commandBuffer);
 	}
-	void RenderPass::Resize(VkExtent2D& extent)
+	void RenderPass::Resize()
 	{
 		Destroy();
 

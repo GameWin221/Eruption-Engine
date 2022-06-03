@@ -27,6 +27,14 @@ namespace en
 		};
 		struct Subpass
 		{
+			uint32_t srcSubpass = VK_SUBPASS_EXTERNAL;
+			uint32_t dstSubpass = 0U;
+
+			VkAccessFlags			srcAccessMask;
+			VkPipelineStageFlagBits srcStageMask;
+			VkPipelineStageFlagBits dstStageMask;
+			VkAccessFlags		    dstAccessMask;
+
 			std::vector<Attachment> colorAttachments{};
 			Attachment depthAttachment{};
 		};
@@ -42,7 +50,7 @@ namespace en
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 
-		void Resize(VkExtent2D& extent);
+		void Resize();
 
 		void Destroy();
 
