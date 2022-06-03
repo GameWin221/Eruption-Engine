@@ -24,11 +24,12 @@
 #include <Renderer/Camera/Camera.hpp>
 
 #include <Renderer/Pipeline.hpp>
+#include <Renderer/RenderPass.hpp>
 #include <Renderer/PipelineInput.hpp>
 #include <Renderer/Framebuffer.hpp>
 
 #define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
-#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") << '\n';
+#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
 
 namespace en
 {
@@ -178,16 +179,21 @@ namespace en
 
 		} m_ImGui;
 
+		std::unique_ptr<RenderPass> m_DepthPass;
 		std::unique_ptr<Pipeline> m_DepthPipeline;
 
+		std::unique_ptr<RenderPass> m_GeometryPass;
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
 
+		std::unique_ptr<RenderPass> m_LightingPass;
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 		std::unique_ptr<PipelineInput> m_LightingInput;
 
+		std::unique_ptr<RenderPass> m_TonemappingPass;
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
 		std::unique_ptr<PipelineInput> m_TonemappingInput;
 
+		std::unique_ptr<RenderPass> m_AntialiasingPass;
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
 		std::unique_ptr<PipelineInput> m_AntialiasingInput;
 

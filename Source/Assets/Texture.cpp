@@ -5,9 +5,8 @@ namespace en
 {
 	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
 
-	Texture* g_WhiteTexture;
-	Texture* g_NormalTexture;
-	Texture* g_GreyTexture;
+	Texture* g_SRGBWhiteTexture;
+	Texture* g_NSRGBTexture;
 
 	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture, bool useMipMaps) : m_Name(name), m_FilePath(texturePath), m_ImageFormat(format), m_UsesMipMaps(useMipMaps)
 	{
@@ -62,17 +61,17 @@ namespace en
 
 	Texture* Texture::GetWhiteSRGBTexture()
 	{
-		if (!g_WhiteTexture)
-			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
+		if (!g_SRGBWhiteTexture)
+			g_SRGBWhiteTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1), false);
 
-		return g_WhiteTexture;
+		return g_SRGBWhiteTexture;
 	}
 	Texture* Texture::GetWhiteNonSRGBTexture()
 	{
-		if (!g_GreyTexture)
-			g_GreyTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
+		if (!g_NSRGBTexture)
+			g_NSRGBTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1), false);
 
-		return g_GreyTexture;
+		return g_NSRGBTexture;
 	}
 
 	void Texture::CreateImage(void* data)

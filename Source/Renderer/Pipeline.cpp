@@ -6,169 +6,30 @@
 
 namespace en
 {
-	Pipeline::~Pipeline()
+	void Pipeline::Bind(VkCommandBuffer& commandBuffer)
 	{
-		Destroy();
-	}
-	void Pipeline::Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues)
-	{
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass		 = m_RenderPass;
-		renderPassInfo.framebuffer		 = framebuffer;
-		renderPassInfo.renderArea.offset = { 0U, 0U };
-		renderPassInfo.renderArea.extent = extent;
-		renderPassInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
-		renderPassInfo.pClearValues      = clearValues.data();
-
-		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
-	}
-	void Pipeline::Unbind(VkCommandBuffer& commandBuffer)
-	{
-		vkCmdEndRenderPass(commandBuffer);
 	}
 	void Pipeline::Resize(VkExtent2D& extent)
 	{
-		UseContext();
-
-		vkDestroyRenderPass(ctx.m_LogicalDevice, m_RenderPass, nullptr);
-		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
-		vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);
-
-		RenderPassInfo renderPassInfo{};
-		renderPassInfo.colorAttachments = m_ColorAttachments;
-		renderPassInfo.depthAttachment = m_DepthAttachment;
-
-		CreateRenderPass(renderPassInfo);
+		Destroy();
 
 		Shader vShader(m_VShaderPath, ShaderType::Vertex  );
 		Shader fShader(m_FShaderPath, ShaderType::Fragment);
 
-		PipelineInfo pipelineInfo{};
-		pipelineInfo.vShader			= &vShader;
-		pipelineInfo.fShader			= &fShader;
-		pipelineInfo.extent				= extent;
-		pipelineInfo.descriptorLayouts  = m_DescriptorSetLayouts;
-		pipelineInfo.pushConstantRanges = m_PushConstantRanges;
-		pipelineInfo.useVertexBindings  = m_UseVertexBindings;
-		pipelineInfo.enableDepthTest	= m_EnableDepthTest;
-		pipelineInfo.enableDepthWrite	= m_EnableDepthWrite;
-		pipelineInfo.blendEnable		= m_BlendEnable;
-		pipelineInfo.compareOp			= m_CompareOp;
-		pipelineInfo.cullMode			= m_CullMode;
-		pipelineInfo.polygonMode		= m_PolygonMode;
-
+		PipelineInfo pipelineInfo = m_PipelineInfo;
+		pipelineInfo.vShader = &vShader;
+		pipelineInfo.fShader = &fShader;
+		
 		CreatePipeline(pipelineInfo);
 	}
 
-	void Pipeline::CreateRenderPass(RenderPassInfo& renderPass)
-	{
-		UseContext();
-
-		m_ColorAttachments = renderPass.colorAttachments;
-		m_DepthAttachment = renderPass.depthAttachment;
-
-		std::vector<VkAttachmentDescription> descriptions;
-		std::vector<VkAttachmentReference>   references;
-
-		const bool hasDepthAttachment = (renderPass.depthAttachment.format != VK_FORMAT_UNDEFINED);
-
-		for (const auto& attachment : renderPass.colorAttachments)
-		{
-			VkAttachmentDescription description{};
-			description.format  = attachment.format;
-			description.samples = VK_SAMPLE_COUNT_1_BIT;
-			description.loadOp  = attachment.loadOp;
-			description.storeOp = attachment.storeOp;
-			description.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			description.initialLayout  = attachment.initialLayout;
-			description.finalLayout    = attachment.finalLayout;
-
-			descriptions.emplace_back(description);
-
-			VkAttachmentReference reference{};
-			reference.attachment = attachment.index;
-			reference.layout     = attachment.refLayout;
-
-			references.emplace_back(reference);
-		}
-
-		VkAttachmentDescription depthDescription{};
-		VkAttachmentReference   depthReference{};
-
-		if (hasDepthAttachment)
-		{
-			depthDescription.format			= renderPass.depthAttachment.format;
-			depthDescription.samples		= VK_SAMPLE_COUNT_1_BIT;
-			depthDescription.loadOp			= renderPass.depthAttachment.loadOp;
-			depthDescription.storeOp		= renderPass.depthAttachment.storeOp;
-			depthDescription.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			depthDescription.initialLayout  = renderPass.depthAttachment.initialLayout;
-			depthDescription.finalLayout	= renderPass.depthAttachment.finalLayout;
-
-			depthReference.attachment = renderPass.depthAttachment.index;
-			depthReference.layout     = renderPass.depthAttachment.refLayout;
-		}
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount	= static_cast<uint32_t>(references.size());
-		subpass.pColorAttachments		= references.data();
-		subpass.pDepthStencilAttachment = (hasDepthAttachment) ? &depthReference : nullptr;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass    = 0U;
-		dependency.srcAccessMask = 0U;
-		dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		if (hasDepthAttachment)
-		{
-			dependency.srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-			dependency.dstStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-			dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		}
-
-		std::vector<VkAttachmentDescription> attachments = descriptions;
-
-		if (hasDepthAttachment)
-			attachments.emplace_back(depthDescription);
-
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		renderPassInfo.pAttachments    = attachments.data();
-		renderPassInfo.subpassCount    = 1U;
-		renderPassInfo.pSubpasses      = &subpass;
-		renderPassInfo.dependencyCount = 1U;
-		renderPassInfo.pDependencies   = &dependency;
-
-		if (vkCreateRenderPass(ctx.m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
-			EN_ERROR("Pipeline::CreateRenderPass() - Failed to create render pass!");
-	}
 	void Pipeline::CreatePipeline(PipelineInfo& pipeline)
 	{
 		m_VShaderPath = pipeline.vShader->GetPath();
 		m_FShaderPath = pipeline.fShader->GetPath();
 
-		m_DescriptorSetLayouts = pipeline.descriptorLayouts;
-		m_PushConstantRanges   = pipeline.pushConstantRanges;
-
-		m_UseVertexBindings = pipeline.useVertexBindings;
-		m_EnableDepthTest	= pipeline.enableDepthTest;
-		m_EnableDepthWrite	= pipeline.enableDepthWrite;
-		m_BlendEnable		= pipeline.blendEnable;
-
-		m_CompareOp = pipeline.compareOp;
-
-		m_CullMode	  = pipeline.cullMode;
-		m_PolygonMode = pipeline.polygonMode;
+		m_PipelineInfo = pipeline;
 
 		UseContext();
 
@@ -235,9 +96,9 @@ namespace en
 		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		colorBlendAttachment.alphaBlendOp		 = VK_BLEND_OP_ADD;
 
-		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(m_ColorAttachments.size());
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(pipeline.renderPass->m_Subpasses[m_PipelineInfo.subpassIndex].colorAttachments.size());
 
-		for (int i = 0; i < m_ColorAttachments.size(); i++)
+		for (int i = 0; i < colorBlendAttachments.size(); i++)
 			colorBlendAttachments[i] = colorBlendAttachment;
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -290,7 +151,7 @@ namespace en
 		pipelineInfo.pDynamicState		 = nullptr;
 
 		pipelineInfo.layout		= m_Layout;
-		pipelineInfo.renderPass = m_RenderPass;
+		pipelineInfo.renderPass = pipeline.renderPass->m_RenderPass;
 		pipelineInfo.subpass	= 0U;
 
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -299,24 +160,14 @@ namespace en
 		if (vkCreateGraphicsPipelines(ctx.m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline!");
 	}
-	void Pipeline::CreateSyncSemaphore()
+
+	Pipeline::~Pipeline()
 	{
-		UseContext();
-
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		if (vkCreateSemaphore(ctx.m_LogicalDevice, &semaphoreInfo, nullptr, &m_PassFinished) != VK_SUCCESS)
-			EN_ERROR("Pipeline::CreateSyncSemaphore - Failed to create sync objects!");
+		Destroy();
 	}
-
 	void Pipeline::Destroy()
 	{
 		UseContext();
-
-		vkDestroySemaphore(ctx.m_LogicalDevice, m_PassFinished, nullptr);
-
-		vkDestroyRenderPass(ctx.m_LogicalDevice, m_RenderPass, nullptr);
 
 		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
 		vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);
