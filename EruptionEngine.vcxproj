@@ -182,7 +182,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Renderer\RenderPass.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
@@ -258,7 +257,6 @@
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Renderer\RenderPass.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />

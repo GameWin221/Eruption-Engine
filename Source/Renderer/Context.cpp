@@ -21,7 +21,7 @@ namespace en
 	Context::Context()
 	{
 		g_CurrentContext = this;
-
+		
 		VKCreateInstance();
 		VKCreateDebugMessenger();
 		VKCreateWindowSurface();
@@ -45,7 +45,7 @@ namespace en
 
 		vkDestroySurfaceKHR(m_Instance, m_WindowSurface, nullptr);
 		vkDestroyInstance(m_Instance, nullptr);
-
+		
 		glfwTerminate();
 
 		EN_LOG("Destroyed the Vulkan context")

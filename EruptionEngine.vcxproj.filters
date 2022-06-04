@@ -138,9 +138,6 @@
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\RenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -279,9 +276,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\RenderPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -223,7 +223,7 @@ namespace en
 
 	void VulkanRendererBackend::BeginRender()
 	{
-		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPass->m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
+		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, UINT64_MAX, m_GeometryPipeline->m_PassFinished, VK_NULL_HANDLE, &m_ImageIndex);
 
 		m_SkipFrame = false;
 
@@ -260,8 +260,7 @@ namespace en
 		static std::vector<VkClearValue> clearValues(1);
 		clearValues[0].depthStencil = { 1.0f, 0 };
 
-		m_DepthPass->Bind(m_CommandBuffer, m_DepthBuffer->m_Framebuffer, m_Swapchain.extent, clearValues);
-		m_DepthPipeline->Bind(m_CommandBuffer);
+		m_DepthPipeline->Bind(m_CommandBuffer, m_DepthBuffer->m_Framebuffer, m_Swapchain.extent, clearValues);
 
 		// Bind the m_MainCamera once per geometry pass
 		m_MainCamera->Bind(m_CommandBuffer, m_DepthPipeline->m_Layout, m_CameraMatrices.get());
@@ -287,7 +286,7 @@ namespace en
 			}
 		}
 
-		m_DepthPass->Unbind(m_CommandBuffer);
+		m_DepthPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::GeometryPass()
 	{
@@ -300,8 +299,7 @@ namespace en
 		clearValues[3].depthStencil = { 1.0f, 0 };
 		clearValues[3].color = { 0.0f, 0.0f, 0.0f };
 
-		m_GeometryPass->Bind(m_CommandBuffer, m_GBuffer->m_Framebuffer, m_Swapchain.extent, clearValues);
-		m_GeometryPipeline->Bind(m_CommandBuffer);
+		m_GeometryPipeline->Bind(m_CommandBuffer, m_GBuffer->m_Framebuffer, m_Swapchain.extent, clearValues);
 
 		// Bind the m_MainCamera once per geometry pass
 		m_MainCamera->Bind(m_CommandBuffer, m_GeometryPipeline->m_Layout, m_CameraMatrices.get());
@@ -328,7 +326,7 @@ namespace en
 			}
 		}
 
-		m_GeometryPass->Unbind(m_CommandBuffer);
+		m_GeometryPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::LightingPass()
 	{
@@ -340,8 +338,7 @@ namespace en
 
 		Helpers::TransitionImageLayout(m_HDRFramebuffer->m_Attachments[0].image, m_HDRFramebuffer->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U, m_CommandBuffer);
 
-		m_LightingPass->Bind(m_CommandBuffer, m_HDRFramebuffer->m_Framebuffer, m_Swapchain.extent);
-		m_LightingPipeline->Bind(m_CommandBuffer);
+		m_LightingPipeline->Bind(m_CommandBuffer, m_HDRFramebuffer->m_Framebuffer, m_Swapchain.extent);
 
 		vkCmdPushConstants(m_CommandBuffer, m_LightingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
@@ -349,7 +346,7 @@ namespace en
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		m_LightingPass->Unbind(m_CommandBuffer);
+		m_LightingPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::PostProcessPass()
 	{
@@ -367,8 +364,7 @@ namespace en
 		else
 			targetFramebuffer = m_Swapchain.framebuffers[m_ImageIndex];
 
-		m_TonemappingPass->Bind(m_CommandBuffer, targetFramebuffer, m_Swapchain.extent, clearValue);
-		m_TonemappingPipeline->Bind(m_CommandBuffer);
+		m_TonemappingPipeline->Bind(m_CommandBuffer, targetFramebuffer, m_Swapchain.extent, clearValue);
 
 		m_PostProcessParams.exposure.value = m_MainCamera->m_Exposure;
 
@@ -378,7 +374,7 @@ namespace en
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		m_TonemappingPass->Unbind(m_CommandBuffer);
+		m_TonemappingPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::AntialiasPass()
 	{
@@ -386,8 +382,7 @@ namespace en
 
 		static std::vector<VkClearValue> clearValue = { m_BlackClearValue };
 
-		m_AntialiasingPass->Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
-		m_AntialiasingPipeline->Bind(m_CommandBuffer);
+		m_AntialiasingPipeline->Bind(m_CommandBuffer, m_Swapchain.framebuffers[m_ImageIndex], m_Swapchain.extent, clearValue);
 
 		m_AntialiasingInput->Bind(m_CommandBuffer, m_AntialiasingPipeline->m_Layout);
 
@@ -398,7 +393,7 @@ namespace en
 
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
-		m_AntialiasingPass->Unbind(m_CommandBuffer);
+		m_AntialiasingPipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::ImGuiPass()
 	{
@@ -441,7 +436,7 @@ namespace en
 
 		VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		submitInfo.waitSemaphoreCount = 1U;
-		submitInfo.pWaitSemaphores = &m_GeometryPass->m_PassFinished;
+		submitInfo.pWaitSemaphores = &m_GeometryPipeline->m_PassFinished;
 		submitInfo.pWaitDstStageMask = &waitStage;
 
 		VkCommandBuffer commandBuffers[] = { m_CommandBuffer, m_ImGui.commandBuffers[m_ImageIndex] };
@@ -455,7 +450,7 @@ namespace en
 		}
 
 		submitInfo.signalSemaphoreCount = 1U;
-		submitInfo.pSignalSemaphores = &m_LightingPass->m_PassFinished;
+		submitInfo.pSignalSemaphores = &m_LightingPipeline->m_PassFinished;
 
 		if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_SubmitFence) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
@@ -463,7 +458,7 @@ namespace en
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1U;
-		presentInfo.pWaitSemaphores = &m_LightingPass->m_PassFinished;
+		presentInfo.pWaitSemaphores = &m_LightingPipeline->m_PassFinished;
 
 		presentInfo.swapchainCount = 1U;
 		presentInfo.pSwapchains = &m_Swapchain.swapchain;
@@ -704,7 +699,7 @@ namespace en
 		{
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = (m_PostProcessParams.antialiasingMode != AntialiasingMode::None) ? m_AntialiasingPass->m_RenderPass : m_TonemappingPass->m_RenderPass;
+			framebufferInfo.renderPass = (m_PostProcessParams.antialiasingMode != AntialiasingMode::None) ? m_AntialiasingPipeline->m_RenderPass : m_TonemappingPipeline->m_RenderPass;
 			framebufferInfo.attachmentCount = 1U;
 			framebufferInfo.pAttachments = &m_Swapchain.imageViews[i];
 			framebufferInfo.width = m_Swapchain.extent.width;
@@ -718,7 +713,7 @@ namespace en
 
 	void VulkanRendererBackend::CreateDepthBufferHandle()
 	{
-		m_DepthBuffer->CreateFramebuffer(m_DepthPass->m_RenderPass);
+		m_DepthBuffer->CreateFramebuffer(m_DepthPipeline->m_RenderPass);
 	}
 	void VulkanRendererBackend::CreateDepthBufferAttachments()
 	{
@@ -736,21 +731,13 @@ namespace en
 	void VulkanRendererBackend::InitDepthPipeline()
 	{
 		m_DepthPipeline = std::make_unique<Pipeline>();
-		m_DepthPass = std::make_unique<RenderPass>();
 
-		RenderPass::Attachment depthAttachment{ FindDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+		Pipeline::Attachment depthAttachment{ FindDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0U };
 
-		RenderPass::Subpass subpass{};
-		subpass.depthAttachment = depthAttachment;
-		subpass.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass.dstSubpass = 0U;
-		subpass.srcAccessMask = 0U;
-		subpass.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		subpass.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		subpass.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.depthAttachment = depthAttachment;
 
-		m_DepthPass->CreateRenderPass({ subpass });
-		m_DepthPass->CreateSyncSemaphore();
+		m_DepthPipeline->CreateRenderPass(renderPassInfo);
 
 		Shader vShader("Shaders/DepthVertex.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/DepthFragment.spv", ShaderType::Fragment);
@@ -768,37 +755,29 @@ namespace en
 		pipelineInfo.pushConstantRanges = { objectPushConstant };
 		pipelineInfo.enableDepthTest = true;
 		pipelineInfo.useVertexBindings = true;
-		pipelineInfo.renderPass = m_DepthPass.get();
 
 		m_DepthPipeline->CreatePipeline(pipelineInfo);
+		m_DepthPipeline->CreateSyncSemaphore();
 	}
 
 	void VulkanRendererBackend::InitGeometryPipeline()
 	{
 		m_GeometryPipeline = std::make_unique<Pipeline>();
-		m_GeometryPass = std::make_unique<RenderPass>();
 
-		std::vector<RenderPass::Attachment> colorAttachments =
+		std::vector<Pipeline::Attachment> colorAttachments =
 		{
-			{m_GBuffer->m_Attachments[0].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-			{m_GBuffer->m_Attachments[1].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-			{m_GBuffer->m_Attachments[2].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+			{m_GBuffer->m_Attachments[0].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U},
+			{m_GBuffer->m_Attachments[1].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U},
+			{m_GBuffer->m_Attachments[2].format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED , VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 2U}
 		};
 
-		RenderPass::Attachment depthAttachment{ m_GBuffer->m_Attachments[3].format, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+		Pipeline::Attachment depthAttachment{ m_GBuffer->m_Attachments[3].format, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 3U };
 
-		RenderPass::Subpass subpass{};
-		subpass.colorAttachments = colorAttachments;
-		subpass.depthAttachment = depthAttachment;
-		subpass.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass.dstSubpass = 0U;
-		subpass.srcAccessMask = 0U;
-		subpass.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = colorAttachments;
+		renderPassInfo.depthAttachment = depthAttachment;
 
-		m_GeometryPass->CreateRenderPass({ subpass });
-		m_GeometryPass->CreateSyncSemaphore();
+		m_GeometryPipeline->CreateRenderPass(renderPassInfo);
 
 		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
@@ -823,9 +802,9 @@ namespace en
 		pipelineInfo.enableDepthWrite = false;
 		pipelineInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		pipelineInfo.useVertexBindings = true;
-		pipelineInfo.renderPass = m_GeometryPass.get();
 
 		m_GeometryPipeline->CreatePipeline(pipelineInfo);
+		m_GeometryPipeline->CreateSyncSemaphore();
 	}
 
 	void VulkanRendererBackend::UpdateLightingInput()
@@ -860,11 +839,10 @@ namespace en
 	void VulkanRendererBackend::InitLightingPipeline()
 	{
 		m_LightingPipeline = std::make_unique<Pipeline>();
-		m_LightingPass = std::make_unique<RenderPass>();
 
-		RenderPass::Attachment colorAttachment
+		std::vector<Pipeline::Attachment> colorAttachments =
 		{
-			VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			{VK_FORMAT_R16G16B16A16_SFLOAT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
 		if (!m_Lights.buffer)
@@ -872,17 +850,10 @@ namespace en
 
 		UpdateLightingInput();
 
-		RenderPass::Subpass subpass{};
-		subpass.colorAttachments = { colorAttachment };
-		subpass.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass.dstSubpass = 0U;
-		subpass.srcAccessMask = 0U;
-		subpass.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = colorAttachments;
 
-		m_LightingPass->CreateRenderPass({ subpass });
-		m_LightingPass->CreateSyncSemaphore();
+		m_LightingPipeline->CreateRenderPass(renderPassInfo);
 
 		CreateLightingHDRFramebuffer();
 
@@ -901,9 +872,9 @@ namespace en
 		pipelineInfo.descriptorLayouts = { m_LightingInput->m_DescriptorLayout };
 		pipelineInfo.pushConstantRanges = { cameraPushConstant };
 		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
-		pipelineInfo.renderPass = m_LightingPass.get();
 
 		m_LightingPipeline->CreatePipeline(pipelineInfo);
+		m_LightingPipeline->CreateSyncSemaphore();
 	}
 
 	void VulkanRendererBackend::UpdateTonemappingInput()
@@ -923,34 +894,26 @@ namespace en
 	void VulkanRendererBackend::InitTonemappingPipeline()
 	{
 		m_TonemappingPipeline = std::make_unique<Pipeline>();
-		m_TonemappingPass = std::make_unique<RenderPass>();
 
-		RenderPass::Attachment attachment;
+		std::vector<Pipeline::Attachment> attachments;
 
 		if (m_PostProcessParams.antialiasingMode != AntialiasingMode::None)
-			attachment =
+			attachments =
 		{
-			m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 		else
-			attachment =
+			attachments =
 		{
-			m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
 		UpdateTonemappingInput();
 
-		RenderPass::Subpass subpass{};
-		subpass.colorAttachments = { attachment };
-		subpass.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass.dstSubpass = 0U;
-		subpass.srcAccessMask = 0U;
-		subpass.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = attachments;
 
-		m_TonemappingPass->CreateRenderPass({ subpass });
-		m_TonemappingPass->CreateSyncSemaphore();
+		m_TonemappingPipeline->CreateRenderPass(renderPassInfo);
 
 		VkPushConstantRange exposurePushConstant{};
 		exposurePushConstant.offset = 0U;
@@ -967,9 +930,9 @@ namespace en
 		pipelineInfo.descriptorLayouts = { m_TonemappingInput->m_DescriptorLayout };
 		pipelineInfo.pushConstantRanges = { exposurePushConstant };
 		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
-		pipelineInfo.renderPass = m_TonemappingPass.get();
 
 		m_TonemappingPipeline->CreatePipeline(pipelineInfo);
+		m_TonemappingPipeline->CreateSyncSemaphore();
 	}
 
 	void VulkanRendererBackend::UpdateAntialiasingInput()
@@ -992,9 +955,9 @@ namespace en
 	{
 		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
 
-		RenderPass::Attachment attachment =
+		std::vector<Pipeline::Attachment> attachments =
 		{
-			m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			{m_Swapchain.imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0U}
 		};
 
 		CreateAliasedFramebuffer();
@@ -1002,19 +965,11 @@ namespace en
 		UpdateAntialiasingInput();
 
 		m_AntialiasingPipeline = std::make_unique<Pipeline>();
-		m_AntialiasingPass = std::make_unique<RenderPass>();
 
-		RenderPass::Subpass subpass{};
-		subpass.colorAttachments = {attachment};
-		subpass.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass.dstSubpass = 0U;
-		subpass.srcAccessMask = 0U;
-		subpass.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		Pipeline::RenderPassInfo renderPassInfo{};
+		renderPassInfo.colorAttachments = attachments;
 
-		m_AntialiasingPass->CreateRenderPass({ subpass });
-		m_AntialiasingPass->CreateSyncSemaphore();
+		m_AntialiasingPipeline->CreateRenderPass(renderPassInfo);
 
 		VkPushConstantRange antialiasingPushConstant{};
 		antialiasingPushConstant.offset = 0U;
@@ -1038,9 +993,9 @@ namespace en
 		pipelineInfo.descriptorLayouts = { m_AntialiasingInput->m_DescriptorLayout };
 		pipelineInfo.pushConstantRanges = { antialiasingPushConstant };
 		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
-		pipelineInfo.renderPass = m_AntialiasingPass.get();
 
 		m_AntialiasingPipeline->CreatePipeline(pipelineInfo);
+		m_AntialiasingPipeline->CreateSyncSemaphore();
 	}
 	void VulkanRendererBackend::CreateAliasedFramebuffer()
 	{
@@ -1054,7 +1009,7 @@ namespace en
 
 		m_AliasedFramebuffer->CreateSampler();
 		m_AliasedFramebuffer->CreateAttachments({ aliasedImage }, m_Swapchain.extent.width, m_Swapchain.extent.height);
-		m_AliasedFramebuffer->CreateFramebuffer(m_TonemappingPass->m_RenderPass);
+		m_AliasedFramebuffer->CreateFramebuffer(m_TonemappingPipeline->m_RenderPass);
 	}
 
 	void VulkanRendererBackend::CreateCommandBuffer()
@@ -1071,7 +1026,7 @@ namespace en
 
 	void VulkanRendererBackend::CreateGBufferHandle()
 	{
-		m_GBuffer->CreateFramebuffer(m_GeometryPass->m_RenderPass);
+		m_GBuffer->CreateFramebuffer(m_GeometryPipeline->m_RenderPass);
 	}
 	void VulkanRendererBackend::CreateGBufferAttachments()
 	{
@@ -1108,7 +1063,7 @@ namespace en
 
 		m_HDRFramebuffer->CreateSampler();
 		m_HDRFramebuffer->CreateAttachments({ attachment }, m_Swapchain.extent.width, m_Swapchain.extent.height);
-		m_HDRFramebuffer->CreateFramebuffer(m_LightingPass->m_RenderPass);
+		m_HDRFramebuffer->CreateFramebuffer(m_LightingPipeline->m_RenderPass);
 	}
 
 	void VulkanRendererBackend::CreateSyncObjects()
