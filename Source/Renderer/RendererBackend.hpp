@@ -42,7 +42,7 @@ namespace en
 
 		void BindScene(Scene* scene);
 		void UnbindScene();
-		
+
 		void SetVSync(bool& vSync);
 
 		void WaitForGPUIdle();
@@ -108,6 +108,7 @@ namespace en
 			std::vector<VkImage>	   images;
 			std::vector<VkImageView>   imageViews;
 			VkFormat				   imageFormat;
+			std::vector<VkFramebuffer> framebuffers;
 			VkExtent2D				   extent;
 
 			void Destroy(VkDevice& device)
@@ -116,6 +117,9 @@ namespace en
 
 				for (auto& imageView : imageViews)
 					vkDestroyImageView(device, imageView, nullptr);
+
+				for (auto& framebuffer : framebuffers)
+					vkDestroyFramebuffer(device, framebuffer, nullptr);
 			}
 
 		} m_Swapchain;
@@ -148,7 +152,7 @@ namespace en
 			uint32_t lastDirLightsSize = 0U;
 
 		} m_Lights;
-		
+
 		struct ImGuiVK
 		{
 			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -175,34 +179,41 @@ namespace en
 
 		} m_ImGui;
 
-		std::unique_ptr<RenderPass> m_MainPass;
-
+		std::unique_ptr<RenderPass> m_DepthPass;
 		std::unique_ptr<Pipeline> m_DepthPipeline;
 
+		std::unique_ptr<RenderPass> m_GeometryPass;
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
 
+		std::unique_ptr<RenderPass> m_LightingPass;
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 		std::unique_ptr<PipelineInput> m_LightingInput;
 
+		std::unique_ptr<RenderPass> m_TonemappingPass;
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
+		std::unique_ptr<PipelineInput> m_TonemappingInput;
 
+		std::unique_ptr<RenderPass> m_AntialiasingPass;
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
+		std::unique_ptr<PipelineInput> m_AntialiasingInput;
 
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		std::vector<std::unique_ptr<Framebuffer>> m_MainFramebuffers;
+		std::unique_ptr<Framebuffer> m_DepthBuffer;
+		std::unique_ptr<Framebuffer> m_GBuffer;
+		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
+		std::unique_ptr<Framebuffer> m_AliasedFramebuffer;
 
 		VkCommandBuffer m_CommandBuffer;
-		
+
 		VkFence	m_SubmitFence;
-		VkSemaphore m_PresentSemaphore;
 
 		const VkClearValue m_BlackClearValue{};
 
 		// References to existing objects
 		Context* m_Ctx;
-		Window*  m_Window;
-		Camera*  m_MainCamera;
+		Window* m_Window;
+		Camera* m_MainCamera;
 
 		Scene* m_Scene = nullptr;
 
@@ -226,17 +237,26 @@ namespace en
 
 		void InitDepthPipeline();
 
-		void CreateFramebuffers();
-		void CreateMainPass();
+		void CreateDepthBufferHandle();
+		void CreateDepthBufferAttachments();
 
 		void InitGeometryPipeline();
 
+		void CreateGBufferHandle();
+		void CreateGBufferAttachments();
+
 		void UpdateLightingInput();
 		void InitLightingPipeline();
+		void CreateLightingHDRFramebuffer();
 
+		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
 
+		void UpdateAntialiasingInput();
 		void InitAntialiasingPipeline();
+		void CreateAliasedFramebuffer();
+
+		void CreateSwapchainFramebuffers();
 
 		void CreateSyncObjects();
 
