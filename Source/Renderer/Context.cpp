@@ -22,12 +22,12 @@ namespace en
 	{
 		g_CurrentContext = this;
 		
-		VKCreateInstance();
-		VKCreateDebugMessenger();
-		VKCreateWindowSurface();
-		VKPickPhysicalDevice();
-		VKCreateLogicalDevice();
-		VKCreateCommandPool();
+		CreateInstance();
+		CreateDebugMessenger();
+		CreateWindowSurface();
+		PickPhysicalDevice();
+		CreateLogicalDevice();
+		CreateCommandPool();
 
 		EN_SUCCESS("Created the Vulkan context");
 	}
@@ -51,33 +51,33 @@ namespace en
 		EN_LOG("Destroyed the Vulkan context")
 	}
 
-	Context& Context::GetContext() 
+	Context& Context::Get() 
 	{
 		if (!g_CurrentContext)
-			EN_ERROR("Context::GetContext()  - g_CurrentContext was a nullptr!");
+			EN_ERROR("Context::Get() - g_CurrentContext was a nullptr!");
 
 		return *g_CurrentContext;
 	}
 
-	void Context::VKCreateInstance()
+	void Context::CreateInstance()
 	{
-		if (enableValidationLayers && !CheckValidationLayerSupport())
-			EN_ERROR("Context.cpp::Context::VKCreateInstance() - Validation layers requested, but not available!");
+		if (enableValidationLayers && !AreValidationLayerSupported())
+			EN_ERROR("Context::VKCreateInstance() - Validation layers requested, but not available!");
 
 		VkApplicationInfo appInfo{};
-		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "Eruption Renderer";
+		appInfo.sType			   = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+		appInfo.pApplicationName   = "Eruption Renderer";
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.pEngineName = "Eruption Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		appInfo.pEngineName		   = "Eruption Engine";
+		appInfo.engineVersion	   = VK_MAKE_VERSION(1, 0, 0);
+		appInfo.apiVersion		   = VK_API_VERSION_1_3;
 
 		auto extensions = GetRequiredExtensions();
 
 		VkInstanceCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pApplicationInfo = &appInfo;
-		createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+		createInfo.sType				   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		createInfo.pApplicationInfo		   = &appInfo;
+		createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
 		createInfo.ppEnabledExtensionNames = extensions.data();
 
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
@@ -89,17 +89,11 @@ namespace en
 			PopulateDebugMessengerCreateInfo(debugCreateInfo);
 			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
 		}
-		else
-		{
-			createInfo.enabledLayerCount = 0;
-			createInfo.pNext = nullptr;
-		}
-
 
 		if (vkCreateInstance(&createInfo, nullptr, &m_Instance) != VK_SUCCESS)
-			EN_ERROR("Context.cpp::Context::VKCreateInstance() - Failed to create instance!");
+			EN_ERROR("Context::VKCreateInstance() - Failed to create instance!");
 	}
-	void Context::VKCreateDebugMessenger()
+	void Context::CreateDebugMessenger()
 	{
 		if (!enableValidationLayers) return;
 
@@ -107,20 +101,20 @@ namespace en
 		PopulateDebugMessengerCreateInfo(createInfo);
 
 		if (CreateDebugUtilsMessengerEXT(&createInfo) != VK_SUCCESS)
-			EN_ERROR("Context.cpp::Context::VKCreateDebugMessenger() - Failed to set up debug messenger!");
+			EN_ERROR("Context::VKCreateDebugMessenger() - Failed to set up debug messenger!");
 	}
-	void Context::VKCreateWindowSurface()
+	void Context::CreateWindowSurface()
 	{
-		if (glfwCreateWindowSurface(m_Instance, Window::GetMainWindow().m_GLFWWindow, nullptr, &m_WindowSurface) != VK_SUCCESS)
-			EN_ERROR("Context.cpp::Context::VKCreateWindowSurface() - Failed to create window surface!");
+		if (glfwCreateWindowSurface(m_Instance, Window::Get().m_GLFWWindow, nullptr, &m_WindowSurface) != VK_SUCCESS)
+			EN_ERROR("Context::VKCreateWindowSurface() - Failed to create window surface!");
 	}
-	void Context::VKPickPhysicalDevice()
+	void Context::PickPhysicalDevice()
 	{
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
 
 		if (deviceCount == 0)
-			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find GPUs with Vulkan support!");
+			EN_ERROR("Context::VKPickPhysicalDevice() - Failed to find GPUs with Vulkan support!");
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
@@ -137,7 +131,7 @@ namespace en
 		if (m_PhysicalDevice == VK_NULL_HANDLE)
 			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
 	}
-	void Context::VKFindQueueFamilies(VkPhysicalDevice& device)
+	void Context::FindQueueFamilies(VkPhysicalDevice& device)
 	{
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
@@ -149,16 +143,16 @@ namespace en
 		for (const auto& queueFamily : queueFamilies)
 		{
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-				m_QueueFamilies.graphicsFamily = i;
+				m_QueueFamilies.graphics = i;
 
 			if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
-				m_QueueFamilies.transferFamily = i;
+				m_QueueFamilies.transfer = i;
 
 			VkBool32 presentSupport = false;
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_WindowSurface, &presentSupport);
 
 			if (presentSupport)
-				m_QueueFamilies.presentFamily = i;
+				m_QueueFamilies.present = i;
 
 			if (m_QueueFamilies.IsComplete())
 				break;
@@ -166,10 +160,10 @@ namespace en
 			i++;
 		}
 	}
-	void Context::VKCreateLogicalDevice()
+	void Context::CreateLogicalDevice()
 	{
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { m_QueueFamilies.graphicsFamily.value(), m_QueueFamilies.transferFamily.value(), m_QueueFamilies.presentFamily.value() };
+		std::set<uint32_t> uniqueQueueFamilies = { m_QueueFamilies.graphics.value(), m_QueueFamilies.transfer.value(), m_QueueFamilies.present.value() };
 
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -203,16 +197,16 @@ namespace en
 		if (vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_LogicalDevice) != VK_SUCCESS)
 			EN_ERROR("Context.cpp::Context::VKCreateLogicalDevice() - Failed to create logical device!");
 
-		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.graphicsFamily.value(), 0U, &m_GraphicsQueue);
-		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.transferFamily.value(), 0U, &m_TransferQueue);
-		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.presentFamily.value(), 0U, &m_PresentQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.graphics.value(), 0U, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.transfer.value(), 0U, &m_TransferQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.present.value(), 0U, &m_PresentQueue);
 	}
 
-	void Context::VKCreateCommandPool()
+	void Context::CreateCommandPool()
 	{
 		VkCommandPoolCreateInfo commandPoolCreateInfo = {};
 		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.graphicsFamily.value();
+		commandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.graphics.value();
 		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		if (vkCreateCommandPool(m_LogicalDevice, &commandPoolCreateInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
@@ -220,14 +214,14 @@ namespace en
 
 		VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {};
 		transferCommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		transferCommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.transferFamily.value();
+		transferCommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.transfer.value();
 		transferCommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		if (vkCreateCommandPool(m_LogicalDevice, &transferCommandPoolCreateInfo, nullptr, &m_TransferCommandPool) != VK_SUCCESS)
 			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a transfer command pool!");
 	}
 
-	bool Context::CheckValidationLayerSupport()
+	bool Context::AreValidationLayerSupported()
 	{
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -257,13 +251,12 @@ namespace en
 	std::vector<const char*> Context::GetRequiredExtensions()
 	{
 		uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions;
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 		std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 		if (enableValidationLayers)
-			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 		return extensions;
 	}

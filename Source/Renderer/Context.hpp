@@ -7,7 +7,7 @@
 
 struct SwapChainSupportDetails
 {
-	VkSurfaceCapabilitiesKHR		capabilities;
+	VkSurfaceCapabilitiesKHR		capabilities{};
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR>	presentModes;
 };
@@ -38,34 +38,33 @@ namespace en
 
 		struct QueueFamilyIndices
 		{
-			std::optional<uint32_t> graphicsFamily;
-			std::optional<uint32_t> transferFamily;
-			std::optional<uint32_t> presentFamily;
+			std::optional<uint32_t> graphics;
+			std::optional<uint32_t> transfer;
+			std::optional<uint32_t> present;
 
 			bool IsComplete()
 			{
-				return graphicsFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
+				return graphics.has_value() && present.has_value() && transfer.has_value();
 			}
 		} m_QueueFamilies;
 
-		static Context& GetContext();
+		static Context& Get();
 
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 
 	private:
 		// Vulkan Initialisation
-		void VKCreateInstance();
-		void VKCreateDebugMessenger();
-		void VKCreateWindowSurface();
-		void VKPickPhysicalDevice();
-		void VKFindQueueFamilies(VkPhysicalDevice& device);
-		void VKCreateLogicalDevice();
-
-		void VKCreateCommandPool();
+		void CreateInstance();
+		void CreateDebugMessenger();
+		void CreateWindowSurface();
+		void PickPhysicalDevice();
+		void FindQueueFamilies(VkPhysicalDevice& device);
+		void CreateLogicalDevice();
+		void CreateCommandPool();
 
 		// Validation Layers and Extensions
-		bool CheckValidationLayerSupport();
+		bool AreValidationLayerSupported();
 		std::vector<const char*> GetRequiredExtensions();
 
 		// Debug Messenger
@@ -79,6 +78,6 @@ namespace en
 	};
 }
 
-#define UseContext() Context& ctx = Context::GetContext()
+#define UseContext() Context& ctx = Context::Get()
 
 #endif

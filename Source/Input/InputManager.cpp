@@ -5,7 +5,7 @@ namespace en
 {
 	InputManager::InputManager()
 	{
-		m_Window = Window::GetMainWindow().m_GLFWWindow;
+		m_Window = Window::Get().m_GLFWWindow;
 
 		m_LastMousePos = GetMousePosition();
 

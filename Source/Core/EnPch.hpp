@@ -18,7 +18,6 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <glfw3.h>
-//#include <vulkan/vulkan.hpp>
 
 #include <Core/Log.hpp>
 

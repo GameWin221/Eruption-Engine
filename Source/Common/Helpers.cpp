@@ -270,7 +270,7 @@ namespace en
 
             VkCommandPoolCreateInfo commandPoolCreateInfo = {};
             commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-            commandPoolCreateInfo.queueFamilyIndex = ctx.m_QueueFamilies.graphicsFamily.value();
+            commandPoolCreateInfo.queueFamilyIndex = ctx.m_QueueFamilies.graphics.value();
             commandPoolCreateInfo.flags = commandPoolCreateFlags;
 
             if (vkCreateCommandPool(ctx.m_LogicalDevice, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS)

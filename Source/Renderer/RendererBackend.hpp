@@ -206,7 +206,6 @@ namespace en
 
 		// References to existing objects
 		Context* m_Ctx;
-		Window* m_Window;
 		Camera* m_MainCamera;
 
 		Scene* m_Scene = nullptr;

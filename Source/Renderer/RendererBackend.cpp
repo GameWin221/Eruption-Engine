@@ -11,8 +11,7 @@ namespace en
 
 	void VulkanRendererBackend::Init()
 	{
-		m_Ctx = &Context::GetContext();
-		m_Window = &Window::GetMainWindow();
+		m_Ctx = &Context::Get();
 
 		g_CurrentBackend = this;
 
@@ -26,7 +25,7 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		glfwSetFramebufferSizeCallback(m_Window->m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
+		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
 
 		EN_SUCCESS("Init began!")
 
@@ -480,10 +479,10 @@ namespace en
 	void VulkanRendererBackend::RecreateFramebuffer()
 	{
 		int width = 0, height = 0;
-		glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
+		glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
 		while (width == 0 || height == 0)
 		{
-			glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
+			glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
 			glfwWaitEvents();
 		}
 
@@ -542,14 +541,6 @@ namespace en
 	{
 		EN_LOG("Reloading the renderer backend...");
 
-		int width = 0, height = 0;
-		glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
-		while (width == 0 || height == 0)
-		{
-			glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
-			glfwWaitEvents();
-		}
-
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
@@ -583,7 +574,7 @@ namespace en
 		vkResetCommandBuffer(m_CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 		vkResetFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFence);
 
-		glfwSetFramebufferSizeCallback(m_Window->m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
+		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
 
 		CreateSwapchain();
 
@@ -654,9 +645,9 @@ namespace en
 		createInfo.imageArrayLayers = 1U;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		uint32_t queueFamilyIndices[] = { m_Ctx->m_QueueFamilies.graphicsFamily.value(), m_Ctx->m_QueueFamilies.presentFamily.value() };
+		uint32_t queueFamilyIndices[] = { m_Ctx->m_QueueFamilies.graphics.value(), m_Ctx->m_QueueFamilies.present.value() };
 
-		if (m_Ctx->m_QueueFamilies.graphicsFamily != m_Ctx->m_QueueFamilies.presentFamily)
+		if (m_Ctx->m_QueueFamilies.graphics != m_Ctx->m_QueueFamilies.present)
 		{
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			createInfo.queueFamilyIndexCount = 2U;
@@ -1159,12 +1150,12 @@ namespace en
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_ImGui.descriptorPool) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
 
-		ImGui_ImplGlfw_InitForVulkan(m_Window->m_GLFWWindow, true);
+		ImGui_ImplGlfw_InitForVulkan(Window::Get().m_GLFWWindow, true);
 		ImGui_ImplVulkan_InitInfo initInfo = {};
 		initInfo.Instance = m_Ctx->m_Instance;
 		initInfo.PhysicalDevice = m_Ctx->m_PhysicalDevice;
 		initInfo.Device = m_Ctx->m_LogicalDevice;
-		initInfo.QueueFamily = m_Ctx->m_QueueFamilies.graphicsFamily.value();
+		initInfo.QueueFamily = m_Ctx->m_QueueFamilies.graphics.value();
 		initInfo.Queue = m_Ctx->m_GraphicsQueue;
 		initInfo.PipelineCache = VK_NULL_HANDLE;
 		initInfo.DescriptorPool = m_ImGui.descriptorPool;
@@ -1229,7 +1220,7 @@ namespace en
 		else
 		{
 			int width, height;
-			glfwGetFramebufferSize(m_Window->m_GLFWWindow, &width, &height);
+			glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
 
 			VkExtent2D actualExtent = {
 				static_cast<uint32_t>(width),
