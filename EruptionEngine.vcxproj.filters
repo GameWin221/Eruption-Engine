@@ -120,7 +120,7 @@
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Framebuffer.cpp">
+    <ClCompile Include="Source\Renderer\DynamicFramebuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp">
@@ -254,7 +254,7 @@
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Framebuffer.hpp">
+    <ClInclude Include="Source\Renderer\DynamicFramebuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp">
@@ -290,6 +290,7 @@
     <None Include="Shaders\DepthVertex.vert" />
     <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\SMAA.frag" />
+    <None Include="Shaders\Move.frag" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />

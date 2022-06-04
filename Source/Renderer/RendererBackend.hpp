@@ -25,7 +25,7 @@
 
 #include <Renderer/Pipeline.hpp>
 #include <Renderer/PipelineInput.hpp>
-#include <Renderer/Framebuffer.hpp>
+#include <Renderer/DynamicFramebuffer.hpp>
 
 #define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
 #define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
@@ -57,6 +57,7 @@ namespace en
 		void LightingPass();
 		void PostProcessPass();
 		void AntialiasPass();
+		void MovePass();
 		void ImGuiPass();
 
 		void EndRender();
@@ -191,12 +192,14 @@ namespace en
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
 		std::unique_ptr<PipelineInput> m_AntialiasingInput;
 
+		std::unique_ptr<Pipeline> m_MovePipeline;
+		std::unique_ptr<PipelineInput> m_MoveInput;
+
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		std::unique_ptr<Framebuffer> m_DepthBuffer;
-		std::unique_ptr<Framebuffer> m_GBuffer;
-		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
-		std::unique_ptr<Framebuffer> m_AliasedFramebuffer;
+		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
+		std::unique_ptr<DynamicFramebuffer> m_HDROffscreen;
+		std::unique_ptr<DynamicFramebuffer> m_LDROffscreen;
 
 		VkCommandBuffer m_CommandBuffer;
 
@@ -228,28 +231,26 @@ namespace en
 
 		void CreateCommandBuffer();
 
+		void CreateSwapchainFramebuffers();
+
+		void CreateGBuffer();
+		void CreateHDROffscreen();
+		void CreateLDROffscreen();
+
 		void InitDepthPipeline();
-
-		void CreateDepthBufferHandle();
-		void CreateDepthBufferAttachments();
-
 		void InitGeometryPipeline();
-
-		void CreateGBufferHandle();
-		void CreateGBufferAttachments();
 
 		void UpdateLightingInput();
 		void InitLightingPipeline();
-		void CreateLightingHDRFramebuffer();
 
 		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
 
 		void UpdateAntialiasingInput();
 		void InitAntialiasingPipeline();
-		void CreateAliasedFramebuffer();
 
-		void CreateSwapchainFramebuffers();
+		void UpdateMoveInput();
+		void InitMovePipeline();
 
 		void CreateSyncObjects();
 
@@ -263,8 +264,6 @@ namespace en
 
 		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 		VkFormat FindDepthFormat();
-		bool HasStencilComponent(const VkFormat format);
-
 	};
 }
 

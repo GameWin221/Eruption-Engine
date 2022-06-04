@@ -14,24 +14,27 @@ namespace en
 	public:
 		struct Attachment
 		{
-			VkFormat format = VK_FORMAT_UNDEFINED;
+			VkImageView   imageView   = VK_NULL_HANDLE;
+			VkFormat      imageFormat = VK_FORMAT_UNDEFINED;
+			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 			VkAttachmentLoadOp  loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-			VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			VkImageLayout refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			uint32_t index = 0U;
 		};
-		struct RenderPassInfo
+		struct RenderingInfo
 		{
-			std::vector<Attachment> colorAttachments{};
-			Attachment depthAttachment{};
+			std::vector<Attachment> colorAttachmentsOverride{};
+		
+			std::vector<VkClearValue> colorClearValues{};
+			VkClearValue depthClearValue{};
+
+			VkRect2D renderArea{};
 		};
 		struct PipelineInfo
 		{
+			std::vector<Attachment> colorAttachments{};
+			Attachment depthAttachment{};
+
 			Shader* vShader;
 			Shader* fShader;
 
@@ -51,13 +54,12 @@ namespace en
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 
-		void CreateRenderPass(RenderPassInfo& renderPass);
 		void CreatePipeline(PipelineInfo& pipeline);
 		void CreateSyncSemaphore();
 
 		~Pipeline();
 
-		void Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues = defaultBlackClearValue);
+		void Bind(VkCommandBuffer& commandBuffer, RenderingInfo& info);
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 
@@ -65,32 +67,19 @@ namespace en
 
 		void Destroy();
 
-		VkRenderPass	 m_RenderPass;
+		PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
+		PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
+
 		VkPipelineLayout m_Layout;
 		VkPipeline		 m_Pipeline;
 
 		VkSemaphore m_PassFinished;
 
 	private:
-		// Cached values
-		std::vector<Attachment> m_ColorAttachments;
-		Attachment m_DepthAttachment;
-
 		std::string m_VShaderPath;
 		std::string m_FShaderPath;
 
-		std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
-		std::vector<VkPushConstantRange> m_PushConstantRanges;
-
-		bool m_UseVertexBindings;
-		bool m_EnableDepthTest;
-		bool m_EnableDepthWrite;
-		bool m_BlendEnable;
-
-		VkCompareOp m_CompareOp;
-
-		VkCullModeFlags m_CullMode;
-		VkPolygonMode m_PolygonMode;
+		PipelineInfo m_LastInfo{};
 	};
 }
 
