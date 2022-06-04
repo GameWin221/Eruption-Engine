@@ -16,9 +16,17 @@ namespace en
 		std::vector<VkSubpassDescription>    subpassDescriptions;
 		std::vector<VkSubpassDependency>     subpassDependencies;
 
-		for (auto& subpass : m_Subpasses)
+		// Prevent reallocations
+		const int maxElements = subpasses.size() * 20;
+		
+		descriptions.reserve(maxElements);
+		references.reserve(maxElements);
+		subpassDescriptions.reserve(maxElements);
+		subpassDependencies.reserve(maxElements);
+
+		for (auto& subpass : subpasses)
 		{
-			EN_SUCCESS("ASDWAEAWE");
+			EN_LOG("Creating a subpass...");
 
 			const bool hasDepthAttachment = (subpass.depthAttachment.format != VK_FORMAT_UNDEFINED);
 
@@ -33,13 +41,11 @@ namespace en
 				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				description.initialLayout  = attachment.initialLayout;
 				description.finalLayout    = attachment.finalLayout;
-
 				descriptions.emplace_back(description);
 
 				VkAttachmentReference reference{};
-				reference.attachment = attachment.index;
+				reference.attachment = references.size();
 				reference.layout = attachment.refLayout;
-
 				references.emplace_back(reference);
 			}
 
@@ -57,15 +63,20 @@ namespace en
 				depthDescription.initialLayout  = subpass.depthAttachment.initialLayout;
 				depthDescription.finalLayout    = subpass.depthAttachment.finalLayout;
 
-				depthReference.attachment = subpass.depthAttachment.index;
+				depthReference.attachment = references.size();
 				depthReference.layout	  = subpass.depthAttachment.refLayout;
+
+				descriptions.emplace_back(depthDescription);
+				references.emplace_back(depthReference);
 			}
 
+			const VkAttachmentReference* first = references.data();
+			
 			VkSubpassDescription subpassDescription{};
-			subpassDescription.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpassDescription.colorAttachmentCount	= static_cast<uint32_t>(references.size());
-			subpassDescription.pColorAttachments		= references.data();
-			subpassDescription.pDepthStencilAttachment = (hasDepthAttachment) ? &depthReference : nullptr;
+			subpassDescription.pipelineBindPoint	   = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpassDescription.colorAttachmentCount	   = static_cast<uint32_t>(subpass.colorAttachments.size());
+			subpassDescription.pColorAttachments	   = &first[references.size()-int(hasDepthAttachment)-subpass.colorAttachments.size()];
+			subpassDescription.pDepthStencilAttachment = ((hasDepthAttachment) ? &first[references.size() - 1] : nullptr);
 			subpassDescriptions.emplace_back(subpassDescription);
 
 			VkSubpassDependency dependency{};
@@ -78,17 +89,7 @@ namespace en
 			dependency.dstAccessMask = subpass.dstAccessMask;
 			dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-			if (hasDepthAttachment)
-			{
-				dependency.srcStageMask  |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-				dependency.dstStageMask  |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-				dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			}
-
 			subpassDependencies.emplace_back(dependency);
-
-			if (hasDepthAttachment)
-				descriptions.emplace_back(depthDescription);
 		}
 
 		VkRenderPassCreateInfo renderPassInfo{};

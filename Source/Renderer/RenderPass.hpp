@@ -22,8 +22,6 @@ namespace en
 			VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			VkImageLayout refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			uint32_t index = 0U;
 		};
 		struct Subpass
 		{
