@@ -7,41 +7,36 @@
 
 namespace en
 {
-	static std::vector<VkClearValue> defaultBlackClearValue{ {0.0f, 0.0f, 0.0f, 1.0f} };
-
 	class Pipeline
 	{
 	public:
 		struct Attachment
 		{
 			VkImageView   imageView   = VK_NULL_HANDLE;
-			VkFormat      imageFormat = VK_FORMAT_UNDEFINED;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 			VkAttachmentLoadOp  loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 		};
 		struct RenderingInfo
-		{
-			std::vector<Attachment> colorAttachmentsOverride{};
-		
-			std::vector<VkClearValue> colorClearValues{};
-			VkClearValue depthClearValue{};
-
-			VkRect2D renderArea{};
-		};
-		struct PipelineInfo
 		{
 			std::vector<Attachment> colorAttachments{};
 			Attachment depthAttachment{};
 
+			VkExtent2D extent{};
+		};
+		struct PipelineInfo
+		{
+			std::vector<VkFormat> colorFormats{};
+			VkFormat depthFormat{};
+
 			Shader* vShader;
 			Shader* fShader;
 
-			VkExtent2D extent;
-
-			std::vector<VkDescriptorSetLayout> descriptorLayouts;
-			std::vector<VkPushConstantRange> pushConstantRanges;
+			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
+			std::vector<VkPushConstantRange> pushConstantRanges{};
 
 			bool useVertexBindings = false;
 			bool enableDepthTest = false;
@@ -63,8 +58,6 @@ namespace en
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 
-		void Resize(VkExtent2D& extent);
-
 		void Destroy();
 
 		PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
@@ -78,6 +71,8 @@ namespace en
 	private:
 		std::string m_VShaderPath;
 		std::string m_FShaderPath;
+
+		bool m_Initialised = false;
 
 		PipelineInfo m_LastInfo{};
 	};

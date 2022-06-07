@@ -15,6 +15,7 @@ namespace en
 			uint32_t    index		 = 0U;
 			VkImageView imageView	 = VK_NULL_HANDLE;
 			VkSampler   imageSampler = VK_NULL_HANDLE;
+			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		};
 		struct BufferInfo
 		{

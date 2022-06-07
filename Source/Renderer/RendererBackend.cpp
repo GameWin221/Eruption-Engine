@@ -33,10 +33,6 @@ namespace en
 
 		EN_SUCCESS("Created swapchain!")
 
-			CreateLDROffscreen();
-
-		EN_SUCCESS("Created low dynamic range framebuffer!")
-
 			CreateHDROffscreen();
 
 		EN_SUCCESS("Created high dynamic range framebuffer!")
@@ -48,6 +44,10 @@ namespace en
 			CreateCommandBuffer();
 
 		EN_SUCCESS("Created command buffer!")
+
+			UpdateSwapchainInputs();
+
+		EN_SUCCESS("Created swapchain inputs!")
 
 			InitDepthPipeline();
 
@@ -68,10 +68,6 @@ namespace en
 			InitAntialiasingPipeline();
 
 		EN_SUCCESS("Created Antialiasing pipeline!");
-
-			InitMovePipeline();
-
-		EN_SUCCESS("Created Move pipeline!");
 
 			InitImGui();
 
@@ -256,11 +252,13 @@ namespace en
 	{
 		if (m_SkipFrame || !m_Scene) return;
 
-		BENCHMARK_START
-
 		static Pipeline::RenderingInfo info{};
-		info.renderArea		 = { {0U, 0U}, m_Swapchain.extent };
-		info.depthClearValue = { 1.0f, 0 };
+		info.extent						 = m_Swapchain.extent;
+		info.depthAttachment.imageView   = m_GBuffer->m_Attachments[3].imageView;
+		info.depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+		info.depthAttachment.loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.depthAttachment.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE;
+		info.depthAttachment.clearValue.depthStencil = { 1.0f, 0 };
 
 		m_DepthPipeline->Bind(m_CommandBuffer, info);
 
@@ -294,16 +292,38 @@ namespace en
 	{
 		if (m_SkipFrame || !m_Scene) return;
 
+		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[0].image, m_GBuffer->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[1].image, m_GBuffer->m_Attachments[1].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[2].image, m_GBuffer->m_Attachments[2].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U, m_CommandBuffer);
+
 		static Pipeline::RenderingInfo info{};
-		if (info.colorClearValues.size() == 0)
-			info.colorClearValues.resize(3);
+		if (info.colorAttachments.size() == 0)
+			info.colorAttachments.resize(3);
 
-		info.colorClearValues[0].color	  = { m_Scene->m_AmbientColor.r, m_Scene->m_AmbientColor.g, m_Scene->m_AmbientColor.b, 1.0f };
-		info.colorClearValues[1].color	  = m_BlackClearValue.color;
-		info.colorClearValues[2].color	  = m_BlackClearValue.color;
-		info.depthClearValue.depthStencil = { 1.0f, 0 };
-		info.renderArea					  = { {0U, 0U}, m_Swapchain.extent };
+		info.extent = m_Swapchain.extent;
 
+		info.colorAttachments[0].imageView   = m_GBuffer->m_Attachments[0].imageView;
+		info.colorAttachments[0].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		info.colorAttachments[0].loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.colorAttachments[0].storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+		info.colorAttachments[0].clearValue  = { m_Scene->m_AmbientColor.r, m_Scene->m_AmbientColor.g, m_Scene->m_AmbientColor.b, 1.0f };
+		
+		info.colorAttachments[1].imageView   = m_GBuffer->m_Attachments[1].imageView;
+		info.colorAttachments[1].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		info.colorAttachments[1].loadOp	  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.colorAttachments[1].storeOp	  = VK_ATTACHMENT_STORE_OP_STORE;
+
+		info.colorAttachments[2].imageView   = m_GBuffer->m_Attachments[2].imageView;
+		info.colorAttachments[2].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		info.colorAttachments[2].loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.colorAttachments[2].storeOp	  = VK_ATTACHMENT_STORE_OP_STORE;
+		
+		info.depthAttachment.imageView				  = m_GBuffer->m_Attachments[3].imageView;
+		info.depthAttachment.imageLayout			  = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+		info.depthAttachment.loadOp				  = VK_ATTACHMENT_LOAD_OP_LOAD;
+		info.depthAttachment.storeOp				  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		info.depthAttachment.clearValue.depthStencil = { 1.0f, 0 };
+		
 		m_GeometryPipeline->Bind(m_CommandBuffer, info);
 
 		// Bind the m_MainCamera once per geometry pass
@@ -336,7 +356,7 @@ namespace en
 	void VulkanRendererBackend::LightingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-	
+
 		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[0].image, m_GBuffer->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1U, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[1].image, m_GBuffer->m_Attachments[1].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1U, m_CommandBuffer);
 		Helpers::TransitionImageLayout(m_GBuffer->m_Attachments[2].image, m_GBuffer->m_Attachments[2].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1U, m_CommandBuffer);
@@ -344,11 +364,15 @@ namespace en
 		Helpers::TransitionImageLayout(m_HDROffscreen->m_Attachments[0].image, m_HDROffscreen->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U, m_CommandBuffer);
 
 		static Pipeline::RenderingInfo info{};
-		if (info.colorClearValues.size() == 0)
-			info.colorClearValues.resize(1);
+		if (info.colorAttachments.size() == 0)
+			info.colorAttachments.resize(1);
 
-		info.colorClearValues[0] = m_BlackClearValue;
-		info.renderArea = { {0U, 0U}, m_Swapchain.extent };
+		info.colorAttachments[0].imageView   = m_HDROffscreen->m_Attachments[0].imageView;
+		info.colorAttachments[0].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		info.colorAttachments[0].loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.colorAttachments[0].storeOp	 = VK_ATTACHMENT_STORE_OP_STORE;
+
+		info.extent = m_Swapchain.extent;
 
 		m_LightingPipeline->Bind(m_CommandBuffer, info);
 
@@ -363,16 +387,20 @@ namespace en
 	void VulkanRendererBackend::PostProcessPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-	
+
 		Helpers::TransitionImageLayout(m_HDROffscreen->m_Attachments[0].image, m_HDROffscreen->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1U, m_CommandBuffer);
-		Helpers::TransitionImageLayout(m_LDROffscreen->m_Attachments[0].image, m_LDROffscreen->m_Attachments[0].format, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1U, m_CommandBuffer);
+		Helpers::TransitionImageLayout(m_Swapchain.images[m_ImageIndex], m_Swapchain.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL, 1U, m_CommandBuffer);
 
 		static Pipeline::RenderingInfo info{};
-		if (info.colorClearValues.size() == 0)
-			info.colorClearValues.resize(1);
+		if (info.colorAttachments.size() == 0)
+			info.colorAttachments.resize(1);
 
-		info.colorClearValues[0] = m_BlackClearValue;
-		info.renderArea = { {0U, 0U}, m_Swapchain.extent };
+		info.colorAttachments[0].imageView   = m_Swapchain.imageViews[m_ImageIndex];
+		info.colorAttachments[0].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		info.colorAttachments[0].loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		info.colorAttachments[0].storeOp	 = VK_ATTACHMENT_STORE_OP_STORE;
+
+		info.extent = m_Swapchain.extent;
 
 		m_TonemappingPipeline->Bind(m_CommandBuffer, info);
 
@@ -385,22 +413,25 @@ namespace en
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
 		m_TonemappingPipeline->Unbind(m_CommandBuffer);
-		system("pause");
 	}
 	void VulkanRendererBackend::AntialiasPass()
 	{
 		if (m_SkipFrame || !m_Scene || m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
 
 		static Pipeline::RenderingInfo info{};
-		if (info.colorClearValues.size() == 0)
-			info.colorClearValues.resize(1);
+		if (info.colorAttachments.size() == 0)
+			info.colorAttachments.resize(1);
 
-		info.colorClearValues[0] = m_BlackClearValue;
-		info.renderArea = { {0U, 0U}, m_Swapchain.extent };
+		info.colorAttachments[0].imageView   = m_Swapchain.imageViews[m_ImageIndex];
+		info.colorAttachments[0].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		info.colorAttachments[0].loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD;
+		info.colorAttachments[0].storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+
+		info.extent = m_Swapchain.extent;
 
 		m_AntialiasingPipeline->Bind(m_CommandBuffer, info);
 
-		m_AntialiasingInput->Bind(m_CommandBuffer, m_AntialiasingPipeline->m_Layout);
+		m_SwapchainInputs[m_ImageIndex]->Bind(m_CommandBuffer, m_AntialiasingPipeline->m_Layout);
 
 		m_PostProcessParams.antialiasing.texelSizeX = 1.0f / static_cast<float>(m_Swapchain.extent.width);
 		m_PostProcessParams.antialiasing.texelSizeY = 1.0f / static_cast<float>(m_Swapchain.extent.height);
@@ -410,30 +441,6 @@ namespace en
 		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
 
 		m_AntialiasingPipeline->Unbind(m_CommandBuffer);
-
-		system("pause");
-	}
-	void VulkanRendererBackend::MovePass()
-	{
-		static Pipeline::RenderingInfo info{};
-		if (info.colorClearValues.size() == 0)
-			info.colorClearValues.resize(1);
-
-		info.colorClearValues[0] = m_BlackClearValue;
-		info.renderArea = { {0U, 0U}, m_Swapchain.extent };
-
-		info.colorAttachmentsOverride = 
-		{
-			{ m_Swapchain.imageViews[m_ImageIndex], m_Swapchain.imageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE}
-		};
-
-		m_MovePipeline->Bind(m_CommandBuffer, info);
-
-		m_MoveInput->Bind(m_CommandBuffer, m_MovePipeline->m_Layout);
-
-		vkCmdDraw(m_CommandBuffer, 3U, 1U, 0U, 0U);
-
-		m_MovePipeline->Unbind(m_CommandBuffer);
 	}
 	void VulkanRendererBackend::ImGuiPass()
 	{
@@ -468,7 +475,7 @@ namespace en
 	{
 		if (m_SkipFrame) return;
 
-		BENCHMARK_RESULT
+		Helpers::TransitionImageLayout(m_Swapchain.images[m_ImageIndex], m_Swapchain.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1U, m_CommandBuffer);
 
 		if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record command buffer!");
@@ -528,7 +535,7 @@ namespace en
 			glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
 			glfwWaitEvents();
 		}
-
+		
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
@@ -537,26 +544,10 @@ namespace en
 
 		CreateGBuffer();
 		CreateHDROffscreen();
-		CreateLDROffscreen();
 
-		m_DepthPipeline->Resize(m_Swapchain.extent);
-
-		m_GeometryPipeline->Resize(m_Swapchain.extent);
-
+		UpdateSwapchainInputs();
 		UpdateLightingInput();
-
-		m_LightingPipeline->Resize(m_Swapchain.extent);
-
 		UpdateTonemappingInput();
-
-		m_TonemappingPipeline->Resize(m_Swapchain.extent);
-
-		if (m_PostProcessParams.antialiasingMode != AntialiasingMode::None)
-		{
-			UpdateAntialiasingInput();
-
-			m_AntialiasingPipeline->Resize(m_Swapchain.extent);
-		}
 
 		CreateSwapchainFramebuffers();
 
@@ -579,8 +570,7 @@ namespace en
 		m_Swapchain.Destroy(m_Ctx->m_LogicalDevice);
 
 		m_LightingInput.reset();
-		m_TonemappingInput.reset();
-		m_AntialiasingInput.reset();
+		m_SwapchainInputs.clear();
 
 		m_DepthPipeline.reset();
 
@@ -590,15 +580,13 @@ namespace en
 		m_LightingInput.reset();
 
 		m_TonemappingPipeline.reset();
-		m_TonemappingInput.reset();
 
 		m_AntialiasingPipeline.reset();
-		m_AntialiasingInput.reset();
 
 		m_CameraMatrices.reset();
 
 		m_GBuffer.reset();
-		m_LDROffscreen.reset();
+		//m_LDROffscreen.reset();
 		m_HDROffscreen.reset();
 
 		vkResetCommandBuffer(m_CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
@@ -609,7 +597,7 @@ namespace en
 		CreateSwapchain();
 
 		CreateGBuffer();
-		CreateLDROffscreen();
+		UpdateSwapchainInputs();
 		CreateHDROffscreen();
 
 		CreateCommandBuffer();
@@ -652,24 +640,23 @@ namespace en
 		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_Ctx->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode = m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
-		VkExtent2D		   extent = ChooseSwapExtent(swapChainSupport.capabilities);
+		VkPresentModeKHR   presentMode	 = m_VSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
 		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
 			imageCount = swapChainSupport.capabilities.maxImageCount;
 
-
 		VkSwapchainCreateInfoKHR createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = m_Ctx->m_WindowSurface;
-		createInfo.minImageCount = imageCount;
-		createInfo.imageFormat = surfaceFormat.format;
-		createInfo.imageColorSpace = surfaceFormat.colorSpace;
-		createInfo.imageExtent = extent;
+		createInfo.sType			= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface			= m_Ctx->m_WindowSurface;
+		createInfo.minImageCount	= imageCount;
+		createInfo.imageFormat		= surfaceFormat.format;
+		createInfo.imageColorSpace  = surfaceFormat.colorSpace;
+		createInfo.imageExtent	    = extent;
 		createInfo.imageArrayLayers = 1U;
-		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 		uint32_t queueFamilyIndices[] = { m_Ctx->m_QueueFamilies.graphics.value(), m_Ctx->m_QueueFamilies.present.value() };
 
@@ -687,11 +674,11 @@ namespace en
 		}
 
 
-		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		createInfo.presentMode = presentMode;
-		createInfo.clipped = VK_TRUE;
-		createInfo.oldSwapchain = VK_NULL_HANDLE;
+		createInfo.presentMode	  = presentMode;
+		createInfo.clipped		  = VK_TRUE;
+		createInfo.oldSwapchain	  = VK_NULL_HANDLE;
 
 		if (vkCreateSwapchainKHR(m_Ctx->m_LogicalDevice, &createInfo, nullptr, &m_Swapchain.swapchain) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::CreateSwapChain() - Failed to create swap chain!");
@@ -701,12 +688,16 @@ namespace en
 		vkGetSwapchainImagesKHR(m_Ctx->m_LogicalDevice, m_Swapchain.swapchain, &imageCount, m_Swapchain.images.data());
 
 		m_Swapchain.imageFormat = surfaceFormat.format;
-		m_Swapchain.extent = extent;
+		m_Swapchain.extent	    = extent;
 
 		m_Swapchain.imageViews.resize(m_Swapchain.images.size());
 
 		for (int i = 0; i < m_Swapchain.imageViews.size(); i++)
+		{
 			Helpers::CreateImageView(m_Swapchain.images[i], m_Swapchain.imageViews[i], m_Swapchain.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+			Helpers::TransitionImageLayout(m_Swapchain.images[i], m_Swapchain.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		}
+
 	}
 	void VulkanRendererBackend::CreateSwapchainFramebuffers()
 	{
@@ -734,15 +725,15 @@ namespace en
 
 		DynamicFramebuffer::AttachmentInfo albedo{};
 		albedo.format = m_Swapchain.imageFormat;
-		albedo.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		albedo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		DynamicFramebuffer::AttachmentInfo position{};
 		position.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-		position.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		position.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		DynamicFramebuffer::AttachmentInfo normal{};
 		normal.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-		normal.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		normal.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		DynamicFramebuffer::AttachmentInfo depth{};
 		depth.format		   = FindDepthFormat();
@@ -759,21 +750,10 @@ namespace en
 
 		DynamicFramebuffer::AttachmentInfo attachment{};
 		attachment.format		 = VK_FORMAT_R16G16B16A16_SFLOAT;
-		attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		m_HDROffscreen->CreateAttachments({ attachment }, m_Swapchain.extent.width, m_Swapchain.extent.height);
 		m_HDROffscreen->CreateSampler();
-	}
-	void VulkanRendererBackend::CreateLDROffscreen()
-	{
-		m_LDROffscreen = std::make_unique<DynamicFramebuffer>();
-
-		DynamicFramebuffer::AttachmentInfo attachment{};
-		attachment.format = m_Swapchain.imageFormat;
-		attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		m_LDROffscreen->CreateAttachments({ attachment }, m_Swapchain.extent.width, m_Swapchain.extent.height);
-		m_LDROffscreen->CreateSampler();
 	}
 
 	void VulkanRendererBackend::InitDepthPipeline()
@@ -788,16 +768,10 @@ namespace en
 		objectPushConstant.size = sizeof(PerObjectData);
 		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		Pipeline::Attachment depthAttachment
-		{
-			m_GBuffer->m_Attachments[3].imageView, m_GBuffer->m_Attachments[3].format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE
-		};
-
 		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.depthAttachment = depthAttachment;
+		pipelineInfo.depthFormat = m_GBuffer->m_Attachments[3].format;
 		pipelineInfo.vShader = &vShader;
 		pipelineInfo.fShader = &fShader;
-		pipelineInfo.extent = m_Swapchain.extent;
 		pipelineInfo.descriptorLayouts = { CameraMatricesBuffer::GetLayout() };
 		pipelineInfo.pushConstantRanges = { objectPushConstant };
 		pipelineInfo.enableDepthTest = true;
@@ -809,18 +783,6 @@ namespace en
 	void VulkanRendererBackend::InitGeometryPipeline()
 	{
 		m_GeometryPipeline = std::make_unique<Pipeline>();
-
-		std::vector<Pipeline::Attachment> colorAttachments =
-		{
-			{m_GBuffer->m_Attachments[0].imageView, m_GBuffer->m_Attachments[0].format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE},
-			{m_GBuffer->m_Attachments[1].imageView, m_GBuffer->m_Attachments[1].format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE},
-			{m_GBuffer->m_Attachments[2].imageView, m_GBuffer->m_Attachments[2].format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE}
-		};
-
-		Pipeline::Attachment depthAttachment
-		{
-			m_GBuffer->m_Attachments[3].imageView, m_GBuffer->m_Attachments[3].format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_DONT_CARE
-		};
 
 		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
@@ -836,11 +798,10 @@ namespace en
 		materialPushConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.colorAttachments = colorAttachments;
-		pipelineInfo.depthAttachment = depthAttachment;
+		pipelineInfo.colorFormats = { m_GBuffer->m_Attachments[0].format, m_GBuffer->m_Attachments[1].format, m_GBuffer->m_Attachments[2].format };
+		pipelineInfo.depthFormat = m_GBuffer->m_Attachments[3].format;
 		pipelineInfo.vShader = &vShader;
 		pipelineInfo.fShader = &fShader;
-		pipelineInfo.extent = m_Swapchain.extent;
 		pipelineInfo.descriptorLayouts = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() };
 		pipelineInfo.pushConstantRanges = { objectPushConstant, materialPushConstant };
 		pipelineInfo.enableDepthTest = true;
@@ -887,7 +848,7 @@ namespace en
 
 		Pipeline::Attachment colorAttachment =
 		{
-			m_HDROffscreen->m_Attachments[0].imageView, m_HDROffscreen->m_Attachments[0].format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE
+			m_HDROffscreen->m_Attachments[0].imageView, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE
 		};
 
 		if (!m_Lights.buffer)
@@ -904,10 +865,9 @@ namespace en
 		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
 
 		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.colorAttachments = { colorAttachment };
+		pipelineInfo.colorFormats = { m_HDROffscreen->m_Attachments[0].format };
 		pipelineInfo.vShader = &vShader;
 		pipelineInfo.fShader = &fShader;
-		pipelineInfo.extent = m_Swapchain.extent;
 		pipelineInfo.descriptorLayouts = { m_LightingInput->m_DescriptorLayout };
 		pipelineInfo.pushConstantRanges = { cameraPushConstant };
 		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
@@ -946,14 +906,13 @@ namespace en
 
 		Pipeline::Attachment attachment
 		{
-			m_LDROffscreen->m_Attachments[0].imageView, m_LDROffscreen->m_Attachments[0].format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE
+			m_Swapchain.imageViews[m_ImageIndex], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE
 		};
 
 		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.colorAttachments = { attachment };
+		pipelineInfo.colorFormats = { m_Swapchain.imageFormat };
 		pipelineInfo.vShader = &vShader;
 		pipelineInfo.fShader = &fShader;
-		pipelineInfo.extent = m_Swapchain.extent;
 		pipelineInfo.descriptorLayouts = { m_TonemappingInput->m_DescriptorLayout };
 		pipelineInfo.pushConstantRanges = { exposurePushConstant };
 		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
@@ -962,34 +921,31 @@ namespace en
 		m_TonemappingPipeline->CreateSyncSemaphore();
 	}
 
-	void VulkanRendererBackend::UpdateAntialiasingInput()
+	void VulkanRendererBackend::UpdateSwapchainInputs()
 	{
-		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
+		m_SwapchainInputs.resize(m_Swapchain.imageViews.size());
 
-		PipelineInput::ImageInfo aliasedImage{};
-		aliasedImage.imageView    = m_LDROffscreen->m_Attachments[0].imageView;
-		aliasedImage.imageSampler = m_LDROffscreen->m_Sampler;
-		aliasedImage.index		  = 0U;
+		for (int i = 0; i < m_SwapchainInputs.size(); i++)
+		{
+			PipelineInput::ImageInfo image{};
+			image.imageView    = m_Swapchain.imageViews[i];
+			image.imageSampler = m_GBuffer->m_Sampler;
+			image.imageLayout  = VK_IMAGE_LAYOUT_GENERAL;
+			image.index        = 0U;
 
-		std::vector<PipelineInput::ImageInfo> imageInfos = { aliasedImage };
+			std::vector<PipelineInput::ImageInfo> imageInfos = { image };
 
-		if (!m_AntialiasingInput)
-			m_AntialiasingInput = std::make_unique<PipelineInput>(imageInfos);
-		else
-			m_AntialiasingInput->UpdateDescriptorSet(imageInfos);
+			if (!m_SwapchainInputs[i])
+				m_SwapchainInputs[i] = std::make_unique<PipelineInput>(imageInfos);
+			else
+				m_SwapchainInputs[i]->UpdateDescriptorSet(imageInfos);
+		}
 	}
 	void VulkanRendererBackend::InitAntialiasingPipeline()
 	{
 		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
 
 		m_AntialiasingPipeline = std::make_unique<Pipeline>();
-
-		Pipeline::Attachment attachment
-		{
-			m_LDROffscreen->m_Attachments[0].imageView, m_LDROffscreen->m_Attachments[0].format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE
-		};
-
-		UpdateAntialiasingInput();
 
 		VkPushConstantRange antialiasingPushConstant{};
 		antialiasingPushConstant.offset = 0U;
@@ -1005,56 +961,15 @@ namespace en
 		Shader fShader(fragmentSource, ShaderType::Fragment);
 
 		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.colorAttachments = { attachment };
+		pipelineInfo.colorFormats = { m_Swapchain.imageFormat };
 		pipelineInfo.vShader = &vShader;
 		pipelineInfo.fShader = &fShader;
-		pipelineInfo.extent = m_Swapchain.extent;
-		pipelineInfo.descriptorLayouts = { m_AntialiasingInput->m_DescriptorLayout };
+		pipelineInfo.descriptorLayouts = { m_SwapchainInputs[0]->m_DescriptorLayout};
 		pipelineInfo.pushConstantRanges = { antialiasingPushConstant };
 		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 
 		m_AntialiasingPipeline->CreatePipeline(pipelineInfo);
 		m_AntialiasingPipeline->CreateSyncSemaphore();
-	}
-
-	void VulkanRendererBackend::UpdateMoveInput()
-	{
-		PipelineInput::ImageInfo ldrImage{};
-		ldrImage.imageView = m_LDROffscreen->m_Attachments[0].imageView;
-		ldrImage.imageSampler = m_LDROffscreen->m_Sampler;
-		ldrImage.index = 0U;
-
-		std::vector<PipelineInput::ImageInfo> imageInfos = { ldrImage };
-
-		if (!m_MoveInput)
-			m_MoveInput = std::make_unique<PipelineInput>(imageInfos);
-		else
-			m_MoveInput->UpdateDescriptorSet(imageInfos);
-	}
-	void VulkanRendererBackend::InitMovePipeline()
-	{
-		m_MovePipeline = std::make_unique<Pipeline>();
-
-		Pipeline::Attachment attachment
-		{
-			VK_NULL_HANDLE, m_Swapchain.imageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE
-		};
-
-		UpdateMoveInput();
-
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/Move.spv", ShaderType::Fragment);
-
-		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.colorAttachments = { attachment };
-		pipelineInfo.vShader= &vShader;
-		pipelineInfo.fShader= &fShader;
-		pipelineInfo.extent	= m_Swapchain.extent;
-		pipelineInfo.descriptorLayouts = { m_MoveInput->m_DescriptorLayout };
-		pipelineInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
-
-		m_MovePipeline->CreatePipeline(pipelineInfo);
-		m_MovePipeline->CreateSyncSemaphore();
 	}
 
 	void VulkanRendererBackend::CreateCommandBuffer()
@@ -1205,7 +1120,7 @@ namespace en
 
 		uint32_t presentModeCount;
 		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Ctx->m_WindowSurface, &presentModeCount, nullptr);
-
+		
 		if (presentModeCount != 0)
 		{
 			details.presentModes.resize(presentModeCount);

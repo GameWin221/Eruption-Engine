@@ -14,66 +14,59 @@ namespace en
 	}
 	void Pipeline::Bind(VkCommandBuffer& commandBuffer, RenderingInfo& info)
 	{
-		std::vector<VkRenderingAttachmentInfoKHR> khrColorAttachments{}; 
+		std::vector<VkRenderingAttachmentInfoKHR> khrColorAttachments(info.colorAttachments.size());
 
-		if (info.colorAttachmentsOverride.empty())
+		for (int i = 0; i < khrColorAttachments.size(); i++)
 		{
-			khrColorAttachments.resize(m_LastInfo.colorAttachments.size());
+			Attachment& attachment = info.colorAttachments[i];
 
-			for (int i = 0; i < m_LastInfo.colorAttachments.size(); i++)
+			khrColorAttachments[i] =
 			{
-				Attachment& attachment = m_LastInfo.colorAttachments[i];
-
-				khrColorAttachments[i] =
-				{
-					.sType		 = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-					.imageView	 = attachment.imageView,
-					.imageLayout = attachment.imageLayout,
-					.loadOp		 = attachment.loadOp,
-					.storeOp	 = attachment.storeOp,
-					.clearValue  = info.colorClearValues[i]
-				};
-			}
-		}
-		else
-		{
-			khrColorAttachments.resize(info.colorAttachmentsOverride.size());
-
-			for (int i = 0; i < info.colorAttachmentsOverride.size(); i++)
-			{
-				Attachment& attachment = info.colorAttachmentsOverride[i];
-
-				khrColorAttachments[i] =
-				{
-					.sType		 = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-					.imageView   = attachment.imageView,
-					.imageLayout = attachment.imageLayout,
-					.loadOp		 = attachment.loadOp,
-					.storeOp	 = attachment.storeOp,
-					.clearValue  = info.colorClearValues[i]
-				};
-			}
+				.sType		 = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+				.imageView	 = attachment.imageView,
+				.imageLayout = attachment.imageLayout,
+				.loadOp		 = attachment.loadOp,
+				.storeOp	 = attachment.storeOp,
+				.clearValue  = attachment.clearValue
+			};
 		}
 
 		VkRenderingAttachmentInfoKHR depthAttachment
 		{
 			.sType		 = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-			.imageView   = m_LastInfo.depthAttachment.imageView,
-			.imageLayout = m_LastInfo.depthAttachment.imageLayout,
-			.loadOp		 = m_LastInfo.depthAttachment.loadOp,
-			.storeOp	 = m_LastInfo.depthAttachment.storeOp,
-			.clearValue  = info.depthClearValue
+			.imageView   = info.depthAttachment.imageView,
+			.imageLayout = info.depthAttachment.imageLayout,
+			.loadOp		 = info.depthAttachment.loadOp,
+			.storeOp	 = info.depthAttachment.storeOp,
+			.clearValue  = info.depthAttachment.clearValue
 		};
 		
-		VkRenderingInfoKHR renderingInfo{};
-		renderingInfo.sType				   = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-		renderingInfo.renderArea		   = info.renderArea;
-		renderingInfo.layerCount		   = 1U;
-		renderingInfo.colorAttachmentCount = static_cast<uint32_t>(khrColorAttachments.size());
-		renderingInfo.pColorAttachments	   = khrColorAttachments.data();
-		renderingInfo.pDepthAttachment	   = &depthAttachment;
+		VkRenderingInfoKHR renderingInfo
+		{
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+			.renderArea = {{0U, 0U}, info.extent},
+			.layerCount = 1U,
+			.colorAttachmentCount = static_cast<uint32_t>(khrColorAttachments.size()),
+			.pColorAttachments = khrColorAttachments.data(),
+			.pDepthAttachment = ((depthAttachment.imageView) ? &depthAttachment : nullptr)
+		};
 
 		vkCmdBeginRenderingKHR(commandBuffer, &renderingInfo);
+
+		VkViewport viewport
+		{
+			.width  = static_cast<float>(info.extent.width),
+			.height = static_cast<float>(info.extent.height),
+			.maxDepth = 1.0f
+		};
+		VkRect2D scissor
+		{
+			.extent = info.extent
+		};
+		
+		vkCmdSetViewport(commandBuffer, 0U, 1U, &viewport);
+
+		vkCmdSetScissor(commandBuffer, 0U, 1U, &scissor);
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 	}
@@ -81,30 +74,15 @@ namespace en
 	{
 		vkCmdEndRenderingKHR(commandBuffer);
 	}
-	void Pipeline::Resize(VkExtent2D& extent)
-	{
-		UseContext();
-
-		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
-		vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);
-
-		Shader vShader(m_VShaderPath, ShaderType::Vertex);
-		Shader fShader(m_FShaderPath, ShaderType::Fragment);
-
-		m_LastInfo.extent = extent;
-		m_LastInfo.fShader = &fShader;
-		m_LastInfo.vShader = &vShader;
-
-		CreatePipeline(m_LastInfo);
-	}
 	void Pipeline::CreatePipeline(PipelineInfo& pipeline)
 	{
-		if (!s_LoadedRenderingKHR)
+		if (!m_Initialised)
 		{
 			VkInstance& instance = Context::Get().m_Instance;
 
 			vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(instance, "vkCmdBeginRenderingKHR");
 			vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetInstanceProcAddr(instance, "vkCmdEndRenderingKHR");
+
 			if (!vkCmdBeginRenderingKHR || !vkCmdEndRenderingKHR)
 				throw std::runtime_error("Pipeline::CreatePipeline() - Unable to load vkCmdBeginRenderingKHR and vkCmdEndRenderingKHR");
 		}
@@ -138,14 +116,15 @@ namespace en
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = (float)pipeline.extent.width;
-		viewport.height = (float)pipeline.extent.height;
+		viewport.width = 1.0f;
+		viewport.height = 1.0f;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
 		scissor.offset = { 0U, 0U };
-		scissor.extent = pipeline.extent;
+		scissor.extent.width = 1.0f;
+		scissor.extent.height = 1.0f;
 
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -168,7 +147,7 @@ namespace en
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		
+
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		colorBlendAttachment.blendEnable = pipeline.blendEnable;
@@ -179,22 +158,22 @@ namespace en
 		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(pipeline.colorAttachments.size());
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(pipeline.colorFormats.size());
 
 		for (auto& colorBlend : colorBlendAttachments)
 			colorBlend = colorBlendAttachment;
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
-		colorBlending.sType				= VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable		= VK_FALSE;
-		colorBlending.logicOp			= VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount	= static_cast<uint32_t>(colorBlendAttachments.size());
-		colorBlending.pAttachments		= colorBlendAttachments.data();
+		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.logicOp = VK_LOGIC_OP_COPY;
+		colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
+		colorBlending.pAttachments = colorBlendAttachments.data();
 		colorBlending.blendConstants[0] = 0.0f;
 		colorBlending.blendConstants[1] = 0.0f;
 		colorBlending.blendConstants[2] = 0.0f;
 		colorBlending.blendConstants[3] = 0.0f;
-		
+
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		depthStencil.depthTestEnable = pipeline.enableDepthTest;
@@ -206,6 +185,13 @@ namespace en
 		depthStencil.stencilTestEnable = VK_FALSE;
 		depthStencil.front = {};
 		depthStencil.back = {};
+
+		std::array<VkDynamicState, 2> pipelineDynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+		VkPipelineDynamicStateCreateInfo dynamicState{};
+		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicState.dynamicStateCount = static_cast<uint32_t>(pipelineDynamicStates.size());
+		dynamicState.pDynamicStates = pipelineDynamicStates.data();
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -220,14 +206,14 @@ namespace en
 		VkPipelineShaderStageCreateInfo shaderStages[] = { pipeline.vShader->m_ShaderInfo, pipeline.fShader->m_ShaderInfo };
 
 		std::vector<VkFormat> colorFormats;
-		for (auto& attachment : pipeline.colorAttachments)
-			colorFormats.emplace_back(attachment.imageFormat);
+		for (auto& format : pipeline.colorFormats)
+			colorFormats.push_back(format);
 
 		const VkPipelineRenderingCreateInfoKHR pipelineKHRCreateInfo{
 			.sType					 = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
 			.colorAttachmentCount	 = static_cast<uint32_t>(colorFormats.size()),
 			.pColorAttachmentFormats = colorFormats.data(),
-			.depthAttachmentFormat   = pipeline.depthAttachment.imageFormat
+			.depthAttachmentFormat   = pipeline.depthFormat
 		};
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -242,7 +228,7 @@ namespace en
 		pipelineInfo.pMultisampleState	 = &multisampling;
 		pipelineInfo.pDepthStencilState  = &depthStencil;
 		pipelineInfo.pColorBlendState	 = &colorBlending;
-		pipelineInfo.pDynamicState		 = nullptr;
+		pipelineInfo.pDynamicState		 = &dynamicState;
 
 		pipelineInfo.layout		= m_Layout;
 		pipelineInfo.renderPass = VK_NULL_HANDLE;
@@ -254,6 +240,8 @@ namespace en
 
 		if (vkCreateGraphicsPipelines(ctx.m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline!");
+
+		m_Initialised = true;
 	}
 	void Pipeline::CreateSyncSemaphore()
 	{

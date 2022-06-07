@@ -50,7 +50,6 @@ namespace en
 		m_Backend->LightingPass();
 		m_Backend->PostProcessPass();
 		m_Backend->AntialiasPass();
-		m_Backend->MovePass();
 		m_Backend->ImGuiPass();
 
 		m_Backend->EndRender();

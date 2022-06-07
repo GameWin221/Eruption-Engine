@@ -186,20 +186,17 @@ namespace en
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 		std::unique_ptr<PipelineInput> m_LightingInput;
 
+		std::vector<std::unique_ptr<PipelineInput>> m_SwapchainInputs;
+
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
 		std::unique_ptr<PipelineInput> m_TonemappingInput;
 
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
-		std::unique_ptr<PipelineInput> m_AntialiasingInput;
-
-		std::unique_ptr<Pipeline> m_MovePipeline;
-		std::unique_ptr<PipelineInput> m_MoveInput;
 
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 		std::unique_ptr<DynamicFramebuffer> m_HDROffscreen;
-		std::unique_ptr<DynamicFramebuffer> m_LDROffscreen;
 
 		VkCommandBuffer m_CommandBuffer;
 
@@ -235,7 +232,6 @@ namespace en
 
 		void CreateGBuffer();
 		void CreateHDROffscreen();
-		void CreateLDROffscreen();
 
 		void InitDepthPipeline();
 		void InitGeometryPipeline();
@@ -246,11 +242,8 @@ namespace en
 		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
 
-		void UpdateAntialiasingInput();
+		void UpdateSwapchainInputs();
 		void InitAntialiasingPipeline();
-
-		void UpdateMoveInput();
-		void InitMovePipeline();
 
 		void CreateSyncObjects();
 
