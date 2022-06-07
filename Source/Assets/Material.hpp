@@ -5,9 +5,11 @@
 
 #include <Assets/Texture.hpp>
 
+#include "Asset.hpp"
+
 namespace en
 {
-	class Material
+	class Material : Asset
 	{
 		friend class AssetManager;
 

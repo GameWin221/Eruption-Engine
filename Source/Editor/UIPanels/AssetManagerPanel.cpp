@@ -66,16 +66,16 @@ namespace en
 		std::vector<Texture*>  textures = m_AssetManager->GetAllTextures();
 		std::vector<Material*> materials = m_AssetManager->GetAllMaterials();
 
-		std::vector<AssetRef> assets;
+		std::vector<Asset*> assets;
 
 		for (const auto& mesh : meshes)
-			assets.emplace_back(mesh, AssetType::Mesh);
+			assets.emplace_back(reinterpret_cast<Asset*>(mesh));
 
 		for (const auto& texture : textures)
-			assets.emplace_back(texture, AssetType::Texture);
+			assets.emplace_back(reinterpret_cast<Asset*>(texture));
 
 		for (const auto& material : materials)
-			assets.emplace_back(material, AssetType::Material);
+			assets.emplace_back(reinterpret_cast<Asset*>(material));
 
 		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x + 20.0f));
 
@@ -85,11 +85,11 @@ namespace en
 		{
 			for (int j = 0; j < sameLineAssets && i + j < assets.size(); j++)
 			{
-				AssetRef& asset = assets[i + j];
+				Asset* asset = assets[i + j];
 
-				if (asset.type == AssetType::Mesh)
+				if (asset->m_Type == AssetType::Mesh)
 				{
-					Mesh* mesh = asset.CastTo<Mesh*>();
+					Mesh* mesh = reinterpret_cast<Mesh*>(asset);
 					std::string name = mesh->GetName();
 
 					ImGui::PushID((name + "Mesh").c_str());
@@ -105,9 +105,9 @@ namespace en
 
 					ImGui::PopID();
 				}
-				else if (asset.type == AssetType::Texture)
+				else if (asset->m_Type == AssetType::Texture)
 				{
-					Texture* texture = asset.CastTo<Texture*>();
+					Texture* texture = reinterpret_cast<Texture*>(asset);
 					std::string name = texture->GetName();
 
 					ImGui::PushID((name + "Texture").c_str());
@@ -123,9 +123,9 @@ namespace en
 
 					ImGui::PopID();
 				}
-				else if (asset.type == AssetType::Material)
+				else if (asset->m_Type == AssetType::Material)
 				{
-					Material* material = asset.CastTo<Material*>();
+					Material* material = reinterpret_cast<Material*>(asset);
 					std::string name = material->GetName();
 
 					ImGui::PushID((name + "Material").c_str());

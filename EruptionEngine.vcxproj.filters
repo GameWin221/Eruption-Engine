@@ -278,6 +278,9 @@
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Assets\Asset.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />

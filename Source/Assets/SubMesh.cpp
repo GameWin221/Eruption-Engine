@@ -3,7 +3,8 @@
 
 namespace en
 {
-	SubMesh::SubMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material) : m_Material(material)
+	SubMesh::SubMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material)
+		: m_Material(material), Asset{ AssetType::SubMesh }
 	{
 		glm::vec3 midpoint;
 		for (const auto& vert : vertices)

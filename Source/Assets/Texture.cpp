@@ -8,7 +8,8 @@ namespace en
 	Texture* g_SRGBWhiteTexture;
 	Texture* g_NSRGBTexture;
 
-	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture, bool useMipMaps) : m_Name(name), m_FilePath(texturePath), m_ImageFormat(format), m_UsesMipMaps(useMipMaps)
+	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture, bool useMipMaps) 
+		: m_Name(name), m_FilePath(texturePath), m_ImageFormat(format), m_UsesMipMaps(useMipMaps), Asset{ AssetType::Texture }
 	{
 		bool shouldFreeImage = true;
 
@@ -40,7 +41,8 @@ namespace en
 			EN_SUCCESS("Successfully loaded a texture from \"" + m_FilePath + "\"");
 		}
 	}
-	Texture::Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size, bool useMipMaps): m_Name(name), m_Size(size), m_ImageFormat(format), m_UsesMipMaps(useMipMaps)
+	Texture::Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size, bool useMipMaps)
+		: m_Name(name), m_Size(size), m_ImageFormat(format), m_UsesMipMaps(useMipMaps), Asset{ AssetType::Texture }
 	{
 		CreateImage(pixelData);
 

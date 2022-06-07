@@ -5,6 +5,8 @@ namespace en
 {
 	Mesh* g_EmptyMesh;
 
+	Mesh::Mesh() : Asset{ AssetType::Mesh }{}
+
 	Mesh* Mesh::GetEmptyMesh()
 	{
 		if (!g_EmptyMesh)

@@ -57,7 +57,6 @@ namespace en
 		void LightingPass();
 		void PostProcessPass();
 		void AntialiasPass();
-		void MovePass();
 		void ImGuiPass();
 
 		void EndRender();

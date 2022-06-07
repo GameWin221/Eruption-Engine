@@ -6,11 +6,13 @@
 #include <Renderer/Buffers/VertexBuffer.hpp>
 #include <Renderer/Buffers/IndexBuffer.hpp>
 
+#include "Asset.hpp"
+
 #include <Assets/Material.hpp>
 
 namespace en
 {
-	class SubMesh
+	class SubMesh : Asset
 	{
 	public:
 		SubMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material);

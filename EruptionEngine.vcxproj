@@ -257,6 +257,7 @@
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
