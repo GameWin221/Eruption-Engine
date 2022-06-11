@@ -73,22 +73,22 @@ namespace en
 
 		VkDescriptorImageInfo albedoImageInfo{};
 		albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		albedoImageInfo.imageView = m_Albedo->m_ImageView;
+		albedoImageInfo.imageView = m_Albedo->m_Image->m_ImageView;
 		albedoImageInfo.sampler = m_Albedo->m_ImageSampler;
 
 		VkDescriptorImageInfo specularImageInfo{};
 		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		specularImageInfo.imageView = m_Roughness->m_ImageView;
+		specularImageInfo.imageView = m_Roughness->m_Image->m_ImageView;
 		specularImageInfo.sampler = m_Roughness->m_ImageSampler;
 
 		VkDescriptorImageInfo normalImageInfo{};
 		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		normalImageInfo.imageView = m_Normal->m_ImageView;
+		normalImageInfo.imageView = m_Normal->m_Image->m_ImageView;
 		normalImageInfo.sampler = m_Normal->m_ImageSampler;
 
 		VkDescriptorImageInfo metalnessImageInfo{};
 		metalnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		metalnessImageInfo.imageView = m_Metalness->m_ImageView;
+		metalnessImageInfo.imageView = m_Metalness->m_Image->m_ImageView;
 		metalnessImageInfo.sampler = m_Metalness->m_ImageSampler;
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};

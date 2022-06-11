@@ -121,6 +121,14 @@ namespace en
 					vkDestroyFramebuffer(device, framebuffer, nullptr);
 			}
 
+			void ChangeLayout(VkImageLayout newLayout, int index, VkCommandBuffer& cmd)
+			{
+				Helpers::TransitionImageLayout(images[index], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, currentLayout, newLayout, 1U, cmd);
+				currentLayout = newLayout;
+			}
+
+			VkImageLayout currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
 		} m_Swapchain;
 
 		struct Lights

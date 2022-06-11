@@ -6,6 +6,5 @@
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\DepthFragment.frag -o %~dp0\DepthFragment.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\DepthVertex.vert -o %~dp0\DepthVertex.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\FXAA.frag -o %~dp0\FXAA.spv
-%VULKAN_SDK%/Bin/glslc.exe %~dp0\Move.frag -o %~dp0\Move.spv
 
 pause

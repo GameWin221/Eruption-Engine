@@ -64,7 +64,7 @@ namespace en
 
         Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }
-    void MemoryBuffer::CopyTo(VkImage& dstImage, uint32_t width, uint32_t height)
+    void MemoryBuffer::CopyTo(Image* dstImage)
     {
         UseContext();
 
@@ -76,12 +76,12 @@ namespace en
         region.imageSubresource.layerCount = 1U;
 
         region.imageExtent = {
-            width,
-            height,
+            dstImage->m_Size.width,
+            dstImage->m_Size.height,
             1U
         };
 
-        vkCmdCopyBufferToImage(commandBuffer, m_Buffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
+        vkCmdCopyBufferToImage(commandBuffer, m_Buffer, dstImage->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
 
         Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }

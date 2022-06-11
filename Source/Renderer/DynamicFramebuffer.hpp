@@ -3,6 +3,8 @@
 #ifndef EN_DYNAMICFRAMEBUFFER_HPP
 #define EN_DYNAMICFRAMEBUFFER_HPP
 
+#include <Renderer/Image.hpp>
+
 namespace en
 {
 	class DynamicFramebuffer
@@ -18,28 +20,17 @@ namespace en
 			VkImageLayout      initialLayout	  = VK_IMAGE_LAYOUT_UNDEFINED;
 		};
 
-		struct Attachment
-		{
-			VkImage		   image	   = VK_NULL_HANDLE;
-			VkDeviceMemory imageMemory = VK_NULL_HANDLE;
-			VkImageView    imageView   = VK_NULL_HANDLE;
-			VkFormat	   format	   = VK_FORMAT_UNDEFINED;
-
-			void Destroy();
-		};
-
-		void CreateAttachments(std::vector<AttachmentInfo> attachmentInfos, uint32_t sizeX, uint32_t sizeY);
+		void CreateAttachments(std::vector<AttachmentInfo> attachmentInfos, VkExtent2D size);
 		void CreateSampler(VkFilter framebufferFiltering = VK_FILTER_LINEAR);
 
 		void Destroy();
 
 		VkSampler m_Sampler;
 
-		std::vector<Attachment> m_Attachments;
+		std::vector<Image> m_Attachments;
 
 	private:
-		uint32_t m_SizeX = 0U;
-		uint32_t m_SizeY = 0U;
+		VkExtent2D m_Size;
 	};
 }
 

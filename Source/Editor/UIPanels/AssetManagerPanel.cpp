@@ -3,6 +3,8 @@
 
 #include <portable-file-dialogs.h>
 
+#include <Common/Helpers.hpp>
+
 namespace en
 {
 	AssetManagerPanel::AssetManagerPanel(AssetManager* assetManager, EditorImageAtlas* atlas) : m_AssetManager(assetManager), m_Atlas(atlas) {}

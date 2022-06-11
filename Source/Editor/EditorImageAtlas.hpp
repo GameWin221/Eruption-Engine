@@ -17,13 +17,13 @@ namespace en
 
 	class EditorImageAtlas
 	{
-		public:
-			EditorImageAtlas(std::string atlasPath, uint32_t xSize, int32_t ySize);
-			~EditorImageAtlas();
+	public:
+		EditorImageAtlas(std::string atlasPath, uint32_t x, int32_t y);
+		~EditorImageAtlas();
 
-			ImageUVs GetImageUVs(uint32_t x, int32_t y);
+		ImageUVs GetImageUVs(uint32_t x, int32_t y);
 
-			VkDescriptorSet m_DescriptorSet;
+		VkDescriptorSet m_DescriptorSet;
 
 	private:
 		std::unique_ptr<Texture> m_Texture;
@@ -34,8 +34,6 @@ namespace en
 		void CreateDescriptorPool();
 		void CreateDescriptorSet();
 
-		glm::uvec2 m_AtlasSize;
-		glm::uvec2 m_TextureSize;
 		glm::vec2 m_ImageUVSize;
 	};
 }

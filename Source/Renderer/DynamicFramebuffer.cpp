@@ -10,33 +10,14 @@ namespace en
 	{
 		Destroy();
 	}
-	void DynamicFramebuffer::Attachment::Destroy()
+	void DynamicFramebuffer::CreateAttachments(std::vector<AttachmentInfo> attachmentInfos, VkExtent2D size)
 	{
-		UseContext();
+		m_Size = size;
 
-		if(imageMemory != VK_NULL_HANDLE)
-			vkFreeMemory(ctx.m_LogicalDevice, imageMemory, nullptr);
-
-		if (imageView != VK_NULL_HANDLE)
-			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
-
-		if (image != VK_NULL_HANDLE)
-			vkDestroyImage(ctx.m_LogicalDevice, image, nullptr);
-	}
-	void DynamicFramebuffer::CreateAttachments(std::vector<AttachmentInfo> attachmentInfos, uint32_t sizeX, uint32_t sizeY)
-	{
-		m_SizeX = sizeX;
-		m_SizeY = sizeY;
+		m_Attachments.reserve(attachmentInfos.size());
 
 		for (const auto& info : attachmentInfos)
-		{
-			Attachment& attachment = m_Attachments.emplace_back();
-
-			Helpers::CreateImage(m_SizeX, m_SizeY, info.format, VK_IMAGE_TILING_OPTIMAL, info.imageUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, attachment.image, attachment.imageMemory);
-			Helpers::CreateImageView(attachment.image, attachment.imageView, info.format, info.imageAspectFlags);
-			Helpers::TransitionImageLayout(attachment.image, info.format, info.imageAspectFlags, VK_IMAGE_LAYOUT_UNDEFINED, info.initialLayout);
-			attachment.format = info.format;
-		}
+			m_Attachments.emplace_back(m_Size, info.format, info.imageUsageFlags, info.imageAspectFlags, info.initialLayout, false);
 	}
 
 	void DynamicFramebuffer::CreateSampler(VkFilter framebufferFiltering)
@@ -75,9 +56,6 @@ namespace en
 
 	void DynamicFramebuffer::Destroy()
 	{
-		for (auto& attachment : m_Attachments)
-			attachment.Destroy();
-		
 		if (m_Sampler != VK_NULL_HANDLE)
 			vkDestroySampler(Context::Get().m_LogicalDevice, m_Sampler, nullptr);
 
