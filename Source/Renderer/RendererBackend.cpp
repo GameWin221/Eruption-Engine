@@ -146,61 +146,61 @@ namespace en
 
 		for (int i = 0; i < m_Lights.lastPointLightsSize; i++)
 		{
-			PointLight::Buffer& lightBuffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
+			PointLight::Buffer& buffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
 			PointLight& light = pointLights[i];
 
 			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 			const float     lightRad = light.m_Radius * (float)light.m_Active;
 
-			if (lightBuffer.position != light.m_Position || lightBuffer.radius != lightRad || lightBuffer.color != lightCol)
+			if (buffer.position != light.m_Position || buffer.radius != lightRad || buffer.color != lightCol)
 				m_LightsChanged = true;
 
 			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
 				continue;
 
-			lightBuffer.position = light.m_Position;
-			lightBuffer.color = lightCol;
-			lightBuffer.radius = lightRad;
+			buffer.position = light.m_Position;
+			buffer.color    = lightCol;
+			buffer.radius   = lightRad;
 
 			m_Lights.LBO.activePointLights++;
 		}
 		for (int i = 0; i < m_Lights.lastSpotlightsSize; i++)
 		{
-			Spotlight::Buffer& lightBuffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotlights];
+			Spotlight::Buffer& buffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotlights];
 			Spotlight& light = spotLights[i];
 
 			const glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (lightBuffer.position != light.m_Position || lightBuffer.innerCutoff != light.m_InnerCutoff || lightBuffer.direction != light.m_Direction || lightBuffer.outerCutoff != light.m_OuterCutoff || lightBuffer.color != lightColor || lightBuffer.range != light.m_Range)
+			if (buffer.position != light.m_Position || buffer.innerCutoff != light.m_InnerCutoff || buffer.direction != light.m_Direction || buffer.outerCutoff != light.m_OuterCutoff || buffer.color != lightColor || buffer.range != light.m_Range)
 				m_LightsChanged = true;
 
 			if (light.m_Range == 0.0f || light.m_Color == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
 				continue;
 
-			lightBuffer.position = light.m_Position;
-			lightBuffer.range = light.m_Range;
-			lightBuffer.outerCutoff = light.m_OuterCutoff;
-			lightBuffer.innerCutoff = light.m_InnerCutoff;
-			lightBuffer.direction = light.m_Direction;
-			lightBuffer.color = lightColor;
+			buffer.position	   = light.m_Position;
+			buffer.range	   = light.m_Range;
+			buffer.outerCutoff = light.m_OuterCutoff;
+			buffer.innerCutoff = light.m_InnerCutoff;
+			buffer.direction   = light.m_Direction;
+			buffer.color	   = lightColor;
 
 			m_Lights.LBO.activeSpotlights++;
 		}
 		for (int i = 0; i < m_Lights.lastDirLightsSize; i++)
 		{
-			DirectionalLight::Buffer& lightBuffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
+			DirectionalLight::Buffer& buffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
 			DirectionalLight& light = dirLights[i];
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (lightBuffer.direction != light.m_Direction || lightBuffer.color != lightCol)
+			if (buffer.direction != light.m_Direction || buffer.color != lightCol)
 				m_LightsChanged = true;
 
 			if (lightCol == glm::vec3(0.0))
 				continue;
 
-			lightBuffer.direction = light.m_Direction;
-			lightBuffer.color = lightCol;
+			buffer.direction = light.m_Direction;
+			buffer.color = lightCol;
 
 			m_Lights.LBO.activeDirLights++;
 		}
