@@ -110,6 +110,8 @@ namespace en
 			std::vector<VkFramebuffer> framebuffers;
 			VkExtent2D				   extent;
 
+			std::vector<VkImageLayout> currentLayouts;
+
 			void Destroy(VkDevice& device)
 			{
 				vkDestroySwapchainKHR(device, swapchain, nullptr);
@@ -119,15 +121,15 @@ namespace en
 
 				for (auto& framebuffer : framebuffers)
 					vkDestroyFramebuffer(device, framebuffer, nullptr);
+
+				currentLayouts.clear();
 			}
 
 			void ChangeLayout(VkImageLayout newLayout, int index, VkCommandBuffer& cmd)
 			{
-				Helpers::TransitionImageLayout(images[index], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, currentLayout, newLayout, 1U, cmd);
-				currentLayout = newLayout;
+				Helpers::TransitionImageLayout(images[index], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, currentLayouts[index], newLayout, 1U, cmd);
+				currentLayouts[index] = newLayout;
 			}
-
-			VkImageLayout currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		} m_Swapchain;
 

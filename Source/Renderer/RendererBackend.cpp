@@ -691,15 +691,15 @@ namespace en
 		m_Swapchain.extent	    = extent;
 
 		m_Swapchain.imageViews.resize(m_Swapchain.images.size());
+		m_Swapchain.currentLayouts.resize(m_Swapchain.images.size());
+
+		VkCommandBuffer dummy = VK_NULL_HANDLE;
 
 		for (int i = 0; i < m_Swapchain.imageViews.size(); i++)
 		{
-			VkCommandBuffer dummy = VK_NULL_HANDLE;
-
 			Helpers::CreateImageView(m_Swapchain.images[i], m_Swapchain.imageViews[i], m_Swapchain.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 			m_Swapchain.ChangeLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, i, dummy);
 		}
-
 	}
 	void VulkanRendererBackend::CreateSwapchainFramebuffers()
 	{
@@ -723,8 +723,6 @@ namespace en
 
 	void VulkanRendererBackend::CreateGBuffer()
 	{
-		m_GBuffer = std::make_unique<DynamicFramebuffer>();
-
 		DynamicFramebuffer::AttachmentInfo albedo{};
 		albedo.format = m_Swapchain.imageFormat;
 		albedo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -743,19 +741,19 @@ namespace en
 		depth.imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 		depth.imageUsageFlags  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-		m_GBuffer->CreateAttachments({ albedo , position, normal, depth }, m_Swapchain.extent);
-		m_GBuffer->CreateSampler();
+		std::vector<DynamicFramebuffer::AttachmentInfo> attachments{ albedo, position, normal, depth };
+
+		m_GBuffer = std::make_unique<DynamicFramebuffer>(attachments, m_Swapchain.extent);
 	}
 	void VulkanRendererBackend::CreateHDROffscreen()
 	{
-		m_HDROffscreen = std::make_unique<DynamicFramebuffer>();
-
 		DynamicFramebuffer::AttachmentInfo attachment{};
 		attachment.format = VK_FORMAT_R16G16B16A16_SFLOAT;
 		attachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		m_HDROffscreen->CreateAttachments({ attachment }, m_Swapchain.extent);
-		m_HDROffscreen->CreateSampler();
+		std::vector<DynamicFramebuffer::AttachmentInfo> attachments{ attachment };
+
+		m_HDROffscreen = std::make_unique<DynamicFramebuffer>(attachments, m_Swapchain.extent);
 	}
 
 	void VulkanRendererBackend::InitDepthPipeline()

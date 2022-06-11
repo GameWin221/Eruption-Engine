@@ -1,7 +1,7 @@
 #include <Core/EnPch.hpp>
 #include "Texture.hpp"
 
-#include <Renderer/Context.hpp>
+#include <Common/Helpers.hpp>
 
 namespace en
 {
@@ -37,7 +37,7 @@ namespace en
 
 		m_Image->SetData(pixels);
 
-		CreateImageSampler();
+		Helpers::CreateSampler(m_ImageSampler, VK_FILTER_LINEAR, ANISOTROPIC_FILTERING, static_cast<float>(m_Image->GetMipLevels()), MIPMAP_BIAS);
 
 		if (shouldFreeImage)
 		{
@@ -50,7 +50,7 @@ namespace en
 		m_Image = std::make_unique<Image>(size, format, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, useMipMaps);
 		m_Image->SetData(pixels);
 
-		CreateImageSampler();
+		Helpers::CreateSampler(m_ImageSampler, VK_FILTER_LINEAR, ANISOTROPIC_FILTERING, static_cast<float>(m_Image->GetMipLevels()), MIPMAP_BIAS);
 	}
 	Texture::~Texture()
 	{
@@ -70,42 +70,5 @@ namespace en
 			g_NSRGBTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, VkExtent2D{ 1U, 1U }, false);
 
 		return g_NSRGBTexture;
-	}
-	void Texture::CreateImageSampler()
-	{
-		UseContext();
-
-		VkPhysicalDeviceProperties properties{};
-		vkGetPhysicalDeviceProperties(ctx.m_PhysicalDevice, &properties);
-		
-		VkSamplerCreateInfo samplerInfo{};
-		samplerInfo.sType		 = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-
-		samplerInfo.magFilter	 = VK_FILTER_LINEAR;
-		samplerInfo.minFilter	 = VK_FILTER_LINEAR;
-
-		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-		samplerInfo.anisotropyEnable = (ANISOTROPIC_FILTERING > 0);
-		samplerInfo.maxAnisotropy	 = std::min(float(ANISOTROPIC_FILTERING), properties.limits.maxSamplerAnisotropy);
-		samplerInfo.borderColor		 = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-
-		samplerInfo.unnormalizedCoordinates = VK_FALSE;
-
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp	  = VK_COMPARE_OP_ALWAYS;
-		
-		if (m_Image->GetMipLevels() > 1U)
-		{
-			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			samplerInfo.mipLodBias = MIPMAP_BIAS;
-			samplerInfo.minLod	   = 0.0f;
-			samplerInfo.maxLod	   = static_cast<float>(m_Image->GetMipLevels());
-		}
-
-		if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &m_ImageSampler) != VK_SUCCESS)
-			EN_ERROR("Texture.cpp::Texture::CreateImageSampler() - Failed to create texture sampler!");
 	}
 }

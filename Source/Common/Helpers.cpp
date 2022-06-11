@@ -344,6 +344,41 @@ namespace en
             vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
         }
 
+        void CreateSampler(VkSampler& sampler, VkFilter filtering, uint32_t anisotropy, float maxLod, float mipLodBias)
+        {
+            UseContext();
+
+            VkPhysicalDeviceProperties properties{};
+            vkGetPhysicalDeviceProperties(ctx.m_PhysicalDevice, &properties);
+
+            VkSamplerCreateInfo samplerInfo{};
+            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+            samplerInfo.magFilter = filtering;
+            samplerInfo.minFilter = filtering;
+
+            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+            samplerInfo.anisotropyEnable = (anisotropy > 0);
+            samplerInfo.maxAnisotropy = std::fminf(anisotropy, properties.limits.maxSamplerAnisotropy);
+            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+            samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+            samplerInfo.compareEnable = VK_FALSE;
+            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            samplerInfo.mipLodBias = mipLodBias;
+            samplerInfo.minLod = 0.0f;
+            samplerInfo.maxLod = maxLod;
+
+            if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
+                EN_ERROR("Helpers::CreateSampler() - Failed to create texture sampler!");
+        }
+
         void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags)
         {
             UseContext();

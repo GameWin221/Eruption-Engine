@@ -34,8 +34,6 @@ namespace en
 		const std::string& GetName()     const { return m_Name;	    };
 
 	private:
-		void CreateImageSampler();
-
 		std::string m_Name;
 		std::string m_FilePath;
 	};
