@@ -9,17 +9,19 @@ layout(location = 0) out vec4 gColor;
 layout(location = 1) out vec4 gPosition;
 layout(location = 2) out vec4 gNormal;
 
-layout(set = 1, binding = 1) uniform MatBufferObject {
+layout(push_constant) uniform MaterialBufferObject
+{
+	layout(offset = 64) 
     vec3 color;
     float metalnessVal;
     float roughnessVal;
     float normalMultiplier;
 } mbo;
 
-layout(set = 1, binding = 2) uniform sampler2D albedoTexture;
-layout(set = 1, binding = 3) uniform sampler2D roughnessTexture;
-layout(set = 1, binding = 4) uniform sampler2D normalTexture;
-layout(set = 1, binding = 5) uniform sampler2D metalnessTexture;
+layout(set = 1, binding = 1) uniform sampler2D albedoTexture;
+layout(set = 1, binding = 2) uniform sampler2D roughnessTexture;
+layout(set = 1, binding = 3) uniform sampler2D normalTexture;
+layout(set = 1, binding = 4) uniform sampler2D metalnessTexture;
 
 vec3 TangentToWorld()
 {

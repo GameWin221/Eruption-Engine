@@ -54,27 +54,6 @@ namespace en
 
 		bool AssetButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos);
 	};
-
-	enum struct AssetType
-	{
-		Mesh,
-		Texture,
-		Material
-	};
-
-	class AssetRef
-	{
-	public:
-		AssetRef(void* assetPtr, AssetType assetType) : ptr(assetPtr), type(assetType) {}
-
-		void* ptr;
-
-		AssetType type;
-
-		// I know it's unsafe...
-		template <typename T>
-		T CastTo() { return reinterpret_cast<T>(ptr); };
-	};
 }
 
 #endif

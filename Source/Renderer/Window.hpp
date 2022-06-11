@@ -26,9 +26,9 @@ namespace en
 		void Close();
 		void PollEvents();
 
-		GLFWwindow*  m_GLFWWindow;
+		GLFWwindow* m_GLFWWindow;
 
-		static Window&     GetMainWindow();
+		static Window&     Get();
 		const  WindowInfo& GetInfo() const { return m_WindowInfo; };
 
 		const bool IsOpen() const { return !glfwWindowShouldClose(m_GLFWWindow); };

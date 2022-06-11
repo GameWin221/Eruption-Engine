@@ -25,10 +25,10 @@
 
 #include <Renderer/Pipeline.hpp>
 #include <Renderer/PipelineInput.hpp>
-#include <Renderer/Framebuffer.hpp>
+#include <Renderer/DynamicFramebuffer.hpp>
 
 #define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
-#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") << '\n';
+#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
 
 namespace en
 {
@@ -41,7 +41,7 @@ namespace en
 
 		void BindScene(Scene* scene);
 		void UnbindScene();
-		
+
 		void SetVSync(bool& vSync);
 
 		void WaitForGPUIdle();
@@ -151,7 +151,7 @@ namespace en
 			uint32_t lastDirLightsSize = 0U;
 
 		} m_Lights;
-		
+
 		struct ImGuiVK
 		{
 			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -185,29 +185,27 @@ namespace en
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 		std::unique_ptr<PipelineInput> m_LightingInput;
 
+		std::vector<std::unique_ptr<PipelineInput>> m_SwapchainInputs;
+
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
 		std::unique_ptr<PipelineInput> m_TonemappingInput;
 
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
-		std::unique_ptr<PipelineInput> m_AntialiasingInput;
 
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		std::unique_ptr<Framebuffer> m_DepthBuffer;
-		std::unique_ptr<Framebuffer> m_GBuffer;
-		std::unique_ptr<Framebuffer> m_HDRFramebuffer;
-		std::unique_ptr<Framebuffer> m_AliasedFramebuffer;
+		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
+		std::unique_ptr<DynamicFramebuffer> m_HDROffscreen;
 
 		VkCommandBuffer m_CommandBuffer;
-		
+
 		VkFence	m_SubmitFence;
 
 		const VkClearValue m_BlackClearValue{};
 
 		// References to existing objects
 		Context* m_Ctx;
-		Window*  m_Window;
-		Camera*  m_MainCamera;
+		Camera* m_MainCamera;
 
 		Scene* m_Scene = nullptr;
 
@@ -229,28 +227,22 @@ namespace en
 
 		void CreateCommandBuffer();
 
+		void CreateSwapchainFramebuffers();
+
+		void CreateGBuffer();
+		void CreateHDROffscreen();
+
 		void InitDepthPipeline();
-
-		void CreateDepthBufferHandle();
-		void CreateDepthBufferAttachments();
-
 		void InitGeometryPipeline();
-
-		void CreateGBufferHandle();
-		void CreateGBufferAttachments();
 
 		void UpdateLightingInput();
 		void InitLightingPipeline();
-		void CreateLightingHDRFramebuffer();
 
 		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
 
-		void UpdateAntialiasingInput();
+		void UpdateSwapchainInputs();
 		void InitAntialiasingPipeline();
-		void CreateAliasedFramebuffer();
-
-		void CreateSwapchainFramebuffers();
 
 		void CreateSyncObjects();
 
@@ -264,8 +256,6 @@ namespace en
 
 		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 		VkFormat FindDepthFormat();
-		bool HasStencilComponent(const VkFormat format);
-
 	};
 }
 

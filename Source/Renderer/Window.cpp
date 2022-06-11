@@ -14,7 +14,8 @@ namespace en
 
 		m_WindowInfo = windowInfo;
 
-		glfwInit();
+		if(!glfwInit())
+			EN_ERROR("Window::Window() - Failed to create the glfw context!");
 
 		GLFWmonitor*       monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
@@ -24,8 +25,6 @@ namespace en
 		glfwWindowHint(GLFW_GREEN_BITS  , mode->greenBits);
 		glfwWindowHint(GLFW_BLUE_BITS   , mode->blueBits);
 		glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-
-		EN_SUCCESS("Created the glfw context");
 
 		// Fullscreen
 		if (m_WindowInfo.fullscreen)
@@ -40,15 +39,13 @@ namespace en
 
         if(!m_GLFWWindow)
             EN_ERROR("Window::Window() - Failed to create m_GLFWWindow!")
-        else
-		    EN_SUCCESS("Created a window")
-
+        
+		EN_SUCCESS("Created a window")
 	}
 	Window::~Window()
 	{
-		glfwDestroyWindow(m_GLFWWindow);
-
 		g_MainWindow = nullptr;
+		glfwDestroyWindow(m_GLFWWindow);
 
 		EN_LOG("Closed the main window.");
 
@@ -67,7 +64,7 @@ namespace en
 		glfwPollEvents();
 	}
 
-	Window& Window::GetMainWindow()
+	Window& Window::Get()
 	{
 		if (!g_MainWindow)
 			EN_ERROR("Window::GetMainWindow() - g_MainWindow was a nullptr!");

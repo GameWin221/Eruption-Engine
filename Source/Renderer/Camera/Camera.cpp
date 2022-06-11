@@ -47,7 +47,7 @@ namespace en
 		if (m_DynamicallyScaled)
 		{
 			int wX, wY;
-			glfwGetWindowSize(en::Window::GetMainWindow().m_GLFWWindow, &wX, &wY);
+			glfwGetWindowSize(en::Window::Get().m_GLFWWindow, &wX, &wY);
 
 			m_Size = glm::vec2(wX, wY);
 		}

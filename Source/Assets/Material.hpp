@@ -4,11 +4,12 @@
 #define EN_MATERIAL_HPP
 
 #include <Assets/Texture.hpp>
-#include <Renderer/Buffers/MemoryBuffer.hpp>
+
+#include "Asset.hpp"
 
 namespace en
 {
-	class Material
+	class Material : Asset
 	{
 		friend class AssetManager;
 
@@ -54,8 +55,6 @@ namespace en
 		Texture* m_Roughness;
 		Texture* m_Metalness;
 		Texture* m_Normal;
-
-		std::unique_ptr<MemoryBuffer> m_Buffer;
 
 		VkDescriptorSet m_DescriptorSet;
 

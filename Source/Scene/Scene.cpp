@@ -62,45 +62,51 @@ namespace en
         }
     }
 
-    void Scene::CreatePointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius)
+    PointLight* Scene::CreatePointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active)
     {
         if (m_PointLights.size() + 1 >= MAX_POINT_LIGHTS)
         {
             EN_WARN("Failed to create a new PointLight because you've reached the MAX_POINT_LIGHTS limit (" + std::to_string(MAX_POINT_LIGHTS) + ")!")
-            return;
+            return nullptr;
         }
 
-        m_PointLights.emplace_back(position, color, intensity, radius);
+        m_PointLights.emplace_back(position, color, intensity, radius, active);
+
+        return &m_PointLights.at(m_PointLights.size()-1);
     }
     void Scene::DeletePointLight(uint32_t index)
     {
         m_PointLights.erase(m_PointLights.begin() + index);
     }
 
-    void Scene::CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity)
+    Spotlight* Scene::CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)
     {
         if (m_Spotlights.size() + 1 >= MAX_SPOT_LIGHTS)
         {
             EN_WARN("Failed to create a new Spotlight because you've reached the MAX_SPOT_LIGHTS limit (" + std::to_string(MAX_SPOT_LIGHTS) + ")!")
-                return;
+            return nullptr;
         }
 
-        m_Spotlights.emplace_back(position, direction, color, innerCutoff, outerCutoff, range, intensity);
+        m_Spotlights.emplace_back(position, direction, color, innerCutoff, outerCutoff, range, intensity, active);
+
+        return &m_Spotlights.at(m_Spotlights.size()-1);
     }
     void Scene::DeleteSpotlight(uint32_t index)
     {
         m_Spotlights.erase(m_Spotlights.begin() + index);
     }
 
-    void Scene::CreateDirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity)
+    DirectionalLight* Scene::CreateDirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity, bool active)
     {
         if (m_DirectionalLights.size() + 1 >= MAX_DIR_LIGHTS)
         {
             EN_WARN("Failed to create a new DirectionalLight because you've reached the MAX_DIR_LIGHTS limit (" + std::to_string(MAX_DIR_LIGHTS) + ")!")
-                return;
+            return nullptr;
         }
 
-        m_DirectionalLights.emplace_back(direction, color, intensity);
+        m_DirectionalLights.emplace_back(direction, color, intensity, active);
+
+        return &m_DirectionalLights.back();
     }
     void Scene::DeleteDirectionalLight(uint32_t index)
     {

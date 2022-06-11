@@ -8,15 +8,19 @@
 #include <assimp/postprocess.h>
 #include <assimp/pbrmaterial.h>
 
+#include "Asset.hpp"
+
 #include <Assets/SubMesh.hpp>
 
 namespace en
 {
-	class Mesh
+	class Mesh : Asset
 	{
 		friend class AssetManager;
 
 	public:
+		Mesh();
+
 		std::vector<SubMesh> m_SubMeshes;
 
 		const std::string& GetName()	 const { return m_Name;     };

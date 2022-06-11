@@ -7,7 +7,8 @@ const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
 const std::vector<const char*> deviceExtensions = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 };
 
 #if not defined(NDEBUG)
@@ -21,13 +22,13 @@ namespace en
 	Context::Context()
 	{
 		g_CurrentContext = this;
-
-		VKCreateInstance();
-		VKCreateDebugMessenger();
-		VKCreateWindowSurface();
-		VKPickPhysicalDevice();
-		VKCreateLogicalDevice();
-		VKCreateCommandPool();
+		
+		CreateInstance();
+		CreateDebugMessenger();
+		CreateWindowSurface();
+		PickPhysicalDevice();
+		CreateLogicalDevice();
+		CreateCommandPool();
 
 		EN_SUCCESS("Created the Vulkan context");
 	}
@@ -36,6 +37,7 @@ namespace en
 		vkDeviceWaitIdle(m_LogicalDevice);
 
 		vkDestroyCommandPool(m_LogicalDevice, m_CommandPool, nullptr);
+		vkDestroyCommandPool(m_LogicalDevice, m_TransferCommandPool, nullptr);
 
 		vkDestroyDevice(m_LogicalDevice, nullptr);
 
@@ -44,39 +46,39 @@ namespace en
 
 		vkDestroySurfaceKHR(m_Instance, m_WindowSurface, nullptr);
 		vkDestroyInstance(m_Instance, nullptr);
-
+		
 		glfwTerminate();
 
 		EN_LOG("Destroyed the Vulkan context")
 	}
 
-	Context& Context::GetContext() 
+	Context& Context::Get() 
 	{
 		if (!g_CurrentContext)
-			EN_ERROR("Context::GetContext()  - g_CurrentContext was a nullptr!");
+			EN_ERROR("Context::Get() - g_CurrentContext was a nullptr!");
 
 		return *g_CurrentContext;
 	}
 
-	void Context::VKCreateInstance()
+	void Context::CreateInstance()
 	{
-		if (enableValidationLayers && !CheckValidationLayerSupport())
-			EN_ERROR("Context.cpp::Context::VKCreateInstance() - Validation layers requested, but not available!");
+		if (enableValidationLayers && !AreValidationLayerSupported())
+			EN_ERROR("Context::VKCreateInstance() - Validation layers requested, but not available!");
 
 		VkApplicationInfo appInfo{};
-		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "Eruption Renderer";
+		appInfo.sType			   = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+		appInfo.pApplicationName   = "Eruption Renderer";
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.pEngineName = "Eruption Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		appInfo.pEngineName		   = "Eruption Engine";
+		appInfo.engineVersion	   = VK_MAKE_VERSION(1, 0, 0);
+		appInfo.apiVersion		   = VK_API_VERSION_1_3;
 
 		auto extensions = GetRequiredExtensions();
 
 		VkInstanceCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pApplicationInfo = &appInfo;
-		createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+		createInfo.sType				   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		createInfo.pApplicationInfo		   = &appInfo;
+		createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
 		createInfo.ppEnabledExtensionNames = extensions.data();
 
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
@@ -88,17 +90,11 @@ namespace en
 			PopulateDebugMessengerCreateInfo(debugCreateInfo);
 			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
 		}
-		else
-		{
-			createInfo.enabledLayerCount = 0;
-			createInfo.pNext = nullptr;
-		}
-
 
 		if (vkCreateInstance(&createInfo, nullptr, &m_Instance) != VK_SUCCESS)
-			EN_ERROR("Context.cpp::Context::VKCreateInstance() - Failed to create instance!");
+			EN_ERROR("Context::VKCreateInstance() - Failed to create instance!");
 	}
-	void Context::VKCreateDebugMessenger()
+	void Context::CreateDebugMessenger()
 	{
 		if (!enableValidationLayers) return;
 
@@ -106,20 +102,20 @@ namespace en
 		PopulateDebugMessengerCreateInfo(createInfo);
 
 		if (CreateDebugUtilsMessengerEXT(&createInfo) != VK_SUCCESS)
-			EN_ERROR("Context.cpp::Context::VKCreateDebugMessenger() - Failed to set up debug messenger!");
+			EN_ERROR("Context::VKCreateDebugMessenger() - Failed to set up debug messenger!");
 	}
-	void Context::VKCreateWindowSurface()
+	void Context::CreateWindowSurface()
 	{
-		if (glfwCreateWindowSurface(m_Instance, Window::GetMainWindow().m_GLFWWindow, nullptr, &m_WindowSurface) != VK_SUCCESS)
-			EN_ERROR("Context.cpp::Context::VKCreateWindowSurface() - Failed to create window surface!");
+		if (glfwCreateWindowSurface(m_Instance, Window::Get().m_GLFWWindow, nullptr, &m_WindowSurface) != VK_SUCCESS)
+			EN_ERROR("Context::VKCreateWindowSurface() - Failed to create window surface!");
 	}
-	void Context::VKPickPhysicalDevice()
+	void Context::PickPhysicalDevice()
 	{
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
 
 		if (deviceCount == 0)
-			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find GPUs with Vulkan support!");
+			EN_ERROR("Context::VKPickPhysicalDevice() - Failed to find GPUs with Vulkan support!");
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
@@ -135,20 +131,52 @@ namespace en
 
 		if (m_PhysicalDevice == VK_NULL_HANDLE)
 			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
-	}
-	void Context::VKCreateLogicalDevice()
-	{
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(m_PhysicalDevice);
 
+		VkPhysicalDeviceProperties properties{};
+		vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
+
+		EN_SUCCESS("Picked \"" + std::string(properties.deviceName) + "\" as the physical device!");
+	}
+	void Context::FindQueueFamilies(VkPhysicalDevice& device)
+	{
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+		int i = 0;
+		for (const auto& queueFamily : queueFamilies)
+		{
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				m_QueueFamilies.graphics = i;
+
+			if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+				m_QueueFamilies.transfer = i;
+
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_WindowSurface, &presentSupport);
+
+			if (presentSupport)
+				m_QueueFamilies.present = i;
+
+			if (m_QueueFamilies.IsComplete())
+				break;
+
+			i++;
+		}
+	}
+	void Context::CreateLogicalDevice()
+	{
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+		std::set<uint32_t> uniqueQueueFamilies = { m_QueueFamilies.graphics.value(), m_QueueFamilies.transfer.value(), m_QueueFamilies.present.value() };
 
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
 			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueCreateInfo.queueFamilyIndex = queueFamily;
-			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.queueCount = 1U;
 			queueCreateInfo.pQueuePriorities = &queuePriority;
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
@@ -156,8 +184,14 @@ namespace en
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+		constexpr VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+			.dynamicRendering = VK_TRUE
+		};
+
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		createInfo.pNext = &dynamicRenderingFeature;
 		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
 		createInfo.pEnabledFeatures = &deviceFeatures;
@@ -175,16 +209,31 @@ namespace en
 		if (vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_LogicalDevice) != VK_SUCCESS)
 			EN_ERROR("Context.cpp::Context::VKCreateLogicalDevice() - Failed to create logical device!");
 
-		vkGetDeviceQueue(m_LogicalDevice, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
-		vkGetDeviceQueue(m_LogicalDevice, indices.presentFamily.value(), 0, &m_PresentQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.graphics.value(), 0U, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.transfer.value(), 0U, &m_TransferQueue);
+		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilies.present.value(), 0U, &m_PresentQueue);
 	}
 
-	void Context::VKCreateCommandPool()
+	void Context::CreateCommandPool()
 	{
-		Helpers::CreateCommandPool(m_CommandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		VkCommandPoolCreateInfo commandPoolCreateInfo = {};
+		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		commandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.graphics.value();
+		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		if (vkCreateCommandPool(m_LogicalDevice, &commandPoolCreateInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
+			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a command pool!");
+
+		VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {};
+		transferCommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		transferCommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.transfer.value();
+		transferCommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		if (vkCreateCommandPool(m_LogicalDevice, &transferCommandPoolCreateInfo, nullptr, &m_TransferCommandPool) != VK_SUCCESS)
+			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a transfer command pool!");
 	}
 
-	bool Context::CheckValidationLayerSupport()
+	bool Context::AreValidationLayerSupported()
 	{
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -214,13 +263,12 @@ namespace en
 	std::vector<const char*> Context::GetRequiredExtensions()
 	{
 		uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions;
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 		std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 		if (enableValidationLayers)
-			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 		return extensions;
 	}
@@ -255,7 +303,7 @@ namespace en
 	VKAPI_ATTR VkBool32 VKAPI_CALL Context::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 	{
 		std::string message;
-
+		
 		switch (messageSeverity)
 		{
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -272,14 +320,14 @@ namespace en
 			break;
 		}
 
-		std::cerr << message << " validation layer: " << pCallbackData->pMessage << '\n';
+		std::cerr << message << " validation: " << pCallbackData->pMessage << '\n';
 
 		return VK_FALSE;
 	}
 
 	bool Context::IsDeviceSuitable(VkPhysicalDevice& device)
 	{
-		Helpers::QueueFamilyIndices indices = Helpers::FindQueueFamilies(device);
+		FindQueueFamilies(device);
 
 		bool extensionsSupported = CheckDeviceExtensionSupport(device);
 
@@ -314,7 +362,7 @@ namespace en
 		VkPhysicalDeviceFeatures supportedFeatures;
 		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-		return indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+		return m_QueueFamilies.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 	}
 	bool Context::CheckDeviceExtensionSupport(VkPhysicalDevice& device)
 	{

@@ -187,7 +187,7 @@
     <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Framebuffer.cpp" />
+    <ClCompile Include="Source\Renderer\DynamicFramebuffer.cpp" />
     <ClCompile Include="Source\Renderer\Lights\Lights.cpp" />
     <ClCompile Include="Source\Renderer\PipelineInput.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
@@ -257,6 +257,7 @@
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
@@ -264,7 +265,7 @@
     <ClInclude Include="Source\Editor\EditorCommons.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Framebuffer.hpp" />
+    <ClInclude Include="Source\Renderer\DynamicFramebuffer.hpp" />
     <ClInclude Include="Source\Renderer\PipelineInput.hpp" />
     <ClInclude Include="Source\Renderer\Pipeline.hpp" />
     <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
@@ -326,6 +327,7 @@
     <None Include="Shaders\FullscreenTriVert.vert">
       <FileType>Document</FileType>
     </None>
+    <None Include="Shaders\Move.frag" />
     <None Include="Shaders\SMAA.frag" />
     <None Include="Shaders\TonemapFrag.frag" />
   </ItemGroup>

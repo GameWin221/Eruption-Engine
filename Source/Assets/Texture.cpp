@@ -5,11 +5,11 @@ namespace en
 {
 	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
 
-	Texture* g_WhiteTexture;
-	Texture* g_NormalTexture;
-	Texture* g_GreyTexture;
+	Texture* g_SRGBWhiteTexture;
+	Texture* g_NSRGBTexture;
 
-	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture, bool useMipMaps) : m_Name(name), m_FilePath(texturePath), m_ImageFormat(format), m_UsesMipMaps(useMipMaps)
+	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture, bool useMipMaps) 
+		: m_Name(name), m_FilePath(texturePath), m_ImageFormat(format), m_UsesMipMaps(useMipMaps), Asset{ AssetType::Texture }
 	{
 		bool shouldFreeImage = true;
 
@@ -41,7 +41,8 @@ namespace en
 			EN_SUCCESS("Successfully loaded a texture from \"" + m_FilePath + "\"");
 		}
 	}
-	Texture::Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size, bool useMipMaps): m_Name(name), m_Size(size), m_ImageFormat(format), m_UsesMipMaps(useMipMaps)
+	Texture::Texture(stbi_uc* pixelData, std::string name, VkFormat format, glm::uvec2 size, bool useMipMaps)
+		: m_Name(name), m_Size(size), m_ImageFormat(format), m_UsesMipMaps(useMipMaps), Asset{ AssetType::Texture }
 	{
 		CreateImage(pixelData);
 
@@ -62,17 +63,17 @@ namespace en
 
 	Texture* Texture::GetWhiteSRGBTexture()
 	{
-		if (!g_WhiteTexture)
-			g_WhiteTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1));
+		if (!g_SRGBWhiteTexture)
+			g_SRGBWhiteTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, glm::uvec2(1), false);
 
-		return g_WhiteTexture;
+		return g_SRGBWhiteTexture;
 	}
 	Texture* Texture::GetWhiteNonSRGBTexture()
 	{
-		if (!g_GreyTexture)
-			g_GreyTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1));
+		if (!g_NSRGBTexture)
+			g_NSRGBTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, glm::uvec2(1), false);
 
-		return g_GreyTexture;
+		return g_NSRGBTexture;
 	}
 
 	void Texture::CreateImage(void* data)
@@ -143,7 +144,7 @@ namespace en
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 			throw std::runtime_error("Texture::GenerateMipMaps() - The specified image format does not support linear blitting!");
 
-		VkCommandBuffer cmd = Helpers::BeginSingleTimeCommands();
+		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType							= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -219,7 +220,7 @@ namespace en
 			0U, nullptr,
 			1U, &barrier);
 
-		Helpers::EndSingleTimeCommands(cmd);
+		Helpers::EndSingleTimeGraphicsCommands(cmd);
 	}
 	uint32_t Texture::GetMipLevels()
 	{

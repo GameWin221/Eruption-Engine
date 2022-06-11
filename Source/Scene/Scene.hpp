@@ -22,13 +22,13 @@ namespace en
 
 		void RenameSceneObject(std::string oldName, std::string newName);
 
-		void CreatePointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, float radius = 10.0f);
+		PointLight* CreatePointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, float radius = 10.0f, bool active = true);
 		void DeletePointLight(uint32_t index);
 
-		void CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float innerCutoff = 0.2f, float outerCutoff = 0.4f, float range = 8.0f, float intensity = 2.5f);
+		Spotlight* CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float innerCutoff = 0.2f, float outerCutoff = 0.4f, float range = 8.0f, float intensity = 2.5f, bool active = true);
 		void DeleteSpotlight(uint32_t index);
 
-		void CreateDirectionalLight(glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f);
+		DirectionalLight* CreateDirectionalLight(glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, bool active = true);
 		void DeleteDirectionalLight(uint32_t index);
 
 		std::vector<PointLight>&	   GetAllPointLights()		 { return m_PointLights;	   };

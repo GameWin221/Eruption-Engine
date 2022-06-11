@@ -100,7 +100,7 @@ namespace en
 		for (const auto& image : imageInfos)
 		{
 			VkDescriptorImageInfo info{};
-			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			info.imageLayout = image.imageLayout;
 			info.imageView = image.imageView;
 			info.sampler = image.imageSampler;
 			descriptorImageInfos.emplace_back(info);

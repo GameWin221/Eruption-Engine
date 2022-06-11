@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.6.4";
+	windowInfo.title	  = "Eruption Engine v0.6.5";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -96,9 +96,9 @@ void Eruption::Update()
 		if (targetPitch > 89.999f) targetPitch = 89.999f;
 		else if (targetPitch < -89.999f) targetPitch = -89.999f;
 	}
-
-	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, 30.0 * m_DeltaTime);
-	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, 30.0 * m_DeltaTime);
+	
+	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, std::fmin(30.0 * m_DeltaTime, 1.0));
+	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, std::fmin(30.0 * m_DeltaTime, 1.0));
 
 	m_Input->UpdateInput();
 
@@ -115,6 +115,8 @@ void Eruption::Render()
 
 void Eruption::CreateExampleScene()
 {
+	m_ExampleScene = new en::Scene;
+	
 	m_AssetManager->LoadMesh("SkullModel", "Models/Skull/Skull.gltf"  );
 
 	m_AssetManager->LoadTexture("SkullAlbedo", "Models/Skull/SkullAlbedo.jpg");
@@ -126,8 +128,6 @@ void Eruption::CreateExampleScene()
 	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial");
 
 	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
-
-	m_ExampleScene = new en::Scene;
 
 	en::SceneObject* m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->m_Position = glm::vec3(0, 0.5f, -0.3);

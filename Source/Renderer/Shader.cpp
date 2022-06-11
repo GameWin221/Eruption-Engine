@@ -12,12 +12,10 @@ namespace en
         createInfo.codeSize = shaderCode.size();
         createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-        UseContext();
+        if (vkCreateShaderModule(Context::Get().m_LogicalDevice, &createInfo, nullptr, &m_ShaderModule) != VK_SUCCESS)
+            EN_ERROR("Shader::Shader() - Failed to create shader module!");
 
-        if (vkCreateShaderModule(ctx.m_LogicalDevice, &createInfo, nullptr, &m_ShaderModule) != VK_SUCCESS)
-            EN_ERROR("Shader.cpp::Shader::Shader() - Failed to create shader module!");
-
-        VkShaderStageFlagBits shaderStage;
+        VkShaderStageFlagBits shaderStage{};
         switch (shaderType)
         {
         case ShaderType::Vertex:
@@ -39,9 +37,7 @@ namespace en
 
     Shader::~Shader()
     {
-        UseContext();
-
-        vkDestroyShaderModule(ctx.m_LogicalDevice, m_ShaderModule, nullptr);
+        vkDestroyShaderModule(Context::Get().m_LogicalDevice, m_ShaderModule, nullptr);
     }
 
     std::vector<char> Shader::ReadShaderFile(std::string shaderPath)
@@ -49,7 +45,7 @@ namespace en
         std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
 
         if (!file.is_open())
-            EN_ERROR("Shader.cpp::Shader::ReadShaderFile() - Failed to open shader source file!");
+            EN_ERROR("Shader::ReadShaderFile() - Failed to open shader source file!");
 
         size_t fileSize = (size_t)file.tellg();
         std::vector<char> buffer(fileSize);
@@ -57,6 +53,9 @@ namespace en
         file.seekg(0);
         file.read(buffer.data(), fileSize);
         file.close();
+
+        if(buffer.empty())
+            EN_WARN("Shader::ReadShaderFile() - The read buffer is empty!");
 
         return buffer;
     }

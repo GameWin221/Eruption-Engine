@@ -3,13 +3,11 @@
 #ifndef EN_CONTEXT_HPP
 #define EN_CONTEXT_HPP
 
-#include <Common/Helpers.hpp>
-
 #include <Renderer/Window.hpp>
 
 struct SwapChainSupportDetails
 {
-	VkSurfaceCapabilitiesKHR		capabilities;
+	VkSurfaceCapabilitiesKHR		capabilities{};
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR>	presentModes;
 };
@@ -30,27 +28,43 @@ namespace en
 		// Graphics
 		VkSurfaceKHR	 m_WindowSurface;
 		VkPhysicalDevice m_PhysicalDevice;
-		VkQueue			 m_GraphicsQueue;
-		VkQueue			 m_PresentQueue;
 		VkCommandPool    m_CommandPool;
 
-		static Context& GetContext();
+		VkCommandPool m_TransferCommandPool;
+
+		VkQueue	m_GraphicsQueue;
+		VkQueue	m_TransferQueue;
+		VkQueue	m_PresentQueue;
+
+		struct QueueFamilyIndices
+		{
+			std::optional<uint32_t> graphics;
+			std::optional<uint32_t> transfer;
+			std::optional<uint32_t> present;
+
+			bool IsComplete()
+			{
+				return graphics.has_value() && present.has_value() && transfer.has_value();
+			}
+		} m_QueueFamilies;
+
+		static Context& Get();
 
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 
 	private:
 		// Vulkan Initialisation
-		void VKCreateInstance();
-		void VKCreateDebugMessenger();
-		void VKCreateWindowSurface();
-		void VKPickPhysicalDevice();
-		void VKCreateLogicalDevice();
-
-		void VKCreateCommandPool();
+		void CreateInstance();
+		void CreateDebugMessenger();
+		void CreateWindowSurface();
+		void PickPhysicalDevice();
+		void FindQueueFamilies(VkPhysicalDevice& device);
+		void CreateLogicalDevice();
+		void CreateCommandPool();
 
 		// Validation Layers and Extensions
-		bool CheckValidationLayerSupport();
+		bool AreValidationLayerSupported();
 		std::vector<const char*> GetRequiredExtensions();
 
 		// Debug Messenger
@@ -64,6 +78,6 @@ namespace en
 	};
 }
 
-#define UseContext() Context& ctx = Context::GetContext()
+#define UseContext() Context& ctx = Context::Get()
 
 #endif

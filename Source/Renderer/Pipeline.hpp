@@ -7,41 +7,39 @@
 
 namespace en
 {
-	static std::vector<VkClearValue> defaultBlackClearValue{ {0.0f, 0.0f, 0.0f, 1.0f} };
-
 	class Pipeline
 	{
 	public:
 		struct Attachment
 		{
-			VkFormat format = VK_FORMAT_UNDEFINED;
+			VkImageView   imageView   = VK_NULL_HANDLE;
+			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-			VkAttachmentLoadOp  loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			VkAttachmentLoadOp  loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-			VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			VkImageLayout finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			VkImageLayout refLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			uint32_t index = 0U;
+			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 		};
-		struct RenderPassInfo
+		struct RenderingInfo
 		{
 			std::vector<Attachment> colorAttachments{};
 			Attachment depthAttachment{};
-		}; 
+
+			VkExtent2D extent{};
+		};
 		struct PipelineInfo
 		{
+			std::vector<VkFormat> colorFormats{};
+			VkFormat depthFormat{};
+
 			Shader* vShader;
 			Shader* fShader;
 
-			VkExtent2D extent;
-
-			std::vector<VkDescriptorSetLayout> descriptorLayouts;
-			std::vector<VkPushConstantRange> pushConstantRanges;
+			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
+			std::vector<VkPushConstantRange> pushConstantRanges{};
 
 			bool useVertexBindings = false;
-			bool enableDepthTest  = false;
+			bool enableDepthTest = false;
 			bool enableDepthWrite = true;
 			bool blendEnable = false;
 
@@ -51,46 +49,32 @@ namespace en
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 
-		void CreateRenderPass(RenderPassInfo& renderPass);
 		void CreatePipeline(PipelineInfo& pipeline);
 		void CreateSyncSemaphore();
 
 		~Pipeline();
 
-		void Bind(VkCommandBuffer& commandBuffer, VkFramebuffer& framebuffer, VkExtent2D& extent, std::vector<VkClearValue>& clearValues = defaultBlackClearValue);
+		void Bind(VkCommandBuffer& commandBuffer, RenderingInfo& info);
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 
-		void Resize(VkExtent2D& extent);
-		
 		void Destroy();
 
-		VkRenderPass	 m_RenderPass;
+		PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
+		PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
+
 		VkPipelineLayout m_Layout;
 		VkPipeline		 m_Pipeline;
 
 		VkSemaphore m_PassFinished;
 
 	private:
-		// Cached values
-		std::vector<Attachment> m_ColorAttachments;
-		Attachment m_DepthAttachment;
-
 		std::string m_VShaderPath;
 		std::string m_FShaderPath;
 
-		std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
-		std::vector<VkPushConstantRange> m_PushConstantRanges;
+		bool m_Initialised = false;
 
-		bool m_UseVertexBindings;
-		bool m_EnableDepthTest;
-		bool m_EnableDepthWrite;
-		bool m_BlendEnable;
-
-		VkCompareOp m_CompareOp;
-
-		VkCullModeFlags m_CullMode;
-		VkPolygonMode m_PolygonMode;
+		PipelineInfo m_LastInfo{};
 	};
 }
 

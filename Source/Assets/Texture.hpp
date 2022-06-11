@@ -5,6 +5,8 @@
 
 #include "../../EruptionEngine.ini"
 
+#include "Asset.hpp"
+
 #include <stb_image.h>
 
 #include <Renderer/Buffers/MemoryBuffer.hpp>
@@ -12,7 +14,7 @@
 
 namespace en
 {
-	class Texture
+	class Texture : Asset
 	{
 		friend class AssetManager;
 

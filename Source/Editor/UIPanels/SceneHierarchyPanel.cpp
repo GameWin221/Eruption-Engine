@@ -5,6 +5,11 @@ namespace en
 {
 	SceneHierarchyPanel::SceneHierarchyPanel(Renderer* renderer) : m_Renderer(renderer) {}
 
+	bool SceneHierarchyPanel::PressedCopy(void* lightPtr)
+	{
+		return ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsKeyPressed(ImGuiKey_D, false) && lightPtr && !ImGui::IsMouseDown(ImGuiMouseButton_Right);
+	}
+
 	void SceneHierarchyPanel::Render()
 	{
 		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
@@ -33,6 +38,18 @@ namespace en
 
 			if (ImGui::Button("Add a SceneObject", ImVec2(ImGui::GetWindowWidth() - 15.0f, 40)))
 				m_Renderer->GetScene()->CreateSceneObject("New SceneObject", Mesh::GetEmptyMesh());
+
+			else if (PressedCopy(m_ChosenObject))
+			{
+				auto object = m_Renderer->GetScene()->CreateSceneObject(m_ChosenObject->GetName() + "(Copy)", m_ChosenObject->m_Mesh);
+
+				object->m_Active   = m_ChosenObject->m_Active;
+				object->m_Position = m_ChosenObject->m_Position;
+				object->m_Rotation = m_ChosenObject->m_Rotation;
+				object->m_Scale	   = m_ChosenObject->m_Scale;
+
+				m_ChosenObject = object;
+			}
 
 			SPACE();
 
@@ -64,17 +81,27 @@ namespace en
 
 			if (ImGui::Button("+Point Light", ImVec2(ImGui::GetWindowWidth()/3.0f - 10.0f, 40)))
 				m_Renderer->GetScene()->CreatePointLight(glm::vec3(0.0));
-
+			
+			else if (PressedCopy(m_ChosenPointLight))
+				m_ChosenPointLight = m_Renderer->GetScene()->CreatePointLight(m_ChosenPointLight->m_Position, m_ChosenPointLight->m_Color, m_ChosenPointLight->m_Intensity, m_ChosenPointLight->m_Radius, m_ChosenPointLight->m_Active);
+			
 			ImGui::SameLine();
 
 			if (ImGui::Button("+Spot Light", ImVec2(ImGui::GetWindowWidth() / 3.0f - 10.0f, 40)))
 				m_Renderer->GetScene()->CreateSpotlight(glm::vec3(0.0), glm::vec3(1.0, 0.0, 0.0));
-
+			
+			else if (PressedCopy(m_ChosenSpotLight))
+				m_ChosenSpotLight = m_Renderer->GetScene()->CreateSpotlight(m_ChosenSpotLight->m_Position, m_ChosenSpotLight->m_Direction, m_ChosenSpotLight->m_Color, m_ChosenSpotLight->m_InnerCutoff, m_ChosenSpotLight->m_OuterCutoff, m_ChosenSpotLight->m_Range, m_ChosenSpotLight->m_Intensity, m_ChosenSpotLight->m_Active);
+			
 			ImGui::SameLine();
 
 			if (ImGui::Button("+Dir Light", ImVec2(ImGui::GetWindowWidth() / 3.0f - 10.0f, 40)))
 				m_Renderer->GetScene()->CreateDirectionalLight(glm::vec3(0.0, 1.0, 0.0));
-
+			
+			else if (PressedCopy(m_ChosenDirLight))
+				m_ChosenDirLight = m_Renderer->GetScene()->CreateDirectionalLight(m_ChosenDirLight->m_Direction, m_ChosenDirLight->m_Color, m_ChosenDirLight->m_Intensity, m_ChosenDirLight->m_Active);
+			
+			
 			SPACE();
 
 			auto& pointLights = m_Renderer->GetScene()->GetAllPointLights();
