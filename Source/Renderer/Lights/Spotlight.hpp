@@ -8,7 +8,7 @@ namespace en
 	class Spotlight
 	{
 	public:
-		Spotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity);
+		Spotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active);
 		Spotlight() {};
 		~Spotlight() {};
 

@@ -25,6 +25,12 @@ namespace en
 		void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool);
 
 		extern uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+		
+		template<typename T, typename O>
+		T CastTo(O object)
+		{
+			return reinterpret_cast<T>(object);
+		}	
 	}
 }
 

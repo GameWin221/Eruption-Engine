@@ -7,7 +7,7 @@ namespace en
 	class PointLight
 	{
 	public:
-		PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius);
+		PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active);
 		PointLight() {};
 		~PointLight() {};
 

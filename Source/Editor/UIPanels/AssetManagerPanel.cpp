@@ -69,13 +69,13 @@ namespace en
 		std::vector<Asset*> assets;
 
 		for (const auto& mesh : meshes)
-			assets.emplace_back(reinterpret_cast<Asset*>(mesh));
+			assets.emplace_back(Helpers::CastTo<Asset*>(mesh));
 
 		for (const auto& texture : textures)
-			assets.emplace_back(reinterpret_cast<Asset*>(texture));
+			assets.emplace_back(Helpers::CastTo<Asset*>(texture));
 
 		for (const auto& material : materials)
-			assets.emplace_back(reinterpret_cast<Asset*>(material));
+			assets.emplace_back(Helpers::CastTo<Asset*>(material));
 
 		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x + 20.0f));
 
@@ -89,16 +89,16 @@ namespace en
 
 				if (asset->m_Type == AssetType::Mesh)
 				{
-					Mesh* mesh = reinterpret_cast<Mesh*>(asset);
+					Mesh* mesh = Helpers::CastTo<Mesh*>(asset);
 					std::string name = mesh->GetName();
 
 					ImGui::PushID((name + "Mesh").c_str());
 
 					if (AssetButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(2, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial = nullptr;
-						m_ChosenTexture = nullptr;
-						m_ChosenMesh = mesh;
+						m_ChosenMaterial  = nullptr;
+						m_ChosenTexture   = nullptr;
+						m_ChosenMesh	  = mesh;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
@@ -107,16 +107,16 @@ namespace en
 				}
 				else if (asset->m_Type == AssetType::Texture)
 				{
-					Texture* texture = reinterpret_cast<Texture*>(asset);
+					Texture* texture = Helpers::CastTo<Texture*>(asset);
 					std::string name = texture->GetName();
 
 					ImGui::PushID((name + "Texture").c_str());
 
 					if (AssetButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(1, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial = nullptr;
-						m_ChosenTexture = texture;
-						m_ChosenMesh = nullptr;
+						m_ChosenMaterial  = nullptr;
+						m_ChosenTexture   = texture;
+						m_ChosenMesh	  = nullptr;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
@@ -125,16 +125,16 @@ namespace en
 				}
 				else if (asset->m_Type == AssetType::Material)
 				{
-					Material* material = reinterpret_cast<Material*>(asset);
+					Material* material = Helpers::CastTo<Material*>(asset);
 					std::string name = material->GetName();
 
 					ImGui::PushID((name + "Material").c_str());
 
 					if (AssetButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(0, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial = material;
-						m_ChosenTexture = nullptr;
-						m_ChosenMesh = nullptr;
+						m_ChosenMaterial  = material;
+						m_ChosenTexture   = nullptr;
+						m_ChosenMesh	  = nullptr;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}

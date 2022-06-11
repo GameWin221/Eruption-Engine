@@ -19,6 +19,8 @@ namespace en
 	public:
 		SceneHierarchyPanel(Renderer* renderer);
 
+		bool PressedCopy(void* lightPtr);
+
 		void Render();
 
 	private:
