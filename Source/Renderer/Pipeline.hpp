@@ -50,7 +50,6 @@ namespace en
 		};
 
 		void CreatePipeline(PipelineInfo& pipeline);
-		void CreateSyncSemaphore();
 
 		~Pipeline();
 
@@ -65,8 +64,6 @@ namespace en
 
 		VkPipelineLayout m_Layout;
 		VkPipeline		 m_Pipeline;
-
-		VkSemaphore m_PassFinished;
 
 	private:
 		std::string m_VShaderPath;

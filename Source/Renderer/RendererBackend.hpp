@@ -22,6 +22,7 @@
 #include <Renderer/Lights/Spotlight.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
+#include <Renderer/Camera/CameraMatricesBuffer.hpp>
 
 #include <Renderer/Pipeline.hpp>
 #include <Renderer/PipelineInput.hpp>
@@ -207,9 +208,12 @@ namespace en
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 		std::unique_ptr<DynamicFramebuffer> m_HDROffscreen;
 
-		VkCommandBuffer m_CommandBuffer;
+		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
-		VkFence	m_SubmitFence;
+		std::array<VkFence, FRAMES_IN_FLIGHT> m_SubmitFences;
+
+		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_MainSemaphores;
+		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_PresentSemaphores;
 
 		const VkClearValue m_BlackClearValue{};
 
@@ -220,6 +224,8 @@ namespace en
 		Scene* m_Scene = nullptr;
 
 		uint32_t m_ImageIndex = 0U;
+		uint32_t m_FrameIndex = 0U;
+		// Frame in flight index
 
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
@@ -233,10 +239,9 @@ namespace en
 
 		void ReloadBackendImpl();
 
-		void CreateSwapchain();
-
 		void CreateCommandBuffer();
 
+		void CreateSwapchain();
 		void CreateSwapchainFramebuffers();
 
 		void CreateGBuffer();
@@ -260,7 +265,7 @@ namespace en
 
 		void InitImGui();
 
-		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice& device);
+		SwapchainSupportDetails QuerySwapchainSupport(VkPhysicalDevice& device);
 		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 

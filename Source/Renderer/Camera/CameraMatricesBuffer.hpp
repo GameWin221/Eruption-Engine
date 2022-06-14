@@ -3,7 +3,11 @@
 #ifndef EN_CAMERAMATRICESBUFFER_HPP
 #define EN_CAMERAMATRICESBUFFER_HPP
 
+#include "../../EruptionEngine.ini"
+
 #include <Renderer/Buffers/MemoryBuffer.hpp>
+
+#include "Camera.hpp"
 
 namespace en
 {
@@ -13,7 +17,9 @@ namespace en
 		CameraMatricesBuffer();
 		~CameraMatricesBuffer();
 
-		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout);
+		void UpdateMatrices(Camera* camera, uint32_t& frameIndex);
+
+		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t& frameIndex);
 
 		static VkDescriptorSetLayout& GetLayout();
 
@@ -24,11 +30,11 @@ namespace en
 		} m_Matrices;
 
 	private:
-		void CreateDescriptorSet();
+		void CreateDescriptorSets();
 
-		VkDescriptorSet m_DescriptorSet;
+		std::array<VkDescriptorSet, FRAMES_IN_FLIGHT> m_DescriptorSets;
 
-		std::unique_ptr<MemoryBuffer> m_Buffer;
+		std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
 	};
 }
 #endif

@@ -35,13 +35,6 @@ namespace en
 		m_Yaw   = yaw;
 	}
 
-	void Camera::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, CameraMatricesBuffer* cameraMatricesBuffer)
-	{
-		cameraMatricesBuffer->m_Matrices.proj = GetProjMatrix();
-		cameraMatricesBuffer->m_Matrices.view = GetViewMatrix();
-		cameraMatricesBuffer->Bind(cmd, layout);
-	}
-
 	void Camera::UpdateProjMatrix()
 	{
 		if (m_DynamicallyScaled)

@@ -256,6 +256,7 @@
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
+    <ClCompile Include="Source\Renderer\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Renderer\Image.hpp" />
@@ -306,6 +307,7 @@
     <ClInclude Include="Source\Input\InputManager.hpp" />
     <ClInclude Include="Source\Editor\EditorLayer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
+    <ClInclude Include="Source\Renderer\Swapchain.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
