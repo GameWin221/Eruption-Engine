@@ -3,6 +3,8 @@
 #ifndef EN_MEMORYBUFFER_HPP
 #define EN_MEMORYBUFFER_HPP
 
+#include <Renderer/Image.hpp>
+
 namespace en
 {
     class MemoryBuffer
@@ -13,7 +15,7 @@ namespace en
 
         void MapMemory(const void* memory, const VkDeviceSize& memorySize);
         void CopyTo(MemoryBuffer* dstBuffer);
-        void CopyTo(VkImage& dstImage, uint32_t width, uint32_t height);
+        void CopyTo(Image* dstImage);
 
         const VkBuffer&     GetHandle() const { return m_Buffer;     };
         const VkDeviceSize& GetSize()   const { return m_BufferSize; };

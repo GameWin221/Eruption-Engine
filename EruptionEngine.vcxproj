@@ -182,6 +182,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Image.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
@@ -255,8 +256,10 @@
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
+    <ClCompile Include="Source\Renderer\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Image.hpp" />
     <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
@@ -304,6 +307,7 @@
     <ClInclude Include="Source\Input\InputManager.hpp" />
     <ClInclude Include="Source\Editor\EditorLayer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
+    <ClInclude Include="Source\Renderer\Swapchain.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />

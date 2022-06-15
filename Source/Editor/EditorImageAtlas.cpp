@@ -3,13 +3,11 @@
 
 namespace en
 {
-	EditorImageAtlas::EditorImageAtlas(std::string atlasPath, uint32_t xSize, int32_t ySize) : m_AtlasSize(xSize, ySize)
+	EditorImageAtlas::EditorImageAtlas(std::string atlasPath, uint32_t x, int32_t y)
 	{
 		m_Texture = std::make_unique<Texture>(atlasPath, "EditorImageAtlas", VK_FORMAT_R8G8B8A8_SRGB, false, false);
 
-		m_TextureSize = m_Texture->GetSize();
-
-		m_ImageUVSize = (glm::vec2)m_TextureSize / (glm::vec2)m_AtlasSize / (glm::vec2)m_TextureSize;
+		m_ImageUVSize = glm::vec2(1.0f) / glm::vec2(x, y);
 
 		CreateDescriptorPool();
 
@@ -77,7 +75,7 @@ namespace en
 
 		VkDescriptorImageInfo atlasImageInfo{};
 		atlasImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		atlasImageInfo.imageView   = m_Texture->m_ImageView;
+		atlasImageInfo.imageView   = m_Texture->m_Image->m_ImageView;
 		atlasImageInfo.sampler     = m_Texture->m_ImageSampler;
 
 		VkWriteDescriptorSet descriptorWrite{};

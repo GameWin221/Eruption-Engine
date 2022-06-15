@@ -184,8 +184,16 @@ namespace en
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 
-		constexpr VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{
+		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures
+		{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+			.descriptorBindingUpdateUnusedWhilePending = VK_TRUE
+		};
+
+		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature
+		{
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+			.pNext = &descriptorFeatures,
 			.dynamicRendering = VK_TRUE
 		};
 
@@ -222,7 +230,7 @@ namespace en
 		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		if (vkCreateCommandPool(m_LogicalDevice, &commandPoolCreateInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
-			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a command pool!");
+			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a graphics command pool!");
 
 		VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {};
 		transferCommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -334,7 +342,7 @@ namespace en
 		bool swapChainAdequate = false;
 		if (extensionsSupported)
 		{
-			SwapChainSupportDetails swapChainSupport;
+			SwapchainSupportDetails swapChainSupport;
 
 			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_WindowSurface, &swapChainSupport.capabilities);
 

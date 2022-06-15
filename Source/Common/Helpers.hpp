@@ -15,10 +15,12 @@ namespace en
 		extern VkCommandBuffer BeginSingleTimeTransferCommands();
 		extern void EndSingleTimeTransferCommands(VkCommandBuffer& commandBuffer);
 
-		extern void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels = 1U);
+		extern void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, VkExtent2D size, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipLevels = 1U);
 		extern void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels = 1U);
 		extern void DestroyImage(VkImage& image, VkDeviceMemory& memory);
 
+		extern void CreateSampler(VkSampler& sampler, VkFilter filtering = VK_FILTER_LINEAR, uint32_t anisotropy = 0U, float maxLod = 0.0f, float mipLodBias = 0.0f);
+		
 		extern void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels = 1U, VkCommandBuffer cmdBuffer = VK_NULL_HANDLE);
 
 		void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags);

@@ -5,7 +5,6 @@
 
 #include <Renderer/Window.hpp>
 #include <Common/Helpers.hpp>
-#include <Renderer/Camera/CameraMatricesBuffer.hpp>
 
 namespace en
 {
@@ -46,8 +45,6 @@ namespace en
 		float m_Exposure;
 
 		bool m_DynamicallyScaled;
-
-		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, CameraMatricesBuffer* cameraMatricesBuffer);
 
 		const glm::mat4& GetProjMatrix() { UpdateProjMatrix(); return m_Proj; };
 		const glm::mat4& GetViewMatrix() { UpdateViewMatrix(); return m_View; };

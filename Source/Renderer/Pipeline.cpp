@@ -243,22 +243,10 @@ namespace en
 
 		m_Initialised = true;
 	}
-	void Pipeline::CreateSyncSemaphore()
-	{
-		UseContext();
-
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		if (vkCreateSemaphore(ctx.m_LogicalDevice, &semaphoreInfo, nullptr, &m_PassFinished) != VK_SUCCESS)
-			EN_ERROR("Pipeline::CreateSyncSemaphore - Failed to create sync objects!");
-	}
 
 	void Pipeline::Destroy()
 	{
 		UseContext();
-
-		vkDestroySemaphore(ctx.m_LogicalDevice, m_PassFinished, nullptr);
 
 		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
 		vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);

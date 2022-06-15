@@ -35,7 +35,7 @@ namespace en
 
 	private:
 		void CreateDescriptorPool(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo);
-		void CreateDescriptorSet(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo);
+		void CreateDescriptorSet();
 
 		VkDescriptorPool m_DescriptorPool;
 		VkDescriptorSet  m_DescriptorSet;

@@ -200,7 +200,7 @@ namespace en
 
     void AssetManager::UpdateMaterials()
     {
-        for (auto& material : m_Materials)
+        for (const auto& material : m_Materials)
             material.second->UpdateDescriptorSet();
     }
 

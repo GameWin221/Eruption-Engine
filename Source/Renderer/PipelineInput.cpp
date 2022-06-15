@@ -7,7 +7,7 @@ namespace en
 	PipelineInput::PipelineInput(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfo);
-		CreateDescriptorSet(imageInfos, bufferInfo);
+		CreateDescriptorSet();
 		UpdateDescriptorSet(imageInfos, bufferInfo);
 	}
 	PipelineInput::~PipelineInput()
@@ -79,7 +79,7 @@ namespace en
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor pool!");
 	}
-	void PipelineInput::CreateDescriptorSet(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo)
+	void PipelineInput::CreateDescriptorSet()
 	{
 		UseContext();
 
@@ -91,7 +91,7 @@ namespace en
 
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
-		}
+	}
 	void PipelineInput::UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
 	{
 		UseContext();
@@ -141,6 +141,5 @@ namespace en
 		}
 
 		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0U, nullptr);
-
 	}
 }

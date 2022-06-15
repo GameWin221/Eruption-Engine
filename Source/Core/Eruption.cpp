@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.6.5";
+	windowInfo.title	  = "Eruption Engine v0.6.6";
 	windowInfo.resizable  = true;
 	windowInfo.fullscreen = false;
 	windowInfo.size		  = glm::ivec2(1920, 1080);
@@ -63,8 +63,14 @@ void Eruption::Update()
 	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::I, en::InputState::Pressed))
 		m_Editor->SetVisibility(!m_Editor->GetVisibility());
 
-	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
+	else if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
 		m_Renderer->ReloadRenderer();
+
+	else if (m_Input->IsKey(en::Key::Y, en::InputState::Pressed))
+	{
+		m_Renderer->SetVSync(false);
+		m_Renderer->GetPPParams().antialiasingMode = en::VulkanRendererBackend::AntialiasingMode::None;
+	}
 
 	static float targetYaw = m_Camera->m_Yaw;
 	static float targetPitch = m_Camera->m_Pitch;

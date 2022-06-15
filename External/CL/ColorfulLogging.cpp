@@ -12,7 +12,7 @@ namespace cl
 #endif
 
 	// A map of running benchmarks
-	std::map<std::string, std::chrono::system_clock::time_point> benchmarks;
+	std::map<std::string, std::chrono::high_resolution_clock::time_point> benchmarks;
 
 
 	// Returns current system time
@@ -61,7 +61,7 @@ namespace cl
 	{
 		if (benchmarks.count(bechmarkName) == 0)
 		{
-			benchmarks[bechmarkName] = std::chrono::system_clock::now();
+			benchmarks[bechmarkName] = std::chrono::high_resolution_clock::now();
 		}
 
 #ifdef DEBUG_MODE
@@ -75,7 +75,7 @@ namespace cl
 	{
 		if (benchmarks.count(bechmarkName) != 0)
 		{
-			auto now = std::chrono::system_clock::now();
+			auto now = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> diff = now - benchmarks[bechmarkName];
 			return diff.count();
 		}
@@ -94,7 +94,7 @@ namespace cl
 		if (benchmarks.count(bechmarkName) != 0)
 		{
 			double time = BenchmarkGetTime(bechmarkName);
-			benchmarks[bechmarkName] = std::chrono::system_clock::now();
+			benchmarks[bechmarkName] = std::chrono::high_resolution_clock::now();
 			return time;
 		}
 		else

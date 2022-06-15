@@ -22,10 +22,13 @@
 #include <Renderer/Lights/Spotlight.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
+#include <Renderer/Camera/CameraMatricesBuffer.hpp>
 
 #include <Renderer/Pipeline.hpp>
 #include <Renderer/PipelineInput.hpp>
 #include <Renderer/DynamicFramebuffer.hpp>
+
+#include <Renderer/Swapchain.hpp>
 
 #define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
 #define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
@@ -101,28 +104,6 @@ namespace en
 		} m_PostProcessParams;
 
 	private:
-		struct Swapchain
-		{
-			VkSwapchainKHR			   swapchain;
-			std::vector<VkImage>	   images;
-			std::vector<VkImageView>   imageViews;
-			VkFormat				   imageFormat;
-			std::vector<VkFramebuffer> framebuffers;
-			VkExtent2D				   extent;
-
-			void Destroy(VkDevice& device)
-			{
-				vkDestroySwapchainKHR(device, swapchain, nullptr);
-
-				for (auto& imageView : imageViews)
-					vkDestroyImageView(device, imageView, nullptr);
-
-				for (auto& framebuffer : framebuffers)
-					vkDestroyFramebuffer(device, framebuffer, nullptr);
-			}
-
-		} m_Swapchain;
-
 		struct Lights
 		{
 			struct LightsBufferObject
@@ -149,6 +130,8 @@ namespace en
 			uint32_t lastPointLightsSize = 0U;
 			uint32_t lastSpotlightsSize = 0U;
 			uint32_t lastDirLightsSize = 0U;
+
+			bool changed = false;
 
 		} m_Lights;
 
@@ -178,6 +161,8 @@ namespace en
 
 		} m_ImGui;
 
+		std::unique_ptr<Swapchain> m_Swapchain;
+
 		std::unique_ptr<Pipeline> m_DepthPipeline;
 
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
@@ -197,37 +182,35 @@ namespace en
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 		std::unique_ptr<DynamicFramebuffer> m_HDROffscreen;
 
-		VkCommandBuffer m_CommandBuffer;
+		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
-		VkFence	m_SubmitFence;
+		std::array<VkFence, FRAMES_IN_FLIGHT> m_SubmitFences;
+
+		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_MainSemaphores;
+		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_PresentSemaphores;
 
 		const VkClearValue m_BlackClearValue{};
 
 		// References to existing objects
-		Context* m_Ctx;
-		Camera* m_MainCamera;
+		Context* m_Ctx		  = nullptr;
+		Camera*  m_MainCamera = nullptr;
+		Scene*	 m_Scene	  = nullptr;
 
-		Scene* m_Scene = nullptr;
-
-		uint32_t m_ImageIndex = 0U;
+		uint32_t m_SwapchainImageIndex = 0U;
+		uint32_t m_FrameIndex = 0U;
+		// Frame in flight index
 
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
 		bool m_VSync = true;
 
-		bool m_LightsChanged = false;
-
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
 
 		void ReloadBackendImpl();
 
-		void CreateSwapchain();
-
 		void CreateCommandBuffer();
-
-		void CreateSwapchainFramebuffers();
 
 		void CreateGBuffer();
 		void CreateHDROffscreen();
@@ -246,16 +229,7 @@ namespace en
 
 		void CreateSyncObjects();
 
-		void CreateCameraMatricesBuffer();
-
 		void InitImGui();
-
-		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice& device);
-		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-		VkFormat FindDepthFormat();
 	};
 }
 
