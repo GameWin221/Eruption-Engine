@@ -57,8 +57,7 @@ namespace en
 
         VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
 
-        VkBufferCopy copyRegion{};
-        copyRegion.size = m_BufferSize;
+        const VkBufferCopy copyRegion{ .size = m_BufferSize };
 
         vkCmdCopyBuffer(commandBuffer, m_Buffer, dstBuffer->m_Buffer, 1U, &copyRegion);
 

@@ -919,50 +919,58 @@ namespace en
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-
 		ImGui::StyleColorsDark();
 
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format		   = m_Swapchain->GetFormat();
-		colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		colorAttachment.finalLayout	   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		VkAttachmentDescription colorAttachment
+		{
+			.format			= m_Swapchain->GetFormat(),
+			.samples		= VK_SAMPLE_COUNT_1_BIT,
+			.loadOp			= VK_ATTACHMENT_LOAD_OP_LOAD,
+			.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
+			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		};
 
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		constexpr VkAttachmentReference colorAttachmentRef
+		{
+			.attachment = 0U,
+			.layout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		};
 
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
+		VkSubpassDescription subpass
+		{
+			.pipelineBindPoint	  = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.colorAttachmentCount = 1U,
+			.pColorAttachments    = &colorAttachmentRef
+		};
 
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		constexpr VkSubpassDependency dependency
+		{
+			.srcSubpass    = VK_SUBPASS_EXTERNAL,
+			.dstSubpass    = 0U,
+			.srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+		};
 
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
+		VkRenderPassCreateInfo renderPassInfo
+		{
+			.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+			.attachmentCount = 1U,
+			.pAttachments	 = &colorAttachment,
+			.subpassCount	 = 1U,
+			.pSubpasses		 = &subpass,
+			.dependencyCount = 1U,
+			.pDependencies	 = &dependency,
+		};
 
 		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_ImGui.renderPass) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's render pass!");
 
-		VkDescriptorPoolSize poolSizes[] =
+		constexpr VkDescriptorPoolSize poolSizes[]
 		{
 			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
@@ -976,29 +984,34 @@ namespace en
 			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
 		};
-		VkDescriptorPoolCreateInfo poolInfo = {};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-		poolInfo.maxSets = 1000 * IM_ARRAYSIZE(poolSizes);
-		poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
-		poolInfo.pPoolSizes = poolSizes;
+
+		VkDescriptorPoolCreateInfo poolInfo
+		{
+			.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+			.maxSets	   = 1000 * IM_ARRAYSIZE(poolSizes),
+			.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes),
+			.pPoolSizes	   = poolSizes
+		};
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_ImGui.descriptorPool) != VK_SUCCESS)
 			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
 
 		ImGui_ImplGlfw_InitForVulkan(Window::Get().m_GLFWWindow, true);
-		ImGui_ImplVulkan_InitInfo initInfo = {};
-		initInfo.Instance = m_Ctx->m_Instance;
-		initInfo.PhysicalDevice = m_Ctx->m_PhysicalDevice;
-		initInfo.Device = m_Ctx->m_LogicalDevice;
-		initInfo.QueueFamily = m_Ctx->m_QueueFamilies.graphics.value();
-		initInfo.Queue = m_Ctx->m_GraphicsQueue;
-		initInfo.PipelineCache = VK_NULL_HANDLE;
-		initInfo.DescriptorPool = m_ImGui.descriptorPool;
-		initInfo.Allocator = VK_NULL_HANDLE;
-		initInfo.MinImageCount = m_Swapchain->m_ImageViews.size();
-		initInfo.ImageCount = m_Swapchain->m_ImageViews.size();
-		initInfo.CheckVkResultFn = ImGuiCheckResult;
+
+		ImGui_ImplVulkan_InitInfo initInfo
+		{
+			.Instance		 = m_Ctx->m_Instance,
+			.PhysicalDevice  = m_Ctx->m_PhysicalDevice,
+			.Device			 = m_Ctx->m_LogicalDevice,
+			.QueueFamily	 = m_Ctx->m_QueueFamilies.graphics.value(),
+			.Queue			 = m_Ctx->m_GraphicsQueue,
+			.DescriptorPool  = m_ImGui.descriptorPool,
+			.MinImageCount   = static_cast<uint32_t>(m_Swapchain->m_ImageViews.size()),
+			.ImageCount		 = static_cast<uint32_t>(m_Swapchain->m_ImageViews.size()),
+			.CheckVkResultFn = ImGuiCheckResult
+		};
+
 		ImGui_ImplVulkan_Init(&initInfo, m_ImGui.renderPass);
 
 		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
