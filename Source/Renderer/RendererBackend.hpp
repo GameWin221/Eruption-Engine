@@ -28,6 +28,8 @@
 #include <Renderer/PipelineInput.hpp>
 #include <Renderer/DynamicFramebuffer.hpp>
 
+#include <Renderer/Swapchain.hpp>
+
 #define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
 #define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
 
@@ -102,38 +104,6 @@ namespace en
 		} m_PostProcessParams;
 
 	private:
-		struct Swapchain
-		{
-			VkSwapchainKHR			   swapchain;
-			std::vector<VkImage>	   images;
-			std::vector<VkImageView>   imageViews;
-			VkFormat				   imageFormat;
-			std::vector<VkFramebuffer> framebuffers;
-			VkExtent2D				   extent;
-
-			std::vector<VkImageLayout> currentLayouts;
-
-			void Destroy(VkDevice& device)
-			{
-				vkDestroySwapchainKHR(device, swapchain, nullptr);
-
-				for (auto& imageView : imageViews)
-					vkDestroyImageView(device, imageView, nullptr);
-
-				for (auto& framebuffer : framebuffers)
-					vkDestroyFramebuffer(device, framebuffer, nullptr);
-
-				currentLayouts.clear();
-			}
-
-			void ChangeLayout(VkImageLayout newLayout, int index, VkCommandBuffer& cmd)
-			{
-				Helpers::TransitionImageLayout(images[index], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, currentLayouts[index], newLayout, 1U, cmd);
-				currentLayouts[index] = newLayout;
-			}
-
-		} m_Swapchain;
-
 		struct Lights
 		{
 			struct LightsBufferObject
@@ -160,6 +130,8 @@ namespace en
 			uint32_t lastPointLightsSize = 0U;
 			uint32_t lastSpotlightsSize = 0U;
 			uint32_t lastDirLightsSize = 0U;
+
+			bool changed = false;
 
 		} m_Lights;
 
@@ -188,6 +160,8 @@ namespace en
 			}
 
 		} m_ImGui;
+
+		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
 
@@ -218,12 +192,11 @@ namespace en
 		const VkClearValue m_BlackClearValue{};
 
 		// References to existing objects
-		Context* m_Ctx;
-		Camera* m_MainCamera;
+		Context* m_Ctx		  = nullptr;
+		Camera*  m_MainCamera = nullptr;
+		Scene*	 m_Scene	  = nullptr;
 
-		Scene* m_Scene = nullptr;
-
-		uint32_t m_ImageIndex = 0U;
+		uint32_t m_SwapchainImageIndex = 0U;
 		uint32_t m_FrameIndex = 0U;
 		// Frame in flight index
 
@@ -232,17 +205,12 @@ namespace en
 		bool m_SkipFrame = false;
 		bool m_VSync = true;
 
-		bool m_LightsChanged = false;
-
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
 
 		void ReloadBackendImpl();
 
 		void CreateCommandBuffer();
-
-		void CreateSwapchain();
-		void CreateSwapchainFramebuffers();
 
 		void CreateGBuffer();
 		void CreateHDROffscreen();
@@ -261,16 +229,7 @@ namespace en
 
 		void CreateSyncObjects();
 
-		void CreateCameraMatricesBuffer();
-
 		void InitImGui();
-
-		SwapchainSupportDetails QuerySwapchainSupport(VkPhysicalDevice& device);
-		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-		VkFormat FindDepthFormat();
 	};
 }
 

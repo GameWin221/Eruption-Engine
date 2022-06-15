@@ -184,8 +184,16 @@ namespace en
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 
-		constexpr VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{
+		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures
+		{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+			.descriptorBindingUpdateUnusedWhilePending = VK_TRUE
+		};
+
+		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature
+		{
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+			.pNext = &descriptorFeatures,
 			.dynamicRendering = VK_TRUE
 		};
 

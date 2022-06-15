@@ -196,10 +196,25 @@ namespace en
 			metalnessLayoutBinding
 		};
 
+		std::array<VkDescriptorBindingFlags, 4> flags = 
+		{ 
+			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT
+		};
+
+		VkDescriptorSetLayoutBindingFlagsCreateInfo flagsCreateInfo{};
+		flagsCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+		flagsCreateInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		flagsCreateInfo.pBindingFlags = flags.data();
+
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
+		layoutInfo.pNext = &flagsCreateInfo;
+
 
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &g_MatDescriptorSetLayout) != VK_SUCCESS)
 			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor set layout!");
@@ -219,7 +234,7 @@ namespace en
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes	   = poolSizes.data();
 		poolInfo.maxSets	   = static_cast<uint32_t>(MAX_MATERIALS);
-		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &g_MatDescriptorPool) != VK_SUCCESS)
 			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor pool!");

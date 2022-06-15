@@ -28,8 +28,8 @@ namespace en
 		SwapchainSupportDetails swapChainSupport = QuerySwapchainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode = vSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
-		VkExtent2D		   extent = ChooseSwapExtent(swapChainSupport.capabilities);
+		VkPresentModeKHR   presentMode	 = vSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
@@ -76,7 +76,7 @@ namespace en
 		vkGetSwapchainImagesKHR(ctx.m_LogicalDevice, m_Swapchain, &imageCount, m_Images.data());
 
 		m_ImageFormat = surfaceFormat.format;
-		extent = extent;
+		m_Extent = extent;
 
 		m_ImageViews.resize(m_Images.size());
 		m_CurrentLayouts.resize(m_Images.size());
