@@ -12,16 +12,24 @@ namespace en
 	public:
 		struct ImageInfo
 		{
-			uint32_t    index		 = 0U;
-			VkImageView imageView	 = VK_NULL_HANDLE;
-			VkSampler   imageSampler = VK_NULL_HANDLE;
-			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			uint32_t      index		   = 0U;
+			VkImageView   imageView	   = VK_NULL_HANDLE;
+			VkSampler     imageSampler = VK_NULL_HANDLE;
+			VkImageLayout imageLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		};
 		struct BufferInfo
 		{
 			uint32_t	 index  = 0U;
 			VkBuffer	 buffer = VK_NULL_HANDLE;
 			VkDeviceSize size	= 0U;
+
+			VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		};
 
 		PipelineInput(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});

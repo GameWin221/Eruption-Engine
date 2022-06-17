@@ -87,8 +87,8 @@ namespace en
 				throw std::runtime_error("Pipeline::CreatePipeline() - Unable to load vkCmdBeginRenderingKHR and vkCmdEndRenderingKHR");
 		}
 
-		m_VShaderPath = pipeline.vShader->GetPath();
-		m_FShaderPath = pipeline.fShader->GetPath();
+		m_VShaderPath = pipeline.vShader->m_SourcePath;
+		m_FShaderPath = pipeline.fShader->m_SourcePath;
 
 		m_LastInfo = pipeline;
 

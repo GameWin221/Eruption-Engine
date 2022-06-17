@@ -3,9 +3,9 @@
 
 namespace en
 {
-    Shader::Shader(std::string shaderPath, const ShaderType& shaderType) : m_Path(shaderPath)
+    Shader::Shader(std::string sourcePath, const ShaderType shaderType) : m_SourcePath(sourcePath)
     {
-        auto shaderCode = Shader::ReadShaderFile(shaderPath);
+        auto shaderCode = Shader::ReadShaderFile(m_SourcePath);
 
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -40,9 +40,9 @@ namespace en
         vkDestroyShaderModule(Context::Get().m_LogicalDevice, m_ShaderModule, nullptr);
     }
 
-    std::vector<char> Shader::ReadShaderFile(std::string shaderPath)
+    std::vector<char> Shader::ReadShaderFile(const std::string path)
     {
-        std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
+        std::ifstream file(path, std::ios::ate | std::ios::binary);
 
         if (!file.is_open())
             EN_ERROR("Shader::ReadShaderFile() - Failed to open shader source file!");

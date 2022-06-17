@@ -144,6 +144,9 @@
     <ClCompile Include="Source\Renderer\Swapchain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\ComputeShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -293,6 +296,9 @@
     <ClInclude Include="Source\Renderer\Swapchain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\ComputeShader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -300,7 +306,7 @@
     <None Include="Shaders\GeometryVertex.vert" />
     <None Include="Shaders\LightingFrag.frag" />
     <None Include="Shaders\FullscreenTriVert.vert" />
-    <None Include="Shaders\TonemapFrag.frag" />
+    <None Include="Shaders\TonemapComp.comp" />
     <None Include="Shaders\DepthFragment.frag" />
     <None Include="Shaders\DepthVertex.vert" />
     <None Include="Shaders\FXAA.frag" />

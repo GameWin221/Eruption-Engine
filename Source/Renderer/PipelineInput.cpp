@@ -33,9 +33,9 @@ namespace en
 			VkDescriptorSetLayoutBinding binding{};
 			binding.binding			   = image.index;
 			binding.descriptorCount	   = 1U;
-			binding.descriptorType	   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			binding.descriptorType	   = image.type;
 			binding.pImmutableSamplers = nullptr;
-			binding.stageFlags		   = VK_SHADER_STAGE_FRAGMENT_BIT;
+			binding.stageFlags		   = image.stage;
 
 			bindings.emplace_back(binding);
 		}
@@ -44,9 +44,9 @@ namespace en
 		{
 			VkDescriptorSetLayoutBinding binding{};
 			binding.binding			= bufferInfo.index;
-			binding.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			binding.descriptorType  = bufferInfo.type;
 			binding.descriptorCount = 1U;
-			binding.stageFlags		= VK_SHADER_STAGE_FRAGMENT_BIT;
+			binding.stageFlags		= bufferInfo.stage;
 
 			bindings.emplace_back(binding);
 		}
@@ -114,7 +114,7 @@ namespace en
 			descriptorWrite.dstSet = m_DescriptorSet;
 			descriptorWrite.dstBinding = image.index;
 			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrite.descriptorType = image.type;
 			descriptorWrite.descriptorCount = 1U;
 			descriptorWrite.pImageInfo = &descriptorImageInfos[i++];
 
@@ -133,7 +133,7 @@ namespace en
 			descriptorWrite.dstSet = m_DescriptorSet;
 			descriptorWrite.dstBinding = bufferInfo.index;
 			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorType = bufferInfo.type;
 			descriptorWrite.descriptorCount = 1U;
 			descriptorWrite.pBufferInfo = &info;
 
