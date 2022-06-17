@@ -32,8 +32,8 @@ namespace en
 			std::vector<VkFormat> colorFormats{};
 			VkFormat depthFormat{};
 
-			Shader* vShader;
-			Shader* fShader;
+			Shader* vShader = nullptr;
+			Shader* fShader = nullptr;
 
 			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
 			std::vector<VkPushConstantRange> pushConstantRanges{};

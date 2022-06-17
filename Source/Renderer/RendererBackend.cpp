@@ -679,21 +679,21 @@ namespace en
 		m_DepthPipeline = std::make_unique<Pipeline>();
 
 		Shader vShader("Shaders/DepthVertex.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/DepthFragment.spv", ShaderType::Fragment);
 
-		VkPushConstantRange objectPushConstant{};
-		objectPushConstant.offset = 0U;
-		objectPushConstant.size = sizeof(PerObjectData);
-		objectPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		VkPushConstantRange objectPushConstant{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset		= 0U,
+			.size		= sizeof(PerObjectData)
+		};
 
-		Pipeline::PipelineInfo pipelineInfo{};
-		pipelineInfo.depthFormat = m_GBuffer->m_Attachments[3].m_Format;
-		pipelineInfo.vShader = &vShader;
-		pipelineInfo.fShader = &fShader;
-		pipelineInfo.descriptorLayouts = { CameraMatricesBuffer::GetLayout() };
-		pipelineInfo.pushConstantRanges = { objectPushConstant };
-		pipelineInfo.enableDepthTest = true;
-		pipelineInfo.useVertexBindings = true;
+		Pipeline::PipelineInfo pipelineInfo{
+			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
+			.vShader			= &vShader,
+			.descriptorLayouts  = { CameraMatricesBuffer::GetLayout() },
+			.pushConstantRanges = { objectPushConstant },
+			.useVertexBindings  = true,
+			.enableDepthTest    = true
+		};
 
 		m_DepthPipeline->CreatePipeline(pipelineInfo);
 	}

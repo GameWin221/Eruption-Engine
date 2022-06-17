@@ -87,8 +87,11 @@ namespace en
 				throw std::runtime_error("Pipeline::CreatePipeline() - Unable to load vkCmdBeginRenderingKHR and vkCmdEndRenderingKHR");
 		}
 
-		m_VShaderPath = pipeline.vShader->m_SourcePath;
-		m_FShaderPath = pipeline.fShader->m_SourcePath;
+		if(pipeline.vShader)
+			m_VShaderPath = pipeline.vShader->m_SourcePath;
+
+		if (pipeline.fShader)
+			m_FShaderPath = pipeline.fShader->m_SourcePath;
 
 		m_LastInfo = pipeline;
 
@@ -203,23 +206,28 @@ namespace en
 		if (vkCreatePipelineLayout(ctx.m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_Layout) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline layout!");
 
-		VkPipelineShaderStageCreateInfo shaderStages[] = { pipeline.vShader->m_ShaderInfo, pipeline.fShader->m_ShaderInfo };
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages; 
 
-		std::vector<VkFormat> colorFormats;
-		for (auto& format : pipeline.colorFormats)
-			colorFormats.push_back(format);
+		if (pipeline.vShader)
+			shaderStages.emplace_back(pipeline.vShader->m_ShaderInfo);
+
+		if(pipeline.fShader)
+			shaderStages.emplace_back(pipeline.fShader->m_ShaderInfo);
+
+		if (shaderStages.size() == 0)
+			EN_ERROR("Pipeline::CreatePipeline() - No shaders stages specified!");
 
 		const VkPipelineRenderingCreateInfoKHR pipelineKHRCreateInfo{
 			.sType					 = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
-			.colorAttachmentCount	 = static_cast<uint32_t>(colorFormats.size()),
-			.pColorAttachmentFormats = colorFormats.data(),
+			.colorAttachmentCount	 = static_cast<uint32_t>(pipeline.colorFormats.size()),
+			.pColorAttachmentFormats = pipeline.colorFormats.data(),
 			.depthAttachmentFormat   = pipeline.depthFormat
 		};
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2U;
-		pipelineInfo.pStages	= shaderStages;
+		pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+		pipelineInfo.pStages	= shaderStages.data();
 
 		pipelineInfo.pVertexInputState   = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssembly;
