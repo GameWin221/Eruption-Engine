@@ -19,7 +19,7 @@ namespace en
 
 		void OnUIDraw();
 
-		void SetVisibility(bool visibility);
+		void SetVisibility(const bool& visibility);
 		const bool& GetVisibility() const { return m_Visible; };
 
 	private:

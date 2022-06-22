@@ -12,7 +12,7 @@
 
 namespace en
 {
-	class SubMesh : Asset
+	class SubMesh : public Asset
 	{
 	public:
 		SubMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material);

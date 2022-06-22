@@ -14,9 +14,20 @@ namespace en
 		None
 	};
 
+	struct Asset;
+
+	template<class T>
+	concept IsAssetChild = std::derived_from<T, Asset> || std::same_as<T, Asset>;
+
 	struct Asset
 	{
-		AssetType m_Type = AssetType::None;
+		const AssetType m_Type = AssetType::None;
+
+		template<IsAssetChild T>
+		T* CastTo()
+		{
+			return reinterpret_cast<T*>(this);
+		}
 	};
 }
 

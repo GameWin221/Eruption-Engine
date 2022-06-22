@@ -14,13 +14,12 @@ namespace en
 
         void Bind(VkCommandBuffer& commandBuffer);
 
-        const VkDeviceSize& GetBufferSize()   const { return m_Buffer->GetSize(); };
-        const uint32_t&     GetIndicesCount() const { return m_IndicesCount;      };
+        const uint32_t m_IndicesCount;
+
+        const VkDeviceSize& GetBufferSize() const { return m_Buffer->m_BufferSize; };
 
     private:
         std::unique_ptr<MemoryBuffer> m_Buffer;
-
-        uint32_t m_IndicesCount;
     };
 }
 

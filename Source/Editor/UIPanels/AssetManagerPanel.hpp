@@ -27,9 +27,7 @@ namespace en
 		AssetManager*	  m_AssetManager = nullptr;
 		EditorImageAtlas* m_Atlas		 = nullptr;
 
-		Material* m_ChosenMaterial = nullptr;
-		Texture*  m_ChosenTexture  = nullptr;
-		Mesh*	  m_ChosenMesh	   = nullptr;
+		Asset* m_ChosenAsset = nullptr;
 
 		const ImColor m_AssetEditorBG = ImColor(40, 40, 40, 255);
 
@@ -52,7 +50,27 @@ namespace en
 		void EditingTexture(bool* open);
 		void CreatingMaterial();
 
-		bool AssetButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos);
+		bool AssetButtonLabeled(const std::string& label, const  glm::vec2& size, const glm::uvec2& imagePos);
+
+		template<IsAssetChild T>
+		bool IsTypeSelected()
+		{
+			if (!m_ChosenAsset)
+				return false;
+
+			if constexpr (std::same_as<T, Mesh>)
+				return (m_ChosenAsset->m_Type == AssetType::Mesh);
+			else if constexpr (std::same_as<T, SubMesh>)
+				return (m_ChosenAsset->m_Type == AssetType::SubMesh);
+			else if constexpr (std::same_as<T, Texture>)
+				return (m_ChosenAsset->m_Type == AssetType::Texture);
+			else if constexpr (std::same_as<T, Material>)
+				return (m_ChosenAsset->m_Type == AssetType::Material);
+			else
+				EN_ERROR("AssetManagerPanel::IsTypeSelected() - T is an uknown type!");
+		
+			return false;
+		}
 	};
 }
 

@@ -18,10 +18,10 @@ namespace en
 	class EditorImageAtlas
 	{
 	public:
-		EditorImageAtlas(std::string atlasPath, uint32_t x, int32_t y);
+		EditorImageAtlas(const std::string& atlasPath, const uint32_t& x, const uint32_t& y);
 		~EditorImageAtlas();
 
-		ImageUVs GetImageUVs(uint32_t x, int32_t y);
+		ImageUVs GetImageUVs(const uint32_t& x, const uint32_t& y);
 
 		VkDescriptorSet m_DescriptorSet;
 

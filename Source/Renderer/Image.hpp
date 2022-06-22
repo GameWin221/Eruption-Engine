@@ -8,12 +8,12 @@ namespace en
 	class Image
 	{
 	public:
-		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps = false);
+		Image(const VkExtent2D& size, const VkFormat& format, const VkImageUsageFlags& usageFlags, const VkImageAspectFlags& aspectFlags, const VkImageLayout& initialLayout, const bool& genMipMaps = false);
 		~Image();
 
 		void SetData(void* data);
 
-		void ChangeLayout(VkImageLayout newLayout, VkCommandBuffer cmd = VK_NULL_HANDLE);
+		void ChangeLayout(const VkImageLayout& newLayout, const VkCommandBuffer& cmd = VK_NULL_HANDLE);
 
 		VkImage		m_Image		= VK_NULL_HANDLE;
 		VkImageView	m_ImageView = VK_NULL_HANDLE;

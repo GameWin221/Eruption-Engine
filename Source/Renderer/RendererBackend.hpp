@@ -19,7 +19,7 @@
 
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
-#include <Renderer/Lights/Spotlight.hpp>
+#include <Renderer/Lights/SpotLight.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
 #include <Renderer/Camera/CameraMatricesBuffer.hpp>
@@ -45,7 +45,7 @@ namespace en
 		void BindScene(Scene* scene);
 		void UnbindScene();
 
-		void SetVSync(bool& vSync);
+		void SetVSync(const bool& vSync);
 
 		void WaitForGPUIdle();
 
@@ -109,11 +109,11 @@ namespace en
 			struct LightsBufferObject
 			{
 				PointLight::Buffer		 pointLights[MAX_POINT_LIGHTS];
-				Spotlight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
+				SpotLight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
 				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
 
 				alignas(4) uint32_t activePointLights = 0U;
-				alignas(4) uint32_t activeSpotlights = 0U;
+				alignas(4) uint32_t activeSpotLights = 0U;
 				alignas(4) uint32_t activeDirLights = 0U;
 
 				alignas(16) glm::vec3 ambientLight = glm::vec3(0.0f);
@@ -128,7 +128,7 @@ namespace en
 			std::unique_ptr<MemoryBuffer> buffer;
 
 			uint32_t lastPointLightsSize = 0U;
-			uint32_t lastSpotlightsSize = 0U;
+			uint32_t lastSpotLightsSize = 0U;
 			uint32_t lastDirLightsSize = 0U;
 
 			bool changed = false;

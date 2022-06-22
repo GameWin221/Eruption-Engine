@@ -22,7 +22,7 @@ namespace en
 		UpdateVectors();
 	}
 
-	void Camera::LookAt(glm::vec3 target)
+	void Camera::LookAt(const glm::vec3& target)
 	{
 		glm::vec3 diff = glm::normalize(target - m_Position);
 

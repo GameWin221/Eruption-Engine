@@ -9,12 +9,12 @@
 
 namespace en
 {
-	class Material : Asset
+	class Material : public Asset
 	{
 		friend class AssetManager;
 
 	public:
-		Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture);
+		Material(const std::string& name, const glm::vec3& color, const float& metalnessVal, const float& roughnessVal, const float& normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture);
 		~Material();
 
 		glm::vec3 m_Color;

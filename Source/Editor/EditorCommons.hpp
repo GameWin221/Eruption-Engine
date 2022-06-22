@@ -16,7 +16,7 @@ namespace en
 		static constexpr ImVec2 FreeWindowMinSize = ImVec2(500 , 200 );
 		static constexpr ImVec2 FreeWindowMaxSize = ImVec2(1920, 1080);
 
-		static const void TextCentered(std::string text)
+		static const void TextCentered(const std::string& text)
 		{
 			float fontSize = ImGui::GetFontSize() * text.size() / 2;
 

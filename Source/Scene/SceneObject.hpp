@@ -6,6 +6,8 @@
 #include <Assets/Mesh.hpp>
 #include <Assets/AssetManager.hpp>
 
+#include <Scene/SceneMember.hpp>
+
 namespace en
 {
 	struct PerObjectData
@@ -18,12 +20,12 @@ namespace en
 		}
 	};
 
-	class SceneObject
+	class SceneObject : public SceneMember
 	{
 		friend class Scene;
 
 	public:
-		SceneObject(Mesh* mesh, std::string name);
+		SceneObject(Mesh* mesh, std::string name) : m_Mesh(mesh), m_Name(name), SceneMember{ SceneMemberType::SceneObject }{};
 
 		glm::vec3 m_Position = glm::vec3(0.0);
 		glm::vec3 m_Rotation = glm::vec3(0.0);

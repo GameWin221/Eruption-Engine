@@ -4,7 +4,7 @@
 #include <Common/Helpers.hpp>
 namespace en
 {
-	PipelineInput::PipelineInput(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
+	PipelineInput::PipelineInput(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfo);
 		CreateDescriptorSet();
@@ -22,7 +22,7 @@ namespace en
 	{
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, index, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
-	void PipelineInput::CreateDescriptorPool(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo)
+	void PipelineInput::CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();
 
@@ -30,51 +30,56 @@ namespace en
 
 		for (const auto& image : imageInfos)
 		{
-			VkDescriptorSetLayoutBinding binding{};
-			binding.binding			   = image.index;
-			binding.descriptorCount	   = 1U;
-			binding.descriptorType	   = image.type;
-			binding.pImmutableSamplers = nullptr;
-			binding.stageFlags		   = image.stage;
+			const VkDescriptorSetLayoutBinding binding{
+				.binding			= image.index,
+				.descriptorType	    = image.type,
+				.descriptorCount	= 1U,
+				.stageFlags			= static_cast<VkShaderStageFlags>(image.stage),
+				.pImmutableSamplers = nullptr
+			};
 
 			bindings.emplace_back(binding);
 		}
 
 		if (bufferInfo.buffer != VK_NULL_HANDLE)
 		{
-			VkDescriptorSetLayoutBinding binding{};
-			binding.binding			= bufferInfo.index;
-			binding.descriptorType  = bufferInfo.type;
-			binding.descriptorCount = 1U;
-			binding.stageFlags		= bufferInfo.stage;
+			const VkDescriptorSetLayoutBinding binding{
+				.binding			= bufferInfo.index,
+				.descriptorType		= bufferInfo.type,
+				.descriptorCount	= 1U,
+				.stageFlags			= static_cast<VkShaderStageFlags>(bufferInfo.stage),
+				.pImmutableSamplers = nullptr
+			};
 
 			bindings.emplace_back(binding);
 		}
 
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings	= bindings.data();
+		const VkDescriptorSetLayoutCreateInfo layoutInfo{
+			.sType		  = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = static_cast<uint32_t>(bindings.size()),
+			.pBindings	  = bindings.data()
+		};
 
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &m_DescriptorLayout) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor set layout!");
 
-
 		std::vector<VkDescriptorPoolSize> poolSizes;
 		for (const auto& binding : bindings)
 		{
-			VkDescriptorPoolSize size{};
-			size.type = binding.descriptorType;
-			size.descriptorCount = 1U;
+			const VkDescriptorPoolSize size {
+				.type			 = binding.descriptorType,
+				.descriptorCount = 1U
+			};
 
 			poolSizes.emplace_back(size);
 		}
 
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes	   = poolSizes.data();
-		poolInfo.maxSets	   = 1U;
+		const VkDescriptorPoolCreateInfo poolInfo{
+			.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.maxSets	   = 1U,
+			.poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+			.pPoolSizes	   = poolSizes.data(),
+		};
 
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor pool!");
@@ -83,59 +88,65 @@ namespace en
 	{
 		UseContext();
 
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = m_DescriptorPool;
-		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts		 = &m_DescriptorLayout;
+		const VkDescriptorSetAllocateInfo allocInfo{
+			.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool		= m_DescriptorPool,
+			.descriptorSetCount = 1U,
+			.pSetLayouts		= &m_DescriptorLayout
+		};
 
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 	}
-	void PipelineInput::UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo)
+	void PipelineInput::UpdateDescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();
 
 		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
 		for (const auto& image : imageInfos)
 		{
-			VkDescriptorImageInfo info{};
-			info.imageLayout = image.imageLayout;
-			info.imageView = image.imageView;
-			info.sampler = image.imageSampler;
+			const VkDescriptorImageInfo info{
+				.sampler	 = image.imageSampler,
+				.imageView   = image.imageView,
+				.imageLayout = image.imageLayout
+			};
+
 			descriptorImageInfos.emplace_back(info);
 		}
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites;
 		for (int i = 0; const auto & image : imageInfos)
 		{
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_DescriptorSet;
-			descriptorWrite.dstBinding = image.index;
-			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = image.type;
-			descriptorWrite.descriptorCount = 1U;
-			descriptorWrite.pImageInfo = &descriptorImageInfos[i++];
+			const VkWriteDescriptorSet descriptorWrite{
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSet,
+				.dstBinding		 = image.index,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType	 = image.type,
+				.pImageInfo		 = &descriptorImageInfos[i++]
+			};
 
 			descriptorWrites.emplace_back(descriptorWrite);
 		}
 
-		VkDescriptorBufferInfo info{};
-		info.buffer = bufferInfo.buffer;
-		info.offset = 0U;
-		info.range = bufferInfo.size;
+		const VkDescriptorBufferInfo info{
+			.buffer = bufferInfo.buffer,
+			.offset = 0U,
+			.range  = bufferInfo.size
+		};
 
 		if (bufferInfo.buffer != VK_NULL_HANDLE)
 		{
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_DescriptorSet;
-			descriptorWrite.dstBinding = bufferInfo.index;
-			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = bufferInfo.type;
-			descriptorWrite.descriptorCount = 1U;
-			descriptorWrite.pBufferInfo = &info;
+			const VkWriteDescriptorSet descriptorWrite{
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSet,
+				.dstBinding		 = bufferInfo.index,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType  = bufferInfo.type,
+				.pBufferInfo	 = &info
+			};
 
 			descriptorWrites.emplace_back(descriptorWrite);
 		}

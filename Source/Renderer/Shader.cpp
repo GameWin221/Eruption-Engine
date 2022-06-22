@@ -7,10 +7,11 @@ namespace en
     {
         auto shaderCode = Shader::ReadShaderFile(m_SourcePath);
 
-        VkShaderModuleCreateInfo createInfo{};
-        createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = shaderCode.size();
-        createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
+        const VkShaderModuleCreateInfo createInfo{
+            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = shaderCode.size(),
+            .pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data())
+        };
 
         if (vkCreateShaderModule(Context::Get().m_LogicalDevice, &createInfo, nullptr, &m_ShaderModule) != VK_SUCCESS)
             EN_ERROR("Shader::Shader() - Failed to create shader module!");

@@ -49,11 +49,11 @@ namespace en
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 
-		void CreatePipeline(PipelineInfo& pipeline);
+		void CreatePipeline(const PipelineInfo& pipeline);
 
 		~Pipeline();
 
-		void Bind(VkCommandBuffer& commandBuffer, RenderingInfo& info);
+		void Bind(VkCommandBuffer& commandBuffer, const RenderingInfo& info);
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 

@@ -3,10 +3,6 @@
 
 namespace en
 {
-	SceneObject::SceneObject(Mesh* mesh, std::string name) : m_Mesh(mesh), m_Name(name)
-	{
-		
-	}
 	PerObjectData& SceneObject::GetObjectData()
 	{
 		UpdateModelMatrix();

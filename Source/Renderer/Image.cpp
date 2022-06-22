@@ -6,7 +6,7 @@
 
 namespace en
 {
-	Image::Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps) : m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
+	Image::Image(const VkExtent2D& size, const VkFormat& format, const VkImageUsageFlags& usageFlags, const VkImageAspectFlags& aspectFlags, const VkImageLayout& initialLayout, const bool& genMipMaps) : m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
 	{
 		if(genMipMaps)
 			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
@@ -58,15 +58,20 @@ namespace en
 
 		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
 
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.image = m_Image;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseArrayLayer = 0U;
-		barrier.subresourceRange.layerCount = 1U;
-		barrier.subresourceRange.levelCount = 1U;
+		VkImageMemoryBarrier barrier{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+			.image = m_Image,
+
+			.subresourceRange{
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.levelCount = 1U,
+				.baseArrayLayer = 0U,
+				.layerCount = 1U,
+			}
+		};
 
 		int32_t mipWidth  = static_cast<int32_t>(m_Size.width);
 		int32_t mipHeight = static_cast<int32_t>(m_Size.height);
@@ -96,8 +101,8 @@ namespace en
 		for (uint32_t i = 1U; i < m_MipLevels; i++)
 		{
 			barrier.subresourceRange.baseMipLevel = i - 1;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.oldLayout	  = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout	  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
@@ -159,7 +164,7 @@ namespace en
 		Helpers::EndSingleTimeGraphicsCommands(cmd);
 	}
 
-	void Image::ChangeLayout(VkImageLayout newLayout, VkCommandBuffer cmd)
+	void Image::ChangeLayout(const VkImageLayout& newLayout, const VkCommandBuffer& cmd)
 	{
 		Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, m_MipLevels, cmd);
 		m_CurrentLayout = newLayout;

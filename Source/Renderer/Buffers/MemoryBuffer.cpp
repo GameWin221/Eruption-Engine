@@ -5,28 +5,28 @@
 
 namespace en
 {
-	MemoryBuffer::MemoryBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) : m_BufferSize(size)
+	MemoryBuffer::MemoryBuffer(const VkDeviceSize& size, const VkBufferUsageFlags& usage, const VkMemoryPropertyFlags& properties) : m_BufferSize(size)
 	{
         UseContext();
 
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size        = m_BufferSize;
-        bufferInfo.usage       = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        const VkBufferCreateInfo bufferInfo{
+            .sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size        = m_BufferSize,
+            .usage       = usage,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+        };
 
         if (vkCreateBuffer(ctx.m_LogicalDevice, &bufferInfo, nullptr, &m_Buffer) != VK_SUCCESS)
             EN_ERROR("Failed to create a buffer handle!")
 
-
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(ctx.m_LogicalDevice, m_Buffer, &memRequirements);
 
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize  = memRequirements.size;
-        allocInfo.memoryTypeIndex = Helpers::FindMemoryType(memRequirements.memoryTypeBits, properties);
+        const VkMemoryAllocateInfo allocInfo{
+            .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize  = memRequirements.size,
+            .memoryTypeIndex = Helpers::FindMemoryType(memRequirements.memoryTypeBits, properties)
+        };
 
         if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &m_BufferMemory) != VK_SUCCESS)
             EN_ERROR("Failed to allocate buffer memory!");
@@ -53,8 +53,6 @@ namespace en
     }
     void MemoryBuffer::CopyTo(MemoryBuffer* dstBuffer)
     {
-        UseContext();
-
         VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
 
         const VkBufferCopy copyRegion{ .size = m_BufferSize };
@@ -69,15 +67,18 @@ namespace en
 
         VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
 
-        VkBufferImageCopy region{};
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel   = 0U;
-        region.imageSubresource.layerCount = 1U;
+        const VkBufferImageCopy region{
+            .imageSubresource{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel   = 0U,
+                .layerCount = 1U,
+            },
 
-        region.imageExtent = {
-            dstImage->m_Size.width,
-            dstImage->m_Size.height,
-            1U
+            .imageExtent{
+                dstImage->m_Size.width,
+                dstImage->m_Size.height,
+                1U
+            }
         };
 
         vkCmdCopyBufferToImage(commandBuffer, m_Buffer, dstImage->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);

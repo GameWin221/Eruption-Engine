@@ -32,17 +32,17 @@ namespace en
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		};
 
-		PipelineInput(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});
+		PipelineInput(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 		~PipelineInput();
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index = 0U);
 
-		void UpdateDescriptorSet(std::vector<ImageInfo> imageInfos, BufferInfo bufferInfo = BufferInfo{});
+		void UpdateDescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 
 		VkDescriptorSetLayout m_DescriptorLayout;
 
 	private:
-		void CreateDescriptorPool(std::vector<ImageInfo>& imageInfos, BufferInfo& bufferInfo);
+		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
 		void CreateDescriptorSet();
 
 		VkDescriptorPool m_DescriptorPool;

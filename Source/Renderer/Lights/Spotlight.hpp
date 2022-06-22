@@ -3,25 +3,41 @@
 #ifndef EN_SPOTLIGHT_HPP
 #define EN_SPOTLIGHT_HPP
 
+#include <Scene/SceneMember.hpp>
+
 namespace en
 {
-	class Spotlight
+	class SpotLight : public SceneMember
 	{
 	public:
-		Spotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active);
-		Spotlight() {};
-		~Spotlight() {};
+		constexpr SpotLight(const glm::vec3& position, const glm::vec3& direction, const glm::vec3& color, const float& innerCutoff, const float& outerCutoff, const float& range, const float& intensity, const bool& active)
+			: m_Position(position), m_Direction(direction), m_Color(color), m_InnerCutoff(innerCutoff), m_OuterCutoff(outerCutoff), m_Range(range), m_Intensity(intensity), m_Active(active), SceneMember{ SceneMemberType::SpotLight } {};
 
 		bool m_Active = true;
 
 		glm::vec3 m_Position = glm::vec3(0.0);
 		glm::vec3 m_Direction = glm::vec3(1.0, 0.0, 0.0);
 		glm::vec3 m_Color = glm::vec3(1.0);
+
 		float m_Intensity = 1.0f;
 		float m_Range = 8.0f;
 
 		float m_InnerCutoff = 0.2f;
 		float m_OuterCutoff = 0.4f;
+
+		void operator=(const SpotLight& other)
+		{
+			m_Active	= other.m_Active;
+			m_Position  = other.m_Position;
+			m_Direction = other.m_Direction ;
+			m_Color		= other.m_Color;
+
+			m_Intensity = other.m_Intensity;
+			m_Range		= other.m_Range;
+
+			m_InnerCutoff = other.m_InnerCutoff;
+			m_OuterCutoff = other.m_OuterCutoff;
+		}
 
 		struct Buffer
 		{

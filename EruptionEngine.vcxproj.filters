@@ -132,9 +132,6 @@
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Lights\Lights.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -281,7 +278,7 @@
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp">
+    <ClInclude Include="Source\Renderer\Lights\SpotLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
@@ -297,6 +294,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\ComputeShader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneMember.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

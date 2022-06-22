@@ -14,7 +14,7 @@
 
 namespace en
 {
-	class Texture : Asset
+	class Texture : public Asset
 	{
 		friend class AssetManager;
 

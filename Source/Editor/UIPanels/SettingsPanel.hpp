@@ -10,7 +10,7 @@ namespace en
 	class SettingsPanel
 	{
 	public:
-		SettingsPanel(Renderer* renderer);
+		constexpr SettingsPanel(Renderer* renderer) : m_Renderer(renderer) {};
 
 		void Render();
 

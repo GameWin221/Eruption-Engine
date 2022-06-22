@@ -12,7 +12,7 @@ namespace en
 
 		m_Attachments.clear();
 	}
-	DynamicFramebuffer::DynamicFramebuffer(std::vector<AttachmentInfo> attachmentInfos, VkExtent2D size, VkFilter filtering) : m_Size(size)
+	DynamicFramebuffer::DynamicFramebuffer(const std::vector<AttachmentInfo>& attachmentInfos, const VkExtent2D& size, const VkFilter& filtering) : m_Size(size)
 	{
 		m_Attachments.reserve(attachmentInfos.size());
 

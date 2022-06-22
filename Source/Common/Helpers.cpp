@@ -82,7 +82,7 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, VkExtent2D size, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipLevels)
+        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& mipLevels)
         {
             UseContext();
 
@@ -117,7 +117,7 @@ namespace en
 
             vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
         }
-        void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
+        void CreateImageView(VkImage& image, VkImageView& imageView, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& mipLevels)
         {
             UseContext();
 
@@ -137,7 +137,7 @@ namespace en
         }
         
 #define UNSUPPORTED_ERR default:EN_ERROR("Unsupported layout transition!");break
-        void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, VkCommandBuffer cmdBuffer)
+        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
         {
             UseContext();
 
@@ -341,7 +341,7 @@ namespace en
             vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
         }
 
-        void CreateSampler(VkSampler& sampler, VkFilter filtering, uint32_t anisotropy, float maxLod, float mipLodBias)
+        void CreateSampler(VkSampler& sampler, const VkFilter& filtering, const uint32_t& anisotropy, const float& maxLod, const float& mipLodBias)
         {
             UseContext();
 
@@ -376,7 +376,7 @@ namespace en
                 EN_ERROR("Helpers::CreateSampler() - Failed to create texture sampler!");
         }
 
-        void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags)
+        void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags& commandPoolCreateFlags)
         {
             UseContext();
 
@@ -389,7 +389,7 @@ namespace en
                 EN_ERROR("Context::VKCreateCommandPool() - Failed to create a command pool!");
         }
 
-        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool)
+        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t& commandBufferCount, VkCommandPool& commandPool)
         {
             UseContext();
 
@@ -401,7 +401,7 @@ namespace en
             vkAllocateCommandBuffers(ctx.m_LogicalDevice, &commandBufferAllocateInfo, commandBuffers);
         }
         
-        uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+        uint32_t FindMemoryType(const uint32_t& typeFilter, const VkMemoryPropertyFlags& properties)
         {
             UseContext();
 

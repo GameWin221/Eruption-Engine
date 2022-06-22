@@ -19,6 +19,6 @@ namespace en
 	}
 	void SubMesh::Draw(VkCommandBuffer& cmd)
 	{
-		vkCmdDrawIndexed(cmd, m_IndexBuffer->GetIndicesCount(), 1U, 0U, 0U, 0U);
+		vkCmdDrawIndexed(cmd, m_IndexBuffer->m_IndicesCount, 1U, 0U, 0U, 0U);
 	}
 }

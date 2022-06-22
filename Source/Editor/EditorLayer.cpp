@@ -112,7 +112,7 @@ namespace en
 		EndRender();
 	}
 
-	void EditorLayer::SetVisibility(bool visibility)
+	void EditorLayer::SetVisibility(const bool& visibility)
 	{
 		m_Visible = visibility;
 
@@ -231,19 +231,8 @@ namespace en
 	{
 		ImGui::Begin("Camera Properties", nullptr, EditorCommons::CommonFlags);
 
-		static float pos[3];
+		ImGui::InputFloat3("Position", (float*)&m_Renderer->GetMainCamera()->m_Position);
 
-		if (ImGui::InputFloat3("Position", pos))
-			m_Renderer->GetMainCamera()->m_Position = glm::vec3(pos[0], pos[1], pos[2]);
-		else
-		{
-			pos[0] = m_Renderer->GetMainCamera()->m_Position.x;
-			pos[1] = m_Renderer->GetMainCamera()->m_Position.y;
-			pos[2] = m_Renderer->GetMainCamera()->m_Position.z;
-		}
-
-		ImGui::SliderFloat("Pitch", &m_Renderer->GetMainCamera()->m_Pitch, -90.0f, 90.f);
-		ImGui::SliderFloat("Yaw", &m_Renderer->GetMainCamera()->m_Yaw, -180.0f, 180.f);
 		ImGui::SliderFloat("Fov", &m_Renderer->GetMainCamera()->m_Fov, 20.0f, 110.f);
 		ImGui::SliderFloat("Exposure", &m_Renderer->GetMainCamera()->m_Exposure, 0.0f, 16.0f);
 		ImGui::Checkbox("Dynamically Scaled", &m_Renderer->GetMainCamera()->m_DynamicallyScaled);

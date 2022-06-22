@@ -3,18 +3,18 @@
 
 en::Context* g_CurrentContext;
 
-const std::vector<const char*> validationLayers = {
+constexpr std::array<const char*, 1> validationLayers {
 	"VK_LAYER_KHRONOS_validation"
 };
-const std::vector<const char*> deviceExtensions = {
+constexpr std::array<const char*, 2> deviceExtensions {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 };
 
 #if not defined(NDEBUG)
-const bool enableValidationLayers = true;
+constexpr bool enableValidationLayers = true;
 #else
-const bool enableValidationLayers = false;
+constexpr bool enableValidationLayers = false;
 #endif
 
 namespace en
@@ -65,21 +65,23 @@ namespace en
 		if (enableValidationLayers && !AreValidationLayerSupported())
 			EN_ERROR("Context::VKCreateInstance() - Validation layers requested, but not available!");
 
-		VkApplicationInfo appInfo{};
-		appInfo.sType			   = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName   = "Eruption Renderer";
-		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.pEngineName		   = "Eruption Engine";
-		appInfo.engineVersion	   = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion		   = VK_API_VERSION_1_3;
+		constexpr VkApplicationInfo appInfo{
+			.sType				= VK_STRUCTURE_TYPE_APPLICATION_INFO,
+			.pApplicationName	= "Eruption Renderer",
+			.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+			.pEngineName		= "Eruption Engine",
+			.engineVersion		= VK_MAKE_VERSION(1, 0, 0),
+			.apiVersion			= VK_API_VERSION_1_3
+		};
 
 		auto extensions = GetRequiredExtensions();
 
-		VkInstanceCreateInfo createInfo{};
-		createInfo.sType				   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pApplicationInfo		   = &appInfo;
-		createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
-		createInfo.ppEnabledExtensionNames = extensions.data();
+		VkInstanceCreateInfo createInfo {
+			.sType				     = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+			.pApplicationInfo	     = &appInfo,
+			.enabledExtensionCount   = static_cast<uint32_t>(extensions.size()),
+			.ppEnabledExtensionNames = extensions.data()
+		};
 
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 		if (enableValidationLayers)
@@ -173,47 +175,48 @@ namespace en
 
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
-			VkDeviceQueueCreateInfo queueCreateInfo{};
-			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo.queueFamilyIndex = queueFamily;
-			queueCreateInfo.queueCount = 1U;
-			queueCreateInfo.pQueuePriorities = &queuePriority;
-			queueCreateInfos.push_back(queueCreateInfo);
+			const VkDeviceQueueCreateInfo queueCreateInfo{
+				.sType			  = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				.queueFamilyIndex = queueFamily,
+				.queueCount		  = 1U,
+				.pQueuePriorities = &queuePriority,
+			};
+
+			queueCreateInfos.emplace_back(queueCreateInfo);
 		}
 
-		VkPhysicalDeviceFeatures deviceFeatures{};
-		deviceFeatures.samplerAnisotropy = VK_TRUE;
+		constexpr VkPhysicalDeviceFeatures deviceFeatures{
+			.samplerAnisotropy = VK_TRUE
+		};
 
-		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures
-		{
+		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures{
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 			.descriptorBindingUpdateUnusedWhilePending = VK_TRUE
 		};
 
-		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature
-		{
+		const VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature {
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
 			.pNext = &descriptorFeatures,
 			.dynamicRendering = VK_TRUE
 		};
 
-		VkDeviceCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		createInfo.pNext = &dynamicRenderingFeature;
-		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-		createInfo.pQueueCreateInfos = queueCreateInfos.data();
-		createInfo.pEnabledFeatures = &deviceFeatures;
-		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		VkDeviceCreateInfo createInfo{
+			.sType					 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+			.pNext					 = &dynamicRenderingFeature,
+			.queueCreateInfoCount	 = static_cast<uint32_t>(queueCreateInfos.size()),
+			.pQueueCreateInfos		 = queueCreateInfos.data(),
+			.enabledLayerCount		 = 0U,
+			.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size()),
+			.ppEnabledExtensionNames = deviceExtensions.data(),
+			.pEnabledFeatures		 = &deviceFeatures,
+		};
 
 		if (enableValidationLayers)
 		{
 			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
 		}
-		else
-			createInfo.enabledLayerCount = 0;
-
+			
 		if (vkCreateDevice(m_PhysicalDevice, &createInfo, nullptr, &m_LogicalDevice) != VK_SUCCESS)
 			EN_ERROR("Context.cpp::Context::VKCreateLogicalDevice() - Failed to create logical device!");
 
@@ -224,18 +227,20 @@ namespace en
 
 	void Context::CreateCommandPool()
 	{
-		VkCommandPoolCreateInfo commandPoolCreateInfo = {};
-		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.graphics.value();
-		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		const VkCommandPoolCreateInfo commandPoolCreateInfo {
+			.sType			  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags			  = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = m_QueueFamilies.graphics.value()
+		};
 
 		if (vkCreateCommandPool(m_LogicalDevice, &commandPoolCreateInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
 			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a graphics command pool!");
 
-		VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {};
-		transferCommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		transferCommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilies.transfer.value();
-		transferCommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		const VkCommandPoolCreateInfo transferCommandPoolCreateInfo{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = m_QueueFamilies.transfer.value(),
+		};
 
 		if (vkCreateCommandPool(m_LogicalDevice, &transferCommandPoolCreateInfo, nullptr, &m_TransferCommandPool) != VK_SUCCESS)
 			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a transfer command pool!");
@@ -295,9 +300,9 @@ namespace en
 	void Context::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 	{
 		createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		createInfo.sType		   = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		createInfo.messageType	   = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = Context::DebugCallback;
 	}
 	void Context::DestroyDebugUtilsMessengerEXT()
@@ -310,12 +315,12 @@ namespace en
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL Context::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 	{
-		std::string message;
+		std::string_view message;
 		
 		switch (messageSeverity)
 		{
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-			message = "Diagnostic";
+			message = "Diagnostic" ;
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
 			message = "Info";

@@ -10,7 +10,6 @@ namespace en
 	class Swapchain
 	{
 	public:
-		Swapchain();
 		~Swapchain();
 
 		VkSwapchainKHR m_Swapchain;
@@ -19,10 +18,10 @@ namespace en
 		std::vector<VkImageView>   m_ImageViews;
 		std::vector<VkFramebuffer> m_Framebuffers;
 
-		void ChangeLayout(VkImageLayout newLayout, int index, VkCommandBuffer& cmd);
+		void ChangeLayout(const VkImageLayout& newLayout, const int& index, VkCommandBuffer& cmd);
 
-		void CreateSwapchain(bool vSync);
-		void CreateSwapchainFramebuffers(VkRenderPass& inputRenderpass);
+		void CreateSwapchain(const bool& vSync);
+		void CreateSwapchainFramebuffers(const VkRenderPass& inputRenderpass);
 
 		const VkFormat&   const GetFormat() { return m_ImageFormat; };
 		const VkExtent2D& const GetExtent() { return m_Extent;	    };

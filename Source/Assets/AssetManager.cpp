@@ -24,7 +24,7 @@ namespace en
         return g_AssetManagerInstance;
     }
 
-    bool AssetManager::LoadMesh(std::string nameID, std::string path, MeshImportProperties properties)
+    bool AssetManager::LoadMesh(const std::string& nameID, const std::string& path, const MeshImportProperties& properties)
     {
         if (m_Meshes.contains(nameID))
         {
@@ -35,7 +35,7 @@ namespace en
         m_Meshes[nameID] = LoadMeshFromFile(path, nameID, properties);
         return true;
     }
-    bool AssetManager::LoadTexture(std::string nameID, std::string path, TextureImportProperties properties)
+    bool AssetManager::LoadTexture(const std::string& nameID, const std::string& path, const TextureImportProperties& properties)
     {
         if (m_Textures.contains(nameID))
         {
@@ -47,16 +47,16 @@ namespace en
         return true;
     }
 
-    void AssetManager::DeleteMesh(std::string nameID)
+    void AssetManager::DeleteMesh(const std::string& nameID)
     {
         EN_WARN("AssetManager::DeleteMesh() - This feature is disabled for now!");
     }
-    void AssetManager::DeleteTexture(std::string nameID)
+    void AssetManager::DeleteTexture(const std::string& nameID)
     {
         EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
-    bool AssetManager::CreateMaterial(std::string nameID, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
+    bool AssetManager::CreateMaterial(const std::string& nameID, const glm::vec3& color, const float& metalnessVal, const float& roughnessVal, const float& normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -76,12 +76,12 @@ namespace en
                                                            ", Normal: "          + ((normalTexture)    ?  normalTexture  ->m_Name : "No Texture"));
         return true;
     }
-    void AssetManager::DeleteMaterial(std::string nameID)
+    void AssetManager::DeleteMaterial(const std::string& nameID)
     {
         EN_WARN("AssetManager::DeleteMaterial() - This feature is disabled for now!");
     }
 
-    void AssetManager::RenameMesh(std::string oldNameID, std::string newNameID)
+    void AssetManager::RenameMesh(const std::string& oldNameID, const std::string& newNameID)
     {
         if (m_Meshes.contains(newNameID))
             EN_WARN("Failed to rename " + oldNameID + " because a mesh with a name " + newNameID + " already exists.")
@@ -97,7 +97,7 @@ namespace en
                 EN_WARN("Failed to rename " + oldNameID + " because a mesh with that name doesn't exist.")
         }
     }
-    void AssetManager::RenameTexture(std::string oldNameID, std::string newNameID)
+    void AssetManager::RenameTexture(const std::string& oldNameID, const std::string& newNameID)
     {
         if (m_Textures.contains(newNameID))
             EN_WARN("Failed to rename " + oldNameID + " because a texture with a name " + newNameID + " already exists.")
@@ -113,7 +113,7 @@ namespace en
                 EN_WARN("Failed to rename " + oldNameID + " because a texture with that name doesn't exist.")
         }
     }
-    void AssetManager::RenameMaterial(std::string oldNameID, std::string newNameID)
+    void AssetManager::RenameMaterial(const std::string& oldNameID, const std::string& newNameID)
     {
         if (m_Materials.contains(newNameID))
             EN_WARN("Failed to rename " + oldNameID + " because a material with a name " + newNameID + " already exists.")
@@ -135,7 +135,7 @@ namespace en
         UpdateMaterials();
     }
 
-    Mesh* AssetManager::GetMesh(std::string nameID)
+    Mesh* AssetManager::GetMesh(const std::string& nameID)
     {
         // If there's no `nameID` model:
         if (!m_Meshes.contains(nameID))
@@ -147,7 +147,7 @@ namespace en
 
         return m_Meshes.at(nameID).get();
     }
-    Texture* en::AssetManager::GetTexture(std::string nameID)
+    Texture* en::AssetManager::GetTexture(const std::string& nameID)
     {
         // If there's no `nameID` texture:
         if (!m_Textures.contains(nameID))
@@ -158,7 +158,7 @@ namespace en
 
         return m_Textures.at(nameID).get();
     }
-    Material* AssetManager::GetMaterial(std::string nameID)
+    Material* AssetManager::GetMaterial(const std::string& nameID)
     {
         // If there's no `nameID` material:
         if (!m_Materials.contains(nameID))
@@ -174,8 +174,8 @@ namespace en
     {
         std::vector<Mesh*> meshes(m_Meshes.size());
 
-        for (int i = 0; const auto & meshPair : m_Meshes)
-            meshes[i++] = meshPair.second.get();
+        for (int i = 0; const auto& [name, mesh] : m_Meshes)
+            meshes[i++] = mesh.get();
         
         return meshes;
     }
@@ -183,28 +183,28 @@ namespace en
     {
         std::vector< Texture*> textures(m_Textures.size());
 
-        for (int i = 0; const auto& texturePair : m_Textures)
-            textures[i++] = texturePair.second.get();
+        for (int i = 0; const auto& [name, texture] : m_Textures)
+            textures[i++] = texture.get();
 
         return textures;
     }
     std::vector<Material*> AssetManager::GetAllMaterials()
     {
-        std::vector< Material*> materials(m_Materials.size());
+        std::vector<Material*> materials(m_Materials.size());
 
-        for (int i = 0; const auto& materialPair : m_Materials)
-            materials[i++] = materialPair.second.get();
+        for (int i = 0; const auto & [name, material] : m_Materials)
+            materials[i++] = material.get();
 
         return materials;
     }
 
     void AssetManager::UpdateMaterials()
     {
-        for (const auto& material : m_Materials)
-            material.second->UpdateDescriptorSet();
+        for (const auto& [name, material] : m_Materials)
+            material->UpdateDescriptorSet();
     }
 
-    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(std::string& filePath, std::string& name, MeshImportProperties& importProperties)
+    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties)
     {
         std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
         mesh->m_FilePath = filePath;
@@ -297,7 +297,7 @@ namespace en
 
         return mesh;
     }
-    void AssetManager::ProcessNode(aiNode* node, const aiScene* scene, std::vector<Material*> materials, Mesh* mesh)
+    void AssetManager::ProcessNode(aiNode* node, const aiScene* scene, const std::vector<Material*>& materials, Mesh* mesh)
     {
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
         {

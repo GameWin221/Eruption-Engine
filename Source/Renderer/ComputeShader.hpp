@@ -20,7 +20,7 @@ namespace en
 		ComputeShader(const ComputeInfo& createInfo);
 		~ComputeShader();
 
-		void Dispatch(VkCommandBuffer& cmd, uint32_t x = 1U, uint32_t y = 1U, uint32_t z = 1U);
+		void Dispatch(VkCommandBuffer& cmd, const uint32_t& x = 1U, const uint32_t& y = 1U, const uint32_t& z = 1U);
 
 		const std::string m_SourcePath;
 
