@@ -42,7 +42,7 @@ namespace en
 		const std::string& GetName() const { return m_Name; };
 
 	private:
-		void UpdateDescriptorSet();
+		void Update();
 		void CreateDescriptorSet();
 
 		void UpdateBuffer();

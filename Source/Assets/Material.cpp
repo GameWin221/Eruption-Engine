@@ -65,7 +65,7 @@ namespace en
 
 		vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_FRAGMENT_BIT, 64U, sizeof(MatBuffer), &m_MatBuffer);
 	}
-	void Material::UpdateDescriptorSet()
+	void Material::Update()
 	{
 		if (!m_UpdateQueued) return;
 		
@@ -253,6 +253,6 @@ namespace en
 			EN_ERROR("Material::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
 		m_UpdateQueued = true;
-		UpdateDescriptorSet();
+		Update();
 	}
 }

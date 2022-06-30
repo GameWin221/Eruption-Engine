@@ -1,13 +1,13 @@
 #pragma once
 
-#ifndef EN_PIPELINEINPUT_HPP
-#define EN_PIPELINEINPUT_HPP
+#ifndef EN_DESCRIPTORSET_HPP
+#define EN_DESCRIPTORSET_HPP
 
 namespace en
 { 
 	// It is possible that the buffer always has to be the last index
 
-	class PipelineInput
+	class DescriptorSet
 	{
 	public:
 		struct ImageInfo
@@ -32,17 +32,17 @@ namespace en
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		};
 
-		PipelineInput(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
-		~PipelineInput();
+		DescriptorSet(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
+		~DescriptorSet();
 
-		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index = 0U);
+		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, const uint32_t& index = 0U, const VkPipelineBindPoint& bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
 
-		void UpdateDescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
+		void Update(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 
 		VkDescriptorSetLayout m_DescriptorLayout;
 
 	private:
-		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
+		void CreateDescriptorPool(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
 		void CreateDescriptorSet();
 
 		VkDescriptorPool m_DescriptorPool;

@@ -1,16 +1,16 @@
 #include "Core/EnPch.hpp"
-#include "PipelineInput.hpp"
+#include "DescriptorSet.hpp"
 
 #include <Common/Helpers.hpp>
 namespace en
 {
-	PipelineInput::PipelineInput(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
+	DescriptorSet::DescriptorSet(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfo);
 		CreateDescriptorSet();
-		UpdateDescriptorSet(imageInfos, bufferInfo);
+		Update(imageInfos, bufferInfo);
 	}
-	PipelineInput::~PipelineInput()
+	DescriptorSet::~DescriptorSet()
 	{
 		UseContext();
 
@@ -18,11 +18,11 @@ namespace en
 		vkDestroyDescriptorPool(ctx.m_LogicalDevice, m_DescriptorPool, nullptr);
 	}
 	
-	void PipelineInput::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t index)
+	void DescriptorSet::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, const uint32_t& index, const VkPipelineBindPoint& bindPoint)
 	{
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, index, 1U, &m_DescriptorSet, 0U, nullptr);
+		vkCmdBindDescriptorSets(cmd, bindPoint, layout, index, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
-	void PipelineInput::CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
+	void DescriptorSet::CreateDescriptorPool(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();
 
@@ -84,7 +84,7 @@ namespace en
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorPool() - Failed to create descriptor pool!");
 	}
-	void PipelineInput::CreateDescriptorSet()
+	void DescriptorSet::CreateDescriptorSet()
 	{
 		UseContext();
 
@@ -98,7 +98,7 @@ namespace en
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 	}
-	void PipelineInput::UpdateDescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
+	void DescriptorSet::Update(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();
 

@@ -7,18 +7,20 @@
 
 namespace en
 {
-	struct ComputeInfo
-	{
-		std::string sourcePath{};
-		std::vector<VkDescriptorSetLayout> descriptorLayouts{};
-		std::vector<VkPushConstantRange> pushConstantRanges{};
-	};
-
 	class ComputeShader
 	{
 	public:
-		ComputeShader(const ComputeInfo& createInfo);
+		struct CreateInfo
+		{
+			std::string sourcePath{};
+			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
+			std::vector<VkPushConstantRange> pushConstantRanges{};
+		};
+
+		ComputeShader(const CreateInfo& createInfo);
 		~ComputeShader();
+
+		void Bind(VkCommandBuffer& cmd);
 
 		void Dispatch(VkCommandBuffer& cmd, const uint32_t& x = 1U, const uint32_t& y = 1U, const uint32_t& z = 1U);
 

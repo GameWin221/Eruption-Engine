@@ -12,7 +12,7 @@ namespace en
 	{
 		Destroy();
 	}
-	void Pipeline::Bind(VkCommandBuffer& commandBuffer, const RenderingInfo& info)
+	void Pipeline::Bind(VkCommandBuffer& commandBuffer, const BindInfo& info)
 	{
 		std::vector<VkRenderingAttachmentInfoKHR> khrColorAttachments(info.colorAttachments.size());
 
@@ -70,7 +70,7 @@ namespace en
 	{
 		vkCmdEndRenderingKHR(commandBuffer);
 	}
-	void Pipeline::CreatePipeline(const PipelineInfo& pipeline)
+	void Pipeline::CreatePipeline(const CreateInfo& pipeline)
 	{
 		if (!m_Initialised)
 		{

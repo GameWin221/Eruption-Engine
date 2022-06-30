@@ -12,13 +12,14 @@ namespace en
 	public:
 		~Swapchain();
 
-		VkSwapchainKHR m_Swapchain;
+		VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
 
 		std::vector<VkImage>	   m_Images;
 		std::vector<VkImageView>   m_ImageViews;
 		std::vector<VkFramebuffer> m_Framebuffers;
 
-		void ChangeLayout(const VkImageLayout& newLayout, const int& index, VkCommandBuffer& cmd);
+		//void ChangeLayout(const VkImageLayout& newLayout, const int& index, const VkCommandBuffer& cmd = VK_NULL_HANDLE);
+		void ChangeLayout(const int& index, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd = VK_NULL_HANDLE);
 
 		void CreateSwapchain(const bool& vSync);
 		void CreateSwapchainFramebuffers(const VkRenderPass& inputRenderpass);
@@ -29,7 +30,7 @@ namespace en
 	private:
 		std::vector<VkImageLayout> m_CurrentLayouts;
 
-		VkFormat   m_ImageFormat;
+		VkFormat   m_ImageFormat = VK_FORMAT_UNDEFINED;
 		VkExtent2D m_Extent;
 
 		SwapchainSupportDetails QuerySwapchainSupport();

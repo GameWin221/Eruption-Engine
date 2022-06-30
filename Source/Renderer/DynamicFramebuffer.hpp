@@ -18,12 +18,12 @@ namespace en
 			VkImageLayout      initialLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
 		};
 
-		DynamicFramebuffer(const std::vector<AttachmentInfo>& attachmentInfos, const VkExtent2D& size, const VkFilter& filtering = VK_FILTER_LINEAR);
+		DynamicFramebuffer(const std::initializer_list<AttachmentInfo>& attachmentInfos, const VkExtent2D& size, const VkFilter& filtering = VK_FILTER_LINEAR);
 		~DynamicFramebuffer();
 
 		VkSampler m_Sampler;
 
-		std::vector<Image> m_Attachments;
+		std::vector<Image> m_Attachments{};
 
 		const VkExtent2D m_Size;
 	};

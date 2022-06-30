@@ -29,14 +29,14 @@ namespace en
 		static Renderer* Get();
 		void ReloadRenderer();
 
-		VulkanRendererBackend::PostProcessingParams& GetPPParams();
+		RendererBackend::PostProcessingParams& GetPPParams();
 
 		void SetUIRenderCallback(std::function<void()> callback);
 		void SetDebugMode(int& mode);
 		void SetVSync(bool vSync);
 
 	private:
-		std::unique_ptr<VulkanRendererBackend> m_Backend;
+		std::unique_ptr<RendererBackend> m_Backend;
 	};
 }
 

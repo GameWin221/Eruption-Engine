@@ -21,7 +21,8 @@ namespace en
 
 		extern void CreateSampler(VkSampler& sampler, const VkFilter& filtering = VK_FILTER_LINEAR, const uint32_t& anisotropy = 0U, const float& maxLod = 0.0f, const float& mipLodBias = 0.0f);
 		
-		extern void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels = 1U, const VkCommandBuffer& cmdBuffer = VK_NULL_HANDLE);
+		extern void SimpleTransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels = 1U, const VkCommandBuffer& cmdBuffer = VK_NULL_HANDLE);
+		extern void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& mipLevels = 1U, const VkCommandBuffer& cmdBuffer = VK_NULL_HANDLE);
 
 		void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags& commandPoolCreateFlags);
 		void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t& commandBufferCount, VkCommandPool& commandPool);

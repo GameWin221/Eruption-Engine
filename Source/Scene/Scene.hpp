@@ -12,7 +12,7 @@ namespace en
 {
 	class Scene
 	{
-		friend class VulkanRendererBackend;
+		friend class RendererBackend;
 
 	public:
 		SceneObject* GetSceneObject(std::string name);

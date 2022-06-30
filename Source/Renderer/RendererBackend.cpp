@@ -7,9 +7,9 @@ namespace en
 {
 	Camera* g_DefaultCamera;
 
-	VulkanRendererBackend* g_CurrentBackend;
+	RendererBackend* g_CurrentBackend;
 
-	void VulkanRendererBackend::Init()
+	void RendererBackend::Init()
 	{
 		m_Ctx = &Context::Get();
 
@@ -25,7 +25,7 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
+		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, RendererBackend::FramebufferResizeCallback);
 
 		EN_SUCCESS("Init began!")
 
@@ -34,21 +34,33 @@ namespace en
 
 		EN_SUCCESS("Created swapchain!")
 
-			CreateHDROffscreen();
+			CreateLightsBuffer();
 
-		EN_SUCCESS("Created high dynamic range framebuffer!")
+		EN_SUCCESS("Created lights buffer!");
 
 			CreateGBuffer();
 
-		EN_SUCCESS("Created the GBuffer!")
+		EN_SUCCESS("Created GBuffer!")
+
+			UpdateGBufferInput();
+
+		EN_SUCCESS("Created GBuffer descriptor set!")
+
+			CreateHDROffscreen();
+
+		EN_SUCCESS("Created high dynamic range image!")
+
+			UpdateSwapchainInputs();
+
+		EN_SUCCESS("Created swapchain images descriptor sets!")
+
+			UpdateHDRInput();
+
+		EN_SUCCESS("Created high dynamic range image descriptor set!")
 
 			CreateCommandBuffer();
 
 		EN_SUCCESS("Created command buffer!")
-
-			UpdateSwapchainInputs();
-
-		EN_SUCCESS("Created swapchain inputs!")
 
 			InitDepthPipeline();
 
@@ -64,11 +76,11 @@ namespace en
 
 			InitTonemappingPipeline();
 
-		EN_SUCCESS("Created PP pipeline!")
+		EN_SUCCESS("Created tonemapping pipeline!")
 
 			InitAntialiasingPipeline();
 
-		EN_SUCCESS("Created Antialiasing pipeline!");
+		EN_SUCCESS("Created antialiasing pipeline!");
 
 			InitImGui();
 
@@ -90,20 +102,20 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 	}
-	void VulkanRendererBackend::BindScene(Scene* scene)
+	void RendererBackend::BindScene(Scene* scene)
 	{
 		m_Scene = scene;
 	}
-	void VulkanRendererBackend::UnbindScene()
+	void RendererBackend::UnbindScene()
 	{
 		m_Scene = nullptr;
 	}
-	void VulkanRendererBackend::SetVSync(const bool& vSync)
+	void RendererBackend::SetVSync(const bool& vSync)
 	{
 		m_VSync = vSync;
 		m_FramebufferResized = true;
 	}
-	VulkanRendererBackend::~VulkanRendererBackend()
+	RendererBackend::~RendererBackend()
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
@@ -115,12 +127,12 @@ namespace en
 		vkFreeCommandBuffers(m_Ctx->m_LogicalDevice, m_Ctx->m_CommandPool, 1U, m_CommandBuffers.data());
 	}
 
-	void VulkanRendererBackend::WaitForGPUIdle()
+	void RendererBackend::WaitForGPUIdle()
 	{
 		vkWaitForFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFences[m_FrameIndex], VK_TRUE, UINT64_MAX);
 	}
 
-	void VulkanRendererBackend::UpdateLights()
+	void RendererBackend::UpdateLights()
 	{
 		m_Lights.changed = false;
 
@@ -212,11 +224,14 @@ namespace en
 			memset(m_Lights.LBO.spotLights + m_Lights.LBO.activeSpotLights, 0, MAX_SPOT_LIGHTS - m_Lights.LBO.activeSpotLights);
 			memset(m_Lights.LBO.dirLights + m_Lights.LBO.activeDirLights, 0, MAX_DIR_LIGHTS - m_Lights.LBO.activeDirLights);
 
-			m_Lights.buffer->MapMemory(&m_Lights.LBO, m_Lights.buffer->m_BufferSize);
+			MemoryBuffer stagingBuffer(m_Lights.buffer->m_BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.MapMemory(&m_Lights.LBO, m_Lights.buffer->m_BufferSize);
+
+			stagingBuffer.CopyTo(m_Lights.buffer.get());
 		}
 	}
 
-	void VulkanRendererBackend::BeginRender()
+	void RendererBackend::BeginRender()
 	{
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_MainSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_SwapchainImageIndex);
 
@@ -235,7 +250,7 @@ namespace en
 			return;
 		}
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to acquire swap chain image!");
+			EN_ERROR("RendererBackend::BeginRender() - Failed to acquire swap chain image!");
 
 		vkResetFences(m_Ctx->m_LogicalDevice, 1U, &m_SubmitFences[m_FrameIndex]);
 
@@ -245,13 +260,13 @@ namespace en
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording command buffer!");
+			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
 	}
-	void VulkanRendererBackend::DepthPass()
+	void RendererBackend::DepthPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-
-		const Pipeline::RenderingInfo info{
+	
+		const Pipeline::BindInfo info{
 			.depthAttachment {
 				.imageView	 = m_GBuffer->m_Attachments[3].m_ImageView,
 				.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -296,15 +311,19 @@ namespace en
 
 		m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
 	}
-	void VulkanRendererBackend::GeometryPass()
+	void RendererBackend::GeometryPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
+	
+		for (int i = 0; i < 3; i++)
+		{
+			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				m_CommandBuffers[m_FrameIndex]);
+		}
 
-		m_GBuffer->m_Attachments[0].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-		m_GBuffer->m_Attachments[1].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-		m_GBuffer->m_Attachments[2].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-
-		const Pipeline::RenderingInfo info{
+		const Pipeline::BindInfo info{
 			.colorAttachments {
 				{
 					.imageView   = m_GBuffer->m_Attachments[0].m_ImageView,
@@ -370,20 +389,24 @@ namespace en
 
 		m_GeometryPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
 	}
-	void VulkanRendererBackend::LightingPass()
+	void RendererBackend::LightingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
+		
+		for (int i = 0; i < 3; i++)
+		{
+			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				m_CommandBuffers[m_FrameIndex]);
+		}
 
-		m_GBuffer->m_Attachments[0].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-		m_GBuffer->m_Attachments[1].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-		m_GBuffer->m_Attachments[2].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
+		m_HDROffscreen->ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_CommandBuffers[m_FrameIndex]);
 
-		m_HDROffscreen->m_Attachments[0].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-
-		const Pipeline::RenderingInfo info{
+		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
-					.imageView	 = m_HDROffscreen->m_Attachments[0].m_ImageView,
+					.imageView	 = m_HDROffscreen->m_ImageView,
 					.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					.loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE
@@ -397,21 +420,24 @@ namespace en
 
 		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		m_LightingInput->Bind(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout);
+		m_GBufferInput->Bind(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout);
 
 		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
 
 		m_LightingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
 	}
-	void VulkanRendererBackend::PostProcessPass()
+	void RendererBackend::TonemappingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
+		
+		m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_GENERAL,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			m_CommandBuffers[m_FrameIndex]);
 
-		m_Swapchain->ChangeLayout(VK_IMAGE_LAYOUT_GENERAL, m_SwapchainImageIndex, m_CommandBuffers[m_FrameIndex]);
+		m_HDROffscreen->ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, m_CommandBuffers[m_FrameIndex]);
 
-		m_HDROffscreen->m_Attachments[0].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_CommandBuffers[m_FrameIndex]);
-
-		const Pipeline::RenderingInfo info{
+		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
 					.imageView   = m_Swapchain->m_ImageViews[m_SwapchainImageIndex],
@@ -430,23 +456,23 @@ namespace en
 
 		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_TonemappingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
 
-		m_TonemappingInput->Bind(m_CommandBuffers[m_FrameIndex], m_TonemappingPipeline->m_Layout);
+		m_HDRInput->Bind(m_CommandBuffers[m_FrameIndex], m_TonemappingPipeline->m_Layout);
 
 		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
 
 		m_TonemappingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
 	}
-	void VulkanRendererBackend::AntialiasPass()
+	void RendererBackend::AntialiasPass()
 	{
 		if (m_SkipFrame || !m_Scene || m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
 
-		const Pipeline::RenderingInfo info{
+		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
-					.imageView   = m_Swapchain->m_ImageViews[m_SwapchainImageIndex],
+					.imageView	 = m_Swapchain->m_ImageViews[m_SwapchainImageIndex],
 					.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-					.loadOp		 = VK_ATTACHMENT_LOAD_OP_LOAD,
-					.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE
+					.loadOp	     = VK_ATTACHMENT_LOAD_OP_LOAD,
+					.storeOp     = VK_ATTACHMENT_STORE_OP_STORE
 				}
 			},
 
@@ -454,7 +480,7 @@ namespace en
 		};
 
 		m_AntialiasingPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
-
+		
 		m_SwapchainInputs[m_SwapchainImageIndex]->Bind(m_CommandBuffers[m_FrameIndex], m_AntialiasingPipeline->m_Layout);
 
 		m_PostProcessParams.antialiasing.texelSizeX = 1.0f / static_cast<float>(m_Swapchain->GetExtent().width);
@@ -463,10 +489,10 @@ namespace en
 		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_AntialiasingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Antialiasing), &m_PostProcessParams.antialiasing);
 
 		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
-
+		
 		m_AntialiasingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
 	}
-	void VulkanRendererBackend::ImGuiPass()
+	void RendererBackend::ImGuiPass()
 	{
 		if (m_SkipFrame || m_ImGuiRenderCallback == nullptr) return;
 
@@ -486,7 +512,7 @@ namespace en
 		};
 
 		if (vkBeginCommandBuffer(m_ImGui.commandBuffers[m_SwapchainImageIndex], &beginInfo) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
+			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording ImGui command buffer!");
 
 		vkCmdBeginRenderPass(m_ImGui.commandBuffers[m_SwapchainImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -495,16 +521,19 @@ namespace en
 		vkCmdEndRenderPass(m_ImGui.commandBuffers[m_SwapchainImageIndex]);
 
 		if (vkEndCommandBuffer(m_ImGui.commandBuffers[m_SwapchainImageIndex]) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record ImGui command buffer!");
+			EN_ERROR("RendererBackend::EndRender() - Failed to record ImGui command buffer!");
 	}
-	void VulkanRendererBackend::EndRender()
+	void RendererBackend::EndRender()
 	{
 		if (m_SkipFrame) return;
 
-		m_Swapchain->ChangeLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, m_SwapchainImageIndex, m_CommandBuffers[m_FrameIndex]);
+		m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+								  0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+								  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+								  m_CommandBuffers[m_FrameIndex]);
 
 		if (vkEndCommandBuffer(m_CommandBuffers[m_FrameIndex]) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to record command buffer!");
+			EN_ERROR("RendererBackend::EndRender() - Failed to record command buffer!");
 
 		constexpr VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -530,7 +559,7 @@ namespace en
 		}
 
 		if (vkQueueSubmit(m_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_SubmitFences[m_FrameIndex]) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to submit command buffer!");
+			EN_ERROR("RendererBackend::EndRender() - Failed to submit command buffer!");
 
 		const VkPresentInfoKHR presentInfo{
 			.sType				= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -548,16 +577,16 @@ namespace en
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_FramebufferResized)
 			RecreateFramebuffer();
 		else if (result != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::EndRender() - Failed to present swap chain image!");
+			EN_ERROR("RendererBackend::EndRender() - Failed to present swap chain image!");
 
 		m_FrameIndex = (m_FrameIndex + 1) % FRAMES_IN_FLIGHT;
 	}
 
-	void VulkanRendererBackend::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
+	void RendererBackend::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		g_CurrentBackend->m_FramebufferResized = true;
 	}
-	void VulkanRendererBackend::RecreateFramebuffer()
+	void RendererBackend::RecreateFramebuffer()
 	{
 		int width = 0, height = 0;
 		glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
@@ -576,9 +605,9 @@ namespace en
 		CreateGBuffer();
 		CreateHDROffscreen();
 
+		UpdateGBufferInput();
 		UpdateSwapchainInputs();
-		UpdateLightingInput();
-		UpdateTonemappingInput();
+		UpdateHDRInput();
 
 		m_Swapchain->CreateSwapchainFramebuffers(m_ImGui.renderPass);
 
@@ -588,67 +617,68 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 	}
-	void VulkanRendererBackend::ReloadBackend()
+	void RendererBackend::ReloadBackend()
 	{
 		m_ReloadQueued = true;
 	}
-	void VulkanRendererBackend::ReloadBackendImpl()
+	void RendererBackend::ReloadBackendImpl()
 	{
 		EN_LOG("Reloading the renderer backend...");
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		m_LightingInput.reset();
+		m_GBufferInput.reset();
+		m_HDRInput.reset();
 		m_SwapchainInputs.clear();
 
 		m_DepthPipeline.reset();
-
 		m_GeometryPipeline.reset();
-
 		m_LightingPipeline.reset();
-		m_LightingInput.reset();
-
 		m_TonemappingPipeline.reset();
-
 		m_AntialiasingPipeline.reset();
 
 		m_CameraMatrices.reset();
 
+		m_Swapchain.reset();
+
 		m_GBuffer.reset();
 		m_HDROffscreen.reset();
 
-		for(auto& cmd : m_CommandBuffers)
+		for (auto& cmd : m_CommandBuffers)
 			vkResetCommandBuffer(cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
-		vkResetFences(m_Ctx->m_LogicalDevice, FRAMES_IN_FLIGHT, m_SubmitFences.data());
+		for (auto& fence : m_SubmitFences)
+			vkDestroyFence(m_Ctx->m_LogicalDevice, fence, nullptr);
 
-		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, VulkanRendererBackend::FramebufferResizeCallback);
+		for (auto& semaphore : m_MainSemaphores)
+			vkDestroySemaphore(m_Ctx->m_LogicalDevice, semaphore, nullptr);
+
+		for (auto& semaphore : m_PresentSemaphores)
+			vkDestroySemaphore(m_Ctx->m_LogicalDevice, semaphore, nullptr);
+
+		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, RendererBackend::FramebufferResizeCallback);
 
 		m_Swapchain = std::make_unique<Swapchain>();
-
 		m_Swapchain->CreateSwapchain(m_VSync);
 
 		CreateGBuffer();
-		UpdateSwapchainInputs();
 		CreateHDROffscreen();
 
-		CreateCommandBuffer();
+		UpdateGBufferInput();
+		UpdateSwapchainInputs();
+		UpdateHDRInput();
 
 		InitDepthPipeline();
-
 		InitGeometryPipeline();
-
 		InitLightingPipeline();
-
 		InitTonemappingPipeline();
-
 		InitAntialiasingPipeline();
-
-		m_Swapchain->CreateSwapchainFramebuffers(m_ImGui.renderPass);
 
 		CreateSyncObjects();
 
 		m_CameraMatrices = std::make_unique<CameraMatricesBuffer>();
+
+		m_Swapchain->CreateSwapchainFramebuffers(m_ImGui.renderPass);
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain->m_ImageViews.size());
 
@@ -659,14 +689,20 @@ namespace en
 		EN_SUCCESS("Succesfully reloaded the backend");
 	}
 
-	void VulkanRendererBackend::SetMainCamera(Camera* camera)
+	void RendererBackend::SetMainCamera(Camera* camera)
 	{
 		if (camera)
 			m_MainCamera = camera;
 		else
 			m_MainCamera = g_DefaultCamera;
 	}
-	void VulkanRendererBackend::CreateGBuffer()
+
+	void RendererBackend::CreateLightsBuffer()
+	{
+		m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	}
+
+	void RendererBackend::CreateGBuffer()
 	{
 		const DynamicFramebuffer::AttachmentInfo albedo{
 			.format = m_Swapchain->GetFormat(),
@@ -690,23 +726,90 @@ namespace en
 			.initialLayout	  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
 
-		m_GBuffer = std::make_unique<DynamicFramebuffer>(std::vector<DynamicFramebuffer::AttachmentInfo>{ albedo, position, normal, depth }, m_Swapchain->GetExtent());
+		auto attachments = { albedo, position, normal, depth };
+
+		m_GBuffer = std::make_unique<DynamicFramebuffer>(attachments, m_Swapchain->GetExtent());
 	}
-	void VulkanRendererBackend::CreateHDROffscreen()
+	void RendererBackend::CreateHDROffscreen()
 	{
-		constexpr DynamicFramebuffer::AttachmentInfo attachment{
-			.format		   = VK_FORMAT_R16G16B16A16_SFLOAT,
-			.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		m_HDROffscreen = std::make_unique<Image>(m_Swapchain->GetExtent(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	}
+
+	void RendererBackend::UpdateGBufferInput()
+	{
+		const DescriptorSet::ImageInfo albedo{
+			.index = 0U,
+			.imageView = m_GBuffer->m_Attachments[0].m_ImageView,
+			.imageSampler = m_GBuffer->m_Sampler,
 		};
 
-		m_HDROffscreen = std::make_unique<DynamicFramebuffer>(std::vector<DynamicFramebuffer::AttachmentInfo>{attachment}, m_Swapchain->GetExtent());
+		const DescriptorSet::ImageInfo position{
+			.index = 1U,
+			.imageView = m_GBuffer->m_Attachments[1].m_ImageView,
+			.imageSampler = m_GBuffer->m_Sampler
+		};
+
+		const DescriptorSet::ImageInfo normal{
+			.index = 2U,
+			.imageView = m_GBuffer->m_Attachments[2].m_ImageView,
+			.imageSampler = m_GBuffer->m_Sampler
+		};
+
+		const DescriptorSet::BufferInfo buffer{
+			.index = 3U,
+			.buffer = m_Lights.buffer->GetHandle(),
+			.size = sizeof(m_Lights.LBO)
+		};
+
+		auto imageInfos = { albedo, position, normal };
+
+		if (!m_GBufferInput)
+			m_GBufferInput = std::make_unique<DescriptorSet>(imageInfos, buffer);
+		else
+			m_GBufferInput->Update(imageInfos, buffer);
+	}
+	void RendererBackend::UpdateHDRInput()
+	{
+		const DescriptorSet::ImageInfo HDRColorBuffer{
+			.index		  = 0U,
+			.imageView	  = m_HDROffscreen->m_ImageView,
+			.imageSampler = m_GBuffer->m_Sampler
+		};
+
+		auto imageInfos = { HDRColorBuffer};
+
+		if (!m_HDRInput)
+			m_HDRInput = std::make_unique<DescriptorSet>(imageInfos);
+		else
+			m_HDRInput->Update(imageInfos);
+	}
+	void RendererBackend::UpdateSwapchainInputs()
+	{
+		m_SwapchainInputs.resize(m_Swapchain->m_ImageViews.size());
+
+		for (int i = 0; i < m_SwapchainInputs.size(); i++)
+		{
+			const DescriptorSet::ImageInfo image {
+				.index		  = 0U,
+				.imageView	  = m_Swapchain->m_ImageViews[i],
+				.imageSampler = m_GBuffer->m_Sampler,
+				.imageLayout  = VK_IMAGE_LAYOUT_GENERAL,
+			};
+
+			auto imageInfo = { image };
+
+			if (!m_SwapchainInputs[i])
+				m_SwapchainInputs[i] = std::make_unique<DescriptorSet>(imageInfo);
+			else
+				m_SwapchainInputs[i]->Update(imageInfo);
+		}
 	}
 
-	void VulkanRendererBackend::InitDepthPipeline()
+	void RendererBackend::InitDepthPipeline()
 	{
 		m_DepthPipeline = std::make_unique<Pipeline>();
 
-		Shader vShader("Shaders/DepthVertex.spv", ShaderType::Vertex);
+		Shader vShader("Shaders/Depth.spv", ShaderType::Vertex);
 
 		constexpr VkPushConstantRange objectPushConstant {
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -714,7 +817,7 @@ namespace en
 			.size		= sizeof(PerObjectData)
 		};
 
-		const Pipeline::PipelineInfo pipelineInfo{
+		const Pipeline::CreateInfo pipelineInfo{
 			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
 			.vShader			= &vShader,
 			.descriptorLayouts  = { CameraMatricesBuffer::GetLayout() },
@@ -725,7 +828,7 @@ namespace en
 
 		m_DepthPipeline->CreatePipeline(pipelineInfo);
 	}
-	void VulkanRendererBackend::InitGeometryPipeline()
+	void RendererBackend::InitGeometryPipeline()
 	{
 		m_GeometryPipeline = std::make_unique<Pipeline>();
 
@@ -744,7 +847,7 @@ namespace en
 			.size		= 24U,
 		};
 
-		const Pipeline::PipelineInfo pipelineInfo{
+		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_GBuffer->m_Attachments[0].m_Format, m_GBuffer->m_Attachments[1].m_Format, m_GBuffer->m_Attachments[2].m_Format },
 			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
 			.vShader			= &vShader,
@@ -759,46 +862,9 @@ namespace en
 
 		m_GeometryPipeline->CreatePipeline(pipelineInfo);
 	}
-
-	void VulkanRendererBackend::UpdateLightingInput()
-	{
-		const PipelineInput::ImageInfo albedo{
-			.index		  = 0U,
-			.imageView	  = m_GBuffer->m_Attachments[0].m_ImageView,
-			.imageSampler = m_GBuffer->m_Sampler,
-		};
-
-		const PipelineInput::ImageInfo position{
-			.index		  = 1U,
-			.imageView    = m_GBuffer->m_Attachments[1].m_ImageView,
-			.imageSampler = m_GBuffer->m_Sampler
-		};
-
-		const PipelineInput::ImageInfo normal{
-			.index		  = 2U,
-			.imageView	  = m_GBuffer->m_Attachments[2].m_ImageView,
-			.imageSampler = m_GBuffer->m_Sampler
-		};
-
-		const PipelineInput::BufferInfo buffer{
-			.index  = 3U,
-			.buffer = m_Lights.buffer->GetHandle(),
-			.size   = sizeof(m_Lights.LBO)
-		};
-
-		if (!m_LightingInput)
-			m_LightingInput = std::make_unique<PipelineInput>(std::vector<PipelineInput::ImageInfo>{albedo, position, normal}, buffer);
-		else
-			m_LightingInput->UpdateDescriptorSet(std::vector<PipelineInput::ImageInfo>{albedo, position, normal}, buffer);
-	}
-	void VulkanRendererBackend::InitLightingPipeline()
+	void RendererBackend::InitLightingPipeline()
 	{
 		m_LightingPipeline = std::make_unique<Pipeline>();
-
-		if (!m_Lights.buffer)
-			m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		UpdateLightingInput();
 
 		constexpr VkPushConstantRange cameraPushConstant{
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -807,80 +873,44 @@ namespace en
 		};
 
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/LightingFrag.spv", ShaderType::Fragment);
+		Shader fShader("Shaders/Lighting.spv", ShaderType::Fragment);
 
-		const Pipeline::PipelineInfo pipelineInfo{
-			.colorFormats		= { m_HDROffscreen->m_Attachments[0].m_Format},
+		const Pipeline::CreateInfo pipelineInfo{
+			.colorFormats		= { m_HDROffscreen->m_Format},
 			.vShader			= &vShader,
 			.fShader			= &fShader,
-			.descriptorLayouts  = { m_LightingInput->m_DescriptorLayout },
+			.descriptorLayouts  = { m_GBufferInput->m_DescriptorLayout },
 			.pushConstantRanges = { cameraPushConstant },
 			.cullMode			= VK_CULL_MODE_FRONT_BIT
 		};
 
 		m_LightingPipeline->CreatePipeline(pipelineInfo);
 	}
-
-	void VulkanRendererBackend::UpdateTonemappingInput()
-	{
-		const PipelineInput::ImageInfo HDRColorBuffer{
-			.index		  = 0U,
-			.imageView    = m_HDROffscreen->m_Attachments[0].m_ImageView,
-			.imageSampler = m_HDROffscreen->m_Sampler
-		};
-
-		if (!m_TonemappingInput)
-			m_TonemappingInput = std::make_unique<PipelineInput>(std::vector<PipelineInput::ImageInfo>{ HDRColorBuffer });
-		else
-			m_TonemappingInput->UpdateDescriptorSet(std::vector<PipelineInput::ImageInfo>{ HDRColorBuffer });
-	}
-	void VulkanRendererBackend::InitTonemappingPipeline()
+	void RendererBackend::InitTonemappingPipeline()
 	{
 		m_TonemappingPipeline = std::make_unique<Pipeline>();
 
-		UpdateTonemappingInput();
-
-		constexpr VkPushConstantRange exposurePushConstant{
+		constexpr VkPushConstantRange exposurePushConstant {
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.offset		= 0U,
 			.size		= sizeof(PostProcessingParams::Exposure)
 		};
 
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/TonemapFrag.spv", ShaderType::Fragment);
+		Shader fShader("Shaders/Tonemapping.spv", ShaderType::Fragment);
 
-		const Pipeline::PipelineInfo pipelineInfo{
+		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_Swapchain->GetFormat() },
 			.vShader			= &vShader,
 			.fShader			= &fShader,
-			.descriptorLayouts  = { m_TonemappingInput->m_DescriptorLayout },
+			.descriptorLayouts  = { m_HDRInput->m_DescriptorLayout },
 			.pushConstantRanges = { exposurePushConstant },
 			.cullMode			= VK_CULL_MODE_FRONT_BIT,
 		};
 
 		m_TonemappingPipeline->CreatePipeline(pipelineInfo);
 	}
-
-	void VulkanRendererBackend::UpdateSwapchainInputs()
-	{
-		m_SwapchainInputs.resize(m_Swapchain->m_ImageViews.size());
-
-		for (int i = 0; i < m_SwapchainInputs.size(); i++)
-		{
-			const PipelineInput::ImageInfo image{
-				.index		  = 0U,
-				.imageView	  = m_Swapchain->m_ImageViews[i],
-				.imageSampler = m_GBuffer->m_Sampler,
-				.imageLayout  = VK_IMAGE_LAYOUT_GENERAL,
-			};
-
-			if (!m_SwapchainInputs[i])
-				m_SwapchainInputs[i] = std::make_unique<PipelineInput>(std::vector<PipelineInput::ImageInfo>{ image });
-			else
-				m_SwapchainInputs[i]->UpdateDescriptorSet(std::vector<PipelineInput::ImageInfo>{ image });
-		}
-	}
-	void VulkanRendererBackend::InitAntialiasingPipeline()
+	void RendererBackend::InitAntialiasingPipeline()
 	{
 		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
 
@@ -895,19 +925,19 @@ namespace en
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/FXAA.spv", ShaderType::Fragment);
 
-		const Pipeline::PipelineInfo pipelineInfo{
+		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_Swapchain->GetFormat() },
 			.vShader			= &vShader,
 			.fShader			= &fShader,
 			.descriptorLayouts  = { m_SwapchainInputs[0]->m_DescriptorLayout},
 			.pushConstantRanges = { antialiasingPushConstant },
-			.cullMode			 = VK_CULL_MODE_FRONT_BIT,
+			.cullMode = VK_CULL_MODE_FRONT_BIT,
 		};
 
 		m_AntialiasingPipeline->CreatePipeline(pipelineInfo);
 	}
 
-	void VulkanRendererBackend::CreateCommandBuffer()
+	void RendererBackend::CreateCommandBuffer()
 	{
 		const VkCommandBufferAllocateInfo allocInfo{
 			.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -917,9 +947,9 @@ namespace en
 		};
 
 		if (vkAllocateCommandBuffers(m_Ctx->m_LogicalDevice, &allocInfo, m_CommandBuffers.data()) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::GCreateCommandBuffer() - Failed to allocate command buffer!");
+			EN_ERROR("RendererBackend::GCreateCommandBuffer() - Failed to allocate command buffer!");
 	}
-	void VulkanRendererBackend::CreateSyncObjects()
+	void RendererBackend::CreateSyncObjects()
 	{
 		constexpr VkFenceCreateInfo fenceInfo{
 			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -928,7 +958,7 @@ namespace en
 
 		for(auto& fence : m_SubmitFences)
 			if (vkCreateFence(m_Ctx->m_LogicalDevice, &fenceInfo, nullptr, &fence) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::CreateSyncObjects() - Failed to create submit fences!");
+				EN_ERROR("RendererBackend::CreateSyncObjects() - Failed to create submit fences!");
 
 		constexpr VkSemaphoreCreateInfo semaphoreInfo{
 			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
@@ -950,7 +980,7 @@ namespace en
 		std::cerr << err << '\n';
 		EN_ERROR("ImGui has caused a problem!");
 	}
-	void VulkanRendererBackend::InitImGui()
+	void RendererBackend::InitImGui()
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -998,7 +1028,7 @@ namespace en
 		};
 
 		if (vkCreateRenderPass(m_Ctx->m_LogicalDevice, &renderPassInfo, nullptr, &m_ImGui.renderPass) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's render pass!");
+			EN_ERROR("RendererBackend::InitImGui() - Failed to create ImGui's render pass!");
 
 		constexpr VkDescriptorPoolSize poolSizes[]{
 			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -1023,7 +1053,7 @@ namespace en
 		};
 
 		if (vkCreateDescriptorPool(m_Ctx->m_LogicalDevice, &poolInfo, nullptr, &m_ImGui.descriptorPool) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
+			EN_ERROR("RendererBackend::InitImGui() - Failed to create ImGui's descriptor pool!");
 
 		ImGui_ImplGlfw_InitForVulkan(Window::Get().m_GLFWWindow, true);
 

@@ -69,7 +69,7 @@ void Eruption::Update()
 	else if (m_Input->IsKey(en::Key::Y, en::InputState::Pressed))
 	{
 		m_Renderer->SetVSync(false);
-		m_Renderer->GetPPParams().antialiasingMode = en::VulkanRendererBackend::AntialiasingMode::None;
+		m_Renderer->GetPPParams().antialiasingMode = en::RendererBackend::AntialiasingMode::None;
 	}
 
 	static float targetYaw = m_Camera->m_Yaw;

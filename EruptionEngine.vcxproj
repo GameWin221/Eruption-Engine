@@ -198,7 +198,7 @@
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\DynamicFramebuffer.cpp" />
-    <ClCompile Include="Source\Renderer\PipelineInput.cpp" />
+    <ClCompile Include="Source\Renderer\DescriptorSet.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp" />
@@ -278,7 +278,7 @@
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
     <ClInclude Include="Source\Renderer\DynamicFramebuffer.hpp" />
-    <ClInclude Include="Source\Renderer\PipelineInput.hpp" />
+    <ClInclude Include="Source\Renderer\DescriptorSet.hpp" />
     <ClInclude Include="Source\Renderer\Pipeline.hpp" />
     <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
     <ClInclude Include="External\ImGui\imconfig.h" />
@@ -321,29 +321,29 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
-    <None Include="Shaders\DepthFragment.frag" />
-    <None Include="Shaders\DepthVertex.vert" />
+    <None Include="Shaders\AMD\AMDFXAA.comp" />
+    <None Include="Shaders\AMD\AMDTonemapping.comp" />
+    <None Include="Shaders\Depth.frag" />
+    <None Include="Shaders\Depth.vert" />
     <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\GeometryFragment.frag">
       <FileType>Document</FileType>
     </None>
-    <CopyFileToFolders Include="Shaders\GeometryFragment.spv">
-      <FileType>Document</FileType>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Build\$(Platform)\$(Configuration)\Shaders\</DestinationFolders>
-    </CopyFileToFolders>
     <None Include="Shaders\GeometryVertex.vert">
       <FileType>Document</FileType>
     </None>
-    <None Include="Shaders\LightingFrag.frag">
+    <None Include="Shaders\Lighting.frag">
       <FileType>Document</FileType>
     </None>
     <None Include="Shaders\FullscreenTriVert.vert">
       <FileType>Document</FileType>
     </None>
     <None Include="Shaders\Move.frag" />
+    <None Include="Shaders\NVIDIA\NVFXAA.comp" />
+    <None Include="Shaders\NVIDIA\NVTonemapping.comp" />
     <None Include="Shaders\SMAA.frag" />
     <None Include="Shaders\TonemapComp.comp" />
+    <None Include="Shaders\Tonemapping.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -27,11 +27,11 @@ namespace en
 			
 			switch (postProcessing.antialiasingMode)
 			{
-			case VulkanRendererBackend::AntialiasingMode::FXAA:
+			case RendererBackend::AntialiasingMode::FXAA:
 				ImGui::Spacing();
 
 				if (ImGui::Button("Restore Defaults"))
-					postProcessing.antialiasing = VulkanRendererBackend::PostProcessingParams::Antialiasing{};
+					postProcessing.antialiasing = RendererBackend::PostProcessingParams::Antialiasing{};
 
 				ImGui::Spacing();
 
@@ -41,7 +41,7 @@ namespace en
 				ImGui::DragFloat("FXAA Power", &postProcessing.antialiasing.fxaaPower, 0.2f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				break;
 
-			case VulkanRendererBackend::AntialiasingMode::None:
+			case RendererBackend::AntialiasingMode::None:
 				ImGui::Text("Antialiasing is disabled.");
 				break;
 

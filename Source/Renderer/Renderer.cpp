@@ -9,7 +9,7 @@ namespace en
 	{
 		g_CurrentRenderer = this;
 
-		m_Backend = std::make_unique<VulkanRendererBackend>();
+		m_Backend = std::make_unique<RendererBackend>();
 
 		m_Backend->Init();
 
@@ -48,7 +48,7 @@ namespace en
 		m_Backend->DepthPass();
 		m_Backend->GeometryPass();
 		m_Backend->LightingPass();
-		m_Backend->PostProcessPass();
+		m_Backend->TonemappingPass();
 		m_Backend->AntialiasPass();
 		m_Backend->ImGuiPass();
 
@@ -81,7 +81,7 @@ namespace en
 	{
 		m_Backend->ReloadBackend();
 	}
-	VulkanRendererBackend::PostProcessingParams& Renderer::GetPPParams()
+	RendererBackend::PostProcessingParams& Renderer::GetPPParams()
 	{
 		return m_Backend->m_PostProcessParams;
 	}

@@ -201,7 +201,7 @@ namespace en
     void AssetManager::UpdateMaterials()
     {
         for (const auto& [name, material] : m_Materials)
-            material->UpdateDescriptorSet();
+            material->Update();
     }
 
     std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties)

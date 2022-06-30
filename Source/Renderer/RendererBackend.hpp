@@ -16,6 +16,7 @@
 #include <Renderer/Window.hpp>
 #include <Renderer/Context.hpp>
 #include <Renderer/Shader.hpp>
+//#include <Renderer/ComputeShader.hpp>
 
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
@@ -25,7 +26,7 @@
 #include <Renderer/Camera/CameraMatricesBuffer.hpp>
 
 #include <Renderer/Pipeline.hpp>
-#include <Renderer/PipelineInput.hpp>
+#include <Renderer/DescriptorSet.hpp>
 #include <Renderer/DynamicFramebuffer.hpp>
 
 #include <Renderer/Swapchain.hpp>
@@ -35,10 +36,10 @@
 
 namespace en
 {
-	class VulkanRendererBackend
+	class RendererBackend
 	{
 	public:
-		~VulkanRendererBackend();
+		~RendererBackend();
 
 		void Init();
 
@@ -58,7 +59,7 @@ namespace en
 		void DepthPass();
 		void GeometryPass();
 		void LightingPass();
-		void PostProcessPass();
+		void TonemappingPass();
 		void AntialiasPass();
 		void ImGuiPass();
 
@@ -164,23 +165,21 @@ namespace en
 		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
-
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
-
 		std::unique_ptr<Pipeline> m_LightingPipeline;
-		std::unique_ptr<PipelineInput> m_LightingInput;
-
-		std::vector<std::unique_ptr<PipelineInput>> m_SwapchainInputs;
 
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
-		std::unique_ptr<PipelineInput> m_TonemappingInput;
-
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
 
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
-		std::unique_ptr<DynamicFramebuffer> m_HDROffscreen;
+
+		std::unique_ptr<DescriptorSet> m_GBufferInput;
+		std::unique_ptr<DescriptorSet> m_HDRInput;
+		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
+
+		std::unique_ptr<Image> m_HDROffscreen;
 
 		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
@@ -197,8 +196,8 @@ namespace en
 		Scene*	 m_Scene	  = nullptr;
 
 		uint32_t m_SwapchainImageIndex = 0U;
-		uint32_t m_FrameIndex = 0U;
-		// Frame in flight index
+		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
+		
 
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
@@ -212,19 +211,19 @@ namespace en
 
 		void CreateCommandBuffer();
 
+		void CreateLightsBuffer();
+
 		void CreateGBuffer();
 		void CreateHDROffscreen();
 
+		void UpdateGBufferInput();
+		void UpdateHDRInput();
+		void UpdateSwapchainInputs();
+
 		void InitDepthPipeline();
 		void InitGeometryPipeline();
-
-		void UpdateLightingInput();
 		void InitLightingPipeline();
-
-		void UpdateTonemappingInput();
 		void InitTonemappingPipeline();
-
-		void UpdateSwapchainInputs();
 		void InitAntialiasingPipeline();
 
 		void CreateSyncObjects();
