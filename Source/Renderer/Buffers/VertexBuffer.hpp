@@ -16,13 +16,11 @@ namespace en
 
         void Bind(VkCommandBuffer& commandBuffer);
 
-        const VkDeviceSize& GetBufferSize()    const { return m_Buffer->GetSize(); };
-        const uint32_t&     GetVerticesCount() const { return m_VerticesCount; };
-
+        const VkDeviceSize& GetBufferSize() const { return m_Buffer->m_BufferSize; };
+        
+        const uint32_t m_VerticesCount;
     private:
         std::unique_ptr<MemoryBuffer> m_Buffer;
-
-        uint32_t m_VerticesCount;
     };
 
     struct Vertex

@@ -12,7 +12,7 @@
 
 namespace en
 {
-	class SubMesh : Asset
+	class SubMesh : public Asset
 	{
 	public:
 		SubMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material);
@@ -24,12 +24,7 @@ namespace en
 		std::unique_ptr<VertexBuffer> m_VertexBuffer;
 		std::unique_ptr<IndexBuffer>  m_IndexBuffer;
 
-		const glm::vec3& GetCenter() const { return m_Center; }
-
 		bool m_Active = true;
-
-	private:
-		glm::vec3 m_Center;
 	};
 }
 

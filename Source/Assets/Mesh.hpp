@@ -14,7 +14,7 @@
 
 namespace en
 {
-	class Mesh : Asset
+	class Mesh : public Asset
 	{
 		friend class AssetManager;
 

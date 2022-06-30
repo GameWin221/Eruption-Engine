@@ -5,7 +5,7 @@
 
 namespace en
 {
-	SettingsPanel::SettingsPanel(Renderer* renderer) : m_Renderer(renderer) {}
+	constexpr std::array<const char*, 2> g_AntialiasingModeNames = { "FXAA", "None" };
 
 	void SettingsPanel::Render()
 	{
@@ -22,17 +22,16 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Antialiasing"))
 		{
-			static const std::vector<const char*> modes = { "FXAA", "None"};
-
-			if (ImGui::Combo("Antialiasing Mode", (int*)&postProcessing.antialiasingMode, modes.data(), modes.size()))
+			if (ImGui::Combo("Antialiasing Mode", (int*)&postProcessing.antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
 				m_Renderer->ReloadRenderer();
 			
-			if (postProcessing.antialiasingMode == VulkanRendererBackend::AntialiasingMode::FXAA)
+			switch (postProcessing.antialiasingMode)
 			{
+			case RendererBackend::AntialiasingMode::FXAA:
 				ImGui::Spacing();
 
 				if (ImGui::Button("Restore Defaults"))
-					postProcessing.antialiasing = VulkanRendererBackend::PostProcessingParams::Antialiasing{};
+					postProcessing.antialiasing = RendererBackend::PostProcessingParams::Antialiasing{};
 
 				ImGui::Spacing();
 
@@ -40,14 +39,17 @@ namespace en
 				ImGui::DragFloat("FXAA Reduce Min", &postProcessing.antialiasing.fxaaReduceMin, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::DragFloat("FXAA Reduce Mult", &postProcessing.antialiasing.fxaaReduceMult, 0.01f, 0.0f, 1.0f), "%.3f", ImGuiSliderFlags_AlwaysClamp;
 				ImGui::DragFloat("FXAA Power", &postProcessing.antialiasing.fxaaPower, 0.2f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			}
-			//else if (postProcessing.antialiasingMode == VulkanRendererBackend::AntialiasingMode::SMAA)
-			//{
-			//	ImGui::Text("This antialiasing mode doesn't work yet!");
-			//}
-			else if (postProcessing.antialiasingMode == VulkanRendererBackend::AntialiasingMode::None)
+				break;
+
+			case RendererBackend::AntialiasingMode::None:
 				ImGui::Text("Antialiasing is disabled.");
-			
+				break;
+
+			default:
+				EN_ERROR("void SettingsPanel::Render() - postProcessing.antialiasingMode was an unknown value!");
+				break;
+			}
+	
 		}
 
 		ImGui::End();

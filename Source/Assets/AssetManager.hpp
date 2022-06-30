@@ -39,28 +39,28 @@ namespace en
 
 		static AssetManager* Get();
 
-		bool LoadMesh	(std::string nameID, std::string path, MeshImportProperties properties    = MeshImportProperties{}   );
-		bool LoadTexture(std::string nameID, std::string path, TextureImportProperties properties = TextureImportProperties{});
+		bool LoadMesh	(const std::string& nameID, const std::string& path, const MeshImportProperties&    properties = MeshImportProperties{}   );
+		bool LoadTexture(const std::string& nameID, const std::string& path, const TextureImportProperties& properties = TextureImportProperties{});
 
-		void DeleteMesh   (std::string nameID);
-		void DeleteTexture(std::string nameID);
+		void DeleteMesh   (const std::string& nameID);
+		void DeleteTexture(const std::string& nameID);
 
-		bool CreateMaterial(std::string nameID, glm::vec3 color = glm::vec3(1.0f), float metalnessVal = 0.0f, float roughnessVal = 0.75f, float normalStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* roughnessTexture = Texture::GetWhiteNonSRGBTexture(), Texture* normalTexture = Texture::GetWhiteNonSRGBTexture(), Texture* metalnessTexture = Texture::GetWhiteNonSRGBTexture());
-		void DeleteMaterial(std::string nameID);
+		bool CreateMaterial(const std::string& nameID, const glm::vec3& color = glm::vec3(1.0f), const float& metalnessVal = 0.0f, const float& roughnessVal = 0.75f, const float& normalStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* roughnessTexture = Texture::GetWhiteNonSRGBTexture(), Texture* normalTexture = Texture::GetWhiteNonSRGBTexture(), Texture* metalnessTexture = Texture::GetWhiteNonSRGBTexture());
+		void DeleteMaterial(const std::string& nameID);
 
-		bool ContainsMesh    (std::string nameID) { return m_Meshes   .contains(nameID); };
-		bool ContainsTexture (std::string nameID) { return m_Textures .contains(nameID); };
-		bool ContainsMaterial(std::string nameID) { return m_Materials.contains(nameID); };
+		bool ContainsMesh    (const std::string& nameID) { return m_Meshes   .contains(nameID); };
+		bool ContainsTexture (const std::string& nameID) { return m_Textures .contains(nameID); };
+		bool ContainsMaterial(const std::string& nameID) { return m_Materials.contains(nameID); };
 
-		void RenameMesh    (std::string oldNameID, std::string newNameID);
-		void RenameTexture (std::string oldNameID, std::string newNameID);
-		void RenameMaterial(std::string oldNameID, std::string newNameID);
+		void RenameMesh    (const std::string& oldNameID, const std::string& newNameID);
+		void RenameTexture (const std::string& oldNameID, const std::string& newNameID);
+		void RenameMaterial(const std::string& oldNameID, const std::string& newNameID);
 
 		void UpdateAssets();
 
-		Mesh*     GetMesh    (std::string nameID);
-		Texture*  GetTexture (std::string nameID);
-		Material* GetMaterial(std::string nameID);
+		Mesh*     GetMesh    (const std::string& nameID);
+		Texture*  GetTexture (const std::string& nameID);
+		Material* GetMaterial(const std::string& nameID);
 
 		std::vector<Mesh*>     GetAllMeshes();
 		std::vector<Texture* >  GetAllTextures();
@@ -69,13 +69,12 @@ namespace en
 	private:
 		void UpdateMaterials();
 
-
 		std::unordered_map<std::string, std::unique_ptr<Mesh>>     m_Meshes;
 		std::unordered_map<std::string, std::unique_ptr<Texture>>  m_Textures;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
 
-		std::unique_ptr<Mesh> LoadMeshFromFile(std::string& filePath, std::string& name, MeshImportProperties& importProperties);
-		void ProcessNode(aiNode* node, const aiScene* scene, std::vector<Material*> materials, Mesh* mesh);
+		std::unique_ptr<Mesh> LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties);
+		void ProcessNode(aiNode* node, const aiScene* scene, const std::vector<Material*>& materials, Mesh* mesh);
 		void GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices);
 		void GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices);
 	};

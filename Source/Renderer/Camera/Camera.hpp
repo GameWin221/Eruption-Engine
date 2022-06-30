@@ -29,7 +29,7 @@ namespace en
 	public:
 		Camera(CameraInfo& cameraInfo);
 
-		void LookAt(glm::vec3 target);
+		void LookAt(const glm::vec3& target);
 
 		float m_FarPlane;
 		float m_NearPlane;

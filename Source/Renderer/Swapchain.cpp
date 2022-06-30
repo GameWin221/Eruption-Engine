@@ -5,7 +5,6 @@
 
 namespace en
 {
-	Swapchain::Swapchain(){}
 	Swapchain::~Swapchain()
 	{
 		UseContext();
@@ -21,7 +20,7 @@ namespace en
 		m_CurrentLayouts.clear();
 	}
 	
-	void Swapchain::CreateSwapchain(bool vSync)
+	void Swapchain::CreateSwapchain(const bool& vSync)
 	{
 		UseContext();
 
@@ -36,15 +35,21 @@ namespace en
 		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
 			imageCount = swapChainSupport.capabilities.maxImageCount;
 
-		VkSwapchainCreateInfoKHR createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = ctx.m_WindowSurface;
-		createInfo.minImageCount = imageCount;
-		createInfo.imageFormat = surfaceFormat.format;
-		createInfo.imageColorSpace = surfaceFormat.colorSpace;
-		createInfo.imageExtent = extent;
-		createInfo.imageArrayLayers = 1U;
-		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		VkSwapchainCreateInfoKHR createInfo{
+			.sType			  = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+			.surface		  = ctx.m_WindowSurface,
+			.minImageCount	  = imageCount,
+			.imageFormat	  = surfaceFormat.format,
+			.imageColorSpace  = surfaceFormat.colorSpace,
+			.imageExtent	  = extent,
+			.imageArrayLayers = 1U,
+			.imageUsage		  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.preTransform	  = swapChainSupport.capabilities.currentTransform,
+			.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			.presentMode	  = presentMode,
+			.clipped		  = VK_TRUE,
+			.oldSwapchain     = VK_NULL_HANDLE,
+		};
 
 		uint32_t queueFamilyIndices[] = { ctx.m_QueueFamilies.graphics.value(), ctx.m_QueueFamilies.present.value() };
 
@@ -61,15 +66,8 @@ namespace en
 			createInfo.pQueueFamilyIndices = nullptr;
 		}
 
-
-		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		createInfo.presentMode = presentMode;
-		createInfo.clipped = VK_TRUE;
-		createInfo.oldSwapchain = VK_NULL_HANDLE;
-
 		if (vkCreateSwapchainKHR(ctx.m_LogicalDevice, &createInfo, nullptr, &m_Swapchain) != VK_SUCCESS)
-			EN_ERROR("VulkanRendererBackend::CreateSwapChain() - Failed to create swap chain!");
+			EN_ERROR("RendererBackend::CreateSwapChain() - Failed to create swap chain!");
 
 		vkGetSwapchainImagesKHR(ctx.m_LogicalDevice, m_Swapchain, &imageCount, nullptr);
 		m_Images.resize(imageCount);
@@ -81,39 +79,45 @@ namespace en
 		m_ImageViews.resize(m_Images.size());
 		m_CurrentLayouts.resize(m_Images.size());
 
-		VkCommandBuffer dummy = VK_NULL_HANDLE;
-
 		for (int i = 0; i < m_ImageViews.size(); i++)
 		{
 			Helpers::CreateImageView(m_Images[i], m_ImageViews[i], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
-			ChangeLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, i, dummy);
+			ChangeLayout(i, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 		}
 	}
-	void Swapchain::CreateSwapchainFramebuffers(VkRenderPass& inputRenderpass)
+	void Swapchain::CreateSwapchainFramebuffers(const VkRenderPass& inputRenderpass)
 	{
 		m_Framebuffers.resize(m_ImageViews.size());
 
 		for (int i = 0; i < m_Framebuffers.size(); i++)
 		{
-			VkFramebufferCreateInfo framebufferInfo{};
-			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass		= inputRenderpass;
-			framebufferInfo.attachmentCount = 1U;
-			framebufferInfo.pAttachments	= &m_ImageViews[i];
-			framebufferInfo.width			= m_Extent.width;
-			framebufferInfo.height			= m_Extent.height;
-			framebufferInfo.layers			= 1U;
+			const VkFramebufferCreateInfo framebufferInfo{
+				.sType			 = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+				.renderPass		 = inputRenderpass,
+				.attachmentCount = 1U,
+				.pAttachments	 = &m_ImageViews[i],
+				.width			 = m_Extent.width,
+				.height			 = m_Extent.height,
+				.layers			 = 1U
+			};
 
 			if (vkCreateFramebuffer(Context::Get().m_LogicalDevice, &framebufferInfo, nullptr, &m_Framebuffers[i]) != VK_SUCCESS)
-				EN_ERROR("VulkanRendererBackend::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
+				EN_ERROR("RendererBackend::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
 		}
 	}
 	
-	void Swapchain::ChangeLayout(VkImageLayout newLayout, int index, VkCommandBuffer& cmd)
+	//void Swapchain::ChangeLayout(const VkImageLayout& newLayout, const int& index, const VkCommandBuffer& cmd)
+	//{
+	//	Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, 1U, cmd);
+	//	m_CurrentLayouts[index] = newLayout;
+	//}
+
+	void Swapchain::ChangeLayout(const int& index, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
 	{
-		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, 1U, cmd);
+		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 1U, cmd);
 		m_CurrentLayouts[index] = newLayout;
 	}
+
 
 	SwapchainSupportDetails Swapchain::QuerySwapchainSupport()
 	{

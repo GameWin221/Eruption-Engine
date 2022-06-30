@@ -6,13 +6,13 @@
 #include <Scene/SceneObject.hpp>
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
-#include <Renderer/Lights/Spotlight.hpp>
+#include <Renderer/Lights/SpotLight.hpp>
 
 namespace en
 {
 	class Scene
 	{
-		friend class VulkanRendererBackend;
+		friend class RendererBackend;
 
 	public:
 		SceneObject* GetSceneObject(std::string name);
@@ -25,14 +25,14 @@ namespace en
 		PointLight* CreatePointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, float radius = 10.0f, bool active = true);
 		void DeletePointLight(uint32_t index);
 
-		Spotlight* CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float innerCutoff = 0.2f, float outerCutoff = 0.4f, float range = 8.0f, float intensity = 2.5f, bool active = true);
-		void DeleteSpotlight(uint32_t index);
+		SpotLight* CreateSpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float innerCutoff = 0.2f, float outerCutoff = 0.4f, float range = 8.0f, float intensity = 2.5f, bool active = true);
+		void DeleteSpotLight(uint32_t index);
 
 		DirectionalLight* CreateDirectionalLight(glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, bool active = true);
 		void DeleteDirectionalLight(uint32_t index);
 
 		std::vector<PointLight>&	   GetAllPointLights()		 { return m_PointLights;	   };
-		std::vector<Spotlight>&		   GetAllSpotlights()		 { return m_Spotlights;		   };
+		std::vector<SpotLight>&		   GetAllSpotLights()		 { return m_SpotLights;		   };
 		std::vector<DirectionalLight>& GetAllDirectionalLights() { return m_DirectionalLights; };
 
 		glm::vec3 m_AmbientColor = glm::vec3(0.0f);
@@ -45,7 +45,7 @@ namespace en
 		std::unordered_map<std::string, std::unique_ptr<SceneObject>> m_SceneObjects;
 
 		std::vector<PointLight>		  m_PointLights;
-		std::vector<Spotlight>		  m_Spotlights;
+		std::vector<SpotLight>		  m_SpotLights;
 		std::vector<DirectionalLight> m_DirectionalLights;
 	};
 }

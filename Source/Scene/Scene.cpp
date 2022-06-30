@@ -79,21 +79,21 @@ namespace en
         m_PointLights.erase(m_PointLights.begin() + index);
     }
 
-    Spotlight* Scene::CreateSpotlight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)
+    SpotLight* Scene::CreateSpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)
     {
-        if (m_Spotlights.size() + 1 >= MAX_SPOT_LIGHTS)
+        if (m_SpotLights.size() + 1 >= MAX_SPOT_LIGHTS)
         {
-            EN_WARN("Failed to create a new Spotlight because you've reached the MAX_SPOT_LIGHTS limit (" + std::to_string(MAX_SPOT_LIGHTS) + ")!")
+            EN_WARN("Failed to create a new SpotLight because you've reached the MAX_SPOT_LIGHTS limit (" + std::to_string(MAX_SPOT_LIGHTS) + ")!")
             return nullptr;
         }
 
-        m_Spotlights.emplace_back(position, direction, color, innerCutoff, outerCutoff, range, intensity, active);
+        m_SpotLights.emplace_back(position, direction, color, innerCutoff, outerCutoff, range, intensity, active);
 
-        return &m_Spotlights.at(m_Spotlights.size()-1);
+        return &m_SpotLights.at(m_SpotLights.size()-1);
     }
-    void Scene::DeleteSpotlight(uint32_t index)
+    void Scene::DeleteSpotLight(uint32_t index)
     {
-        m_Spotlights.erase(m_Spotlights.begin() + index);
+        m_SpotLights.erase(m_SpotLights.begin() + index);
     }
 
     DirectionalLight* Scene::CreateDirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity, bool active)
@@ -117,8 +117,8 @@ namespace en
     {
         std::vector<SceneObject*> allSceneObjects(m_SceneObjects.size());
 
-        for (int i = 0; auto& sceneObject : m_SceneObjects)
-            allSceneObjects[i++] = sceneObject.second.get();
+        for (int i = 0; const auto& [name, sceneObject] : m_SceneObjects)
+            allSceneObjects[i++] = sceneObject.get();
 
         return allSceneObjects;
     }

@@ -13,13 +13,13 @@ namespace en
 	{
 		DrawAssetManager();
 
-		if (m_ChosenMaterial && m_ShowAssetEditor)
+		if (IsTypeSelected<Material>() && m_ShowAssetEditor)
 			EditingMaterial(&m_ShowAssetEditor);
 
-		else if (m_ChosenMesh && m_ShowAssetEditor)
+		else if (IsTypeSelected<Mesh>() && m_ShowAssetEditor)
 			EditingMesh(&m_ShowAssetEditor);
 
-		else if (m_ChosenTexture && m_ShowAssetEditor)
+		else if (IsTypeSelected<Texture>() && m_ShowAssetEditor)
 			EditingTexture(&m_ShowAssetEditor);
 
 		if (m_IsImportingMesh)
@@ -42,7 +42,35 @@ namespace en
 
 		ImGui::Begin("Asset Manager", nullptr, EditorCommons::CommonFlags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		static char buf[64];
+
+		ImGui::BeginChild("Filtering", ImVec2(320, ImGui::GetWindowSize().y * 0.1f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::InputText("Search...", buf, 64);
+		ImGui::EndChild();
+		int end = 0;
+
+		for (; end < 64; end++)
+			if(buf[end] == char(0))
+				break;
+
+		std::string searchedName(buf, end);
+
+		std::for_each(searchedName.begin(), searchedName.end(), [](char& c) {c = ::tolower(c); });
+
+		static bool showMesh = true;
+		static bool showMaterial = true;
+		static bool showTexture = true;
+
+		ImGui::SameLine();
+		ImGui::BeginChild("FilteringCheckbox", ImVec2(300, ImGui::GetWindowSize().y * 0.1f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::Checkbox("Meshes", &showMesh);
+		ImGui::SameLine();
+		ImGui::Checkbox("Materials", &showMaterial);
+		ImGui::SameLine();
+		ImGui::Checkbox("Textures", &showTexture);
+		ImGui::EndChild();
+
+		ImGui::BeginChild("AssetButtons", ImVec2(230, ImGui::GetWindowSize().y * 0.86f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 		if (ImGui::Button("Import Mesh", buttonSize) && !m_IsCreatingMaterial)
 			m_IsImportingMesh = true;
@@ -60,24 +88,51 @@ namespace en
 
 		ImGui::SameLine();
 
-		const ImVec2 assetPreviewerSize(ImGui::GetWindowSize().x * (assetsCoverage - 0.015f), ImGui::GetWindowSize().y * 0.86f);
+		const ImVec2 assetPreviewerSize(ImGui::GetWindowSize().x * assetsCoverage - 5, ImGui::GetWindowSize().y * 0.86f);
 
 		ImGui::BeginChild("AssetPreviewer", assetPreviewerSize, true);
 
-		std::vector<Mesh*>     meshes = m_AssetManager->GetAllMeshes();
-		std::vector<Texture*>  textures = m_AssetManager->GetAllTextures();
-		std::vector<Material*> materials = m_AssetManager->GetAllMaterials();
+		const std::vector<Mesh*>     meshes	 = m_AssetManager->GetAllMeshes();
+		const std::vector<Texture*>  textures  = m_AssetManager->GetAllTextures();
+		const std::vector<Material*> materials = m_AssetManager->GetAllMaterials();
 
 		std::vector<Asset*> assets;
 
+		assets.reserve(meshes.size() + textures.size() + materials.size() + 1);
+
+		if(showMesh)
 		for (const auto& mesh : meshes)
-			assets.emplace_back(Helpers::CastTo<Asset*>(mesh));
+		{
+			std::string name = mesh->GetName();
 
+			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c);});
+
+			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
+				assets.emplace_back(mesh->CastTo<Asset>());
+		}
+
+		if(showTexture)
 		for (const auto& texture : textures)
-			assets.emplace_back(Helpers::CastTo<Asset*>(texture));
+		{
+			std::string name = texture->GetName();
 
+			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c); });
+
+			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
+				assets.emplace_back(texture->CastTo<Asset>());
+		}
+
+		if(showMaterial)
 		for (const auto& material : materials)
-			assets.emplace_back(Helpers::CastTo<Asset*>(material));
+		{
+			std::string name = material->GetName();
+
+			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c); });
+
+			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
+				assets.emplace_back(material->CastTo<Asset>());
+		}
+
 
 		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x + 20.0f));
 
@@ -88,19 +143,17 @@ namespace en
 			for (int j = 0; j < sameLineAssets && i + j < assets.size(); j++)
 			{
 				Asset* asset = assets[i + j];
-
+				
 				if (asset->m_Type == AssetType::Mesh)
 				{
-					Mesh* mesh = Helpers::CastTo<Mesh*>(asset);
-					std::string name = mesh->GetName();
+					Mesh* mesh{ asset->CastTo<Mesh>() };
+					const std::string& name{ mesh->GetName() };
 
 					ImGui::PushID((name + "Mesh").c_str());
 
 					if (AssetButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(2, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial  = nullptr;
-						m_ChosenTexture   = nullptr;
-						m_ChosenMesh	  = mesh;
+						m_ChosenAsset = mesh;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
@@ -109,16 +162,14 @@ namespace en
 				}
 				else if (asset->m_Type == AssetType::Texture)
 				{
-					Texture* texture = Helpers::CastTo<Texture*>(asset);
-					std::string name = texture->GetName();
+					Texture* texture{ asset->CastTo<Texture>() };
+					const std::string& name{texture->GetName()};
 
 					ImGui::PushID((name + "Texture").c_str());
 
 					if (AssetButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(1, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial  = nullptr;
-						m_ChosenTexture   = texture;
-						m_ChosenMesh	  = nullptr;
+						m_ChosenAsset = texture;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
@@ -127,23 +178,21 @@ namespace en
 				}
 				else if (asset->m_Type == AssetType::Material)
 				{
-					Material* material = Helpers::CastTo<Material*>(asset);
-					std::string name = material->GetName();
+					Material* material{ asset->CastTo<Material>() };
+					const std::string& name{ material->GetName() };
 
 					ImGui::PushID((name + "Material").c_str());
 
 					if (AssetButtonLabeled(name, glm::vec2(assetSize.x, assetSize.y), glm::uvec2(0, 0)) && !m_IsCreatingMaterial)
 					{
-						m_ChosenMaterial  = material;
-						m_ChosenTexture   = nullptr;
-						m_ChosenMesh	  = nullptr;
+						m_ChosenAsset = material;
 						m_ShowAssetEditor = true;
 						m_AssetEditorInit = true;
 					}
 
 					ImGui::PopID();
 				}
-
+				
 				if (j != sameLineAssets - 1)
 					ImGui::SameLine();
 			}
@@ -258,10 +307,10 @@ namespace en
 		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_AssetEditorBG.Value);
 
-		if (ImGui::Begin(("Material editor - \"" + m_ChosenMaterial->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
-		{
-			static float col[3] = { m_ChosenMaterial->m_Color.r, m_ChosenMaterial->m_Color.y, m_ChosenMaterial->m_Color.z };
+		Material* chosenMaterial = m_ChosenAsset->CastTo<Material>();
 
+		if (ImGui::Begin(("Material editor - \"" + chosenMaterial->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		{
 			static char name[86];
 
 			static int chosenAlbedoIndex	= 0;
@@ -271,7 +320,7 @@ namespace en
 
 			if (m_AssetEditorInit)
 			{
-				strcpy_s(name, sizeof(char) * 86, m_ChosenMaterial->GetName().c_str());
+				strcpy_s(name, sizeof(char) * 86, chosenMaterial->GetName().c_str());
 
 				const auto& textures = m_AssetManager->GetAllTextures();
 
@@ -281,28 +330,28 @@ namespace en
 				chosenMetalnessIndex = 0;
 
 				for (int i = 0; i < textures.size(); i++)
-					if (textures[i]->GetName() == m_ChosenMaterial->GetAlbedoTexture()->GetName())
+					if (textures[i]->GetName() == chosenMaterial->GetAlbedoTexture()->GetName())
 					{
 						chosenAlbedoIndex = i + 1;
 						break;
 					}
 
 				for (int i = 0; i < textures.size(); i++)
-					if (textures[i]->GetName() == m_ChosenMaterial->GetRoughnessTexture()->GetName())
+					if (textures[i]->GetName() == chosenMaterial->GetRoughnessTexture()->GetName())
 					{
 						chosenRoughnessIndex = i + 1;
 						break;
 					}
 
 				for (int i = 0; i < textures.size(); i++)
-					if (textures[i]->GetName() == m_ChosenMaterial->GetNormalTexture()->GetName())
+					if (textures[i]->GetName() == chosenMaterial->GetNormalTexture()->GetName())
 					{
 						chosenNormalIndex = i + 1;
 						break;
 					}
 
 				for (int i = 0; i < textures.size(); i++)
-					if (textures[i]->GetName() == m_ChosenMaterial->GetMetalnessTexture()->GetName())
+					if (textures[i]->GetName() == chosenMaterial->GetMetalnessTexture()->GetName())
 					{
 						chosenMetalnessIndex = i + 1;
 						break;
@@ -316,18 +365,11 @@ namespace en
 			ImGui::SameLine();
 
 			if (ImGui::Button("Save Name"))
-				m_AssetManager->RenameMaterial(m_ChosenMaterial->GetName(), name);
+				m_AssetManager->RenameMaterial(chosenMaterial->GetName(), name);
 
-			col[0] = m_ChosenMaterial->m_Color.r;
-			col[1] = m_ChosenMaterial->m_Color.y;
-			col[2] = m_ChosenMaterial->m_Color.z;
+			ImGui::ColorEdit3("Color: ", (float*)&chosenMaterial->m_Color);
 
-			if (ImGui::ColorEdit3("Color: ", col))
-			{
-				m_ChosenMaterial->m_Color.r = std::fmaxf(col[0], 0.0f);
-				m_ChosenMaterial->m_Color.y = std::fmaxf(col[1], 0.0f);
-				m_ChosenMaterial->m_Color.z = std::fmaxf(col[2], 0.0f);
-			}
+			chosenMaterial->m_Color = glm::clamp(chosenMaterial->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -348,9 +390,9 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenAlbedoIndex == 0)
-					m_ChosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
+					chosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
 				else
-					m_ChosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
+					chosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
 			}
 			ImGui::PopID();
 			
@@ -363,14 +405,14 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenRoughnessIndex == 0)
-					m_ChosenMaterial->SetRoughnessTexture(Texture::GetWhiteNonSRGBTexture());
+					chosenMaterial->SetRoughnessTexture(Texture::GetWhiteNonSRGBTexture());
 				else
-					m_ChosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
+					chosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 			}
 			ImGui::PopID();
 
 			if (chosenRoughnessIndex == 0)
-				ImGui::DragFloat("Roughness: ", &m_ChosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("Roughness: ", &chosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			SPACE();
 
@@ -381,14 +423,14 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenNormalIndex == 0)
-					m_ChosenMaterial->SetNormalTexture(Texture::GetWhiteNonSRGBTexture());
+					chosenMaterial->SetNormalTexture(Texture::GetWhiteNonSRGBTexture());
 				else
-					m_ChosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
+					chosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
 			}
 			ImGui::PopID();
 			
 			if (chosenNormalIndex != 0)
-				ImGui::DragFloat("Normal Strength: ", &m_ChosenMaterial->m_NormalStrength, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("Normal Strength: ", &chosenMaterial->m_NormalStrength, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 			SPACE();
 
@@ -399,14 +441,14 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenMetalnessIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenMetalnessIndex == 0)
-					m_ChosenMaterial->SetMetalnessTexture(Texture::GetWhiteNonSRGBTexture());
+					chosenMaterial->SetMetalnessTexture(Texture::GetWhiteNonSRGBTexture());
 				else
-					m_ChosenMaterial->SetMetalnessTexture(m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
+					chosenMaterial->SetMetalnessTexture(m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 			}
 			ImGui::PopID();
 
 			if(chosenMetalnessIndex == 0)
-				ImGui::DragFloat("Metalness: ", &m_ChosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("Metalness: ", &chosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();
@@ -419,7 +461,9 @@ namespace en
 		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_AssetEditorBG.Value);
 
-		if (ImGui::Begin(("Mesh editor - \"" + m_ChosenMesh->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		Mesh* chosenMesh = m_ChosenAsset->CastTo<Mesh>();
+
+		if (ImGui::Begin(("Mesh editor - \"" + chosenMesh->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
 			static char name[86];
 
@@ -427,17 +471,17 @@ namespace en
 
 			if (m_AssetEditorInit)
 			{
-				strcpy_s(name, sizeof(char) * 86, m_ChosenMesh->GetName().c_str());
+				strcpy_s(name, sizeof(char) * 86, chosenMesh->GetName().c_str());
 
 				chosenMaterialIndices.clear();
-				chosenMaterialIndices.resize(m_ChosenMesh->m_SubMeshes.size());
+				chosenMaterialIndices.resize(chosenMesh->m_SubMeshes.size());
 
 				const auto& materials = m_AssetManager->GetAllMaterials();
 
-				for (int i = 0; i < m_ChosenMesh->m_SubMeshes.size(); i++)
+				for (int i = 0; i < chosenMesh->m_SubMeshes.size(); i++)
 				{
 					for (int matIndex = 0; matIndex < materials.size(); matIndex++)
-						if (materials[matIndex]->GetName() == m_ChosenMesh->m_SubMeshes[i].m_Material->GetName())
+						if (materials[matIndex]->GetName() == chosenMesh->m_SubMeshes[i].m_Material->GetName())
 						{
 							chosenMaterialIndices[i] = matIndex + 1;
 							break;
@@ -452,23 +496,23 @@ namespace en
 			ImGui::SameLine();
 
 			if (ImGui::Button("Save Name"))
-				m_AssetManager->RenameMesh(m_ChosenMesh->GetName(), name);
+				m_AssetManager->RenameMesh(chosenMesh->GetName(), name);
 
-			ImGui::Text(("Path: " + m_ChosenMesh->GetFilePath()).c_str());
-
-			SPACE();
-
-			ImGui::Checkbox("Is Active", &m_ChosenMesh->m_Active);
+			ImGui::Text(("Path: " + chosenMesh->GetFilePath()).c_str());
 
 			SPACE();
 
-			for (int id = 0; auto & subMesh : m_ChosenMesh->m_SubMeshes)
+			ImGui::Checkbox("Is Active", &chosenMesh->m_Active);
+
+			SPACE();
+
+			for (int id = 0; auto & subMesh : chosenMesh->m_SubMeshes)
 			{
 				ImGui::PushID(id);
 
 				if (ImGui::CollapsingHeader(("Submesh [" + std::to_string(id) + "]").c_str()))
 				{
-					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->GetVerticesCount())).c_str());
+					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->m_VerticesCount)).c_str());
 
 					SPACE();
 
@@ -511,13 +555,15 @@ namespace en
 		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_AssetEditorBG.Value);
 
-		if (ImGui::Begin(("Texture editor - \"" + m_ChosenTexture->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
+		Texture* chosenTexture = m_ChosenAsset->CastTo<Texture>();
+
+		if (ImGui::Begin(("Texture editor - \"" + chosenTexture->GetName() + "\"").c_str(), open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
 			static char name[86];
 
 			if (m_AssetEditorInit)
 			{
-				strcpy_s(name, sizeof(char) * 86, m_ChosenTexture->GetName().c_str());
+				strcpy_s(name, sizeof(char) * 86, chosenTexture->GetName().c_str());
 				m_AssetEditorInit = false;
 			}
 
@@ -526,9 +572,9 @@ namespace en
 			ImGui::SameLine();
 
 			if (ImGui::Button("Save Name"))
-				m_AssetManager->RenameTexture(m_ChosenTexture->GetName(), name);
+				m_AssetManager->RenameTexture(chosenTexture->GetName(), name);
 
-			ImGui::Text(("Path: " + m_ChosenTexture->GetFilePath()).c_str());
+			ImGui::Text(("Path: " + chosenTexture->GetFilePath()).c_str());
 		}
 
 		ImGui::End();
@@ -538,6 +584,8 @@ namespace en
 	{
 		ImGui::SetNextWindowSizeConstraints(EditorCommons::FreeWindowMinSize, EditorCommons::FreeWindowMaxSize);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, m_AssetEditorBG.Value);
+
+		Material* material = m_ChosenAsset->CastTo<Material>();
 
 		if (ImGui::Begin("Creating a new material", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings))
 		{
@@ -653,15 +701,13 @@ namespace en
 		ImGui::PopStyleColor();
 	}
 
-	bool AssetManagerPanel::AssetButtonLabeled(std::string label, glm::vec2 size, glm::uvec2 imagePos)
+	bool AssetManagerPanel::AssetButtonLabeled(const std::string& label, const glm::vec2& size, const glm::uvec2& imagePos)
 	{
-		bool pressed = false;
-
 		const ImageUVs UVs = m_Atlas->GetImageUVs(imagePos.x, imagePos.y);
 
 		ImGui::BeginChild("Material", ImVec2(size.x + 10.0f, size.y + 10.0f), false, ImGuiWindowFlags_NoCollapse);
 
-		pressed = ImGui::ImageButton(m_Atlas->m_DescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
+		const bool pressed = ImGui::ImageButton(m_Atlas->m_DescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
 
 		EditorCommons::TextCentered(label);
 

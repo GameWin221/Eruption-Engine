@@ -3,14 +3,15 @@
 
 namespace en
 {
-    Shader::Shader(std::string shaderPath, const ShaderType& shaderType) : m_Path(shaderPath)
+    Shader::Shader(std::string sourcePath, const ShaderType shaderType) : m_SourcePath(sourcePath)
     {
-        auto shaderCode = Shader::ReadShaderFile(shaderPath);
+        auto shaderCode = Shader::ReadShaderFile(m_SourcePath);
 
-        VkShaderModuleCreateInfo createInfo{};
-        createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = shaderCode.size();
-        createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
+        const VkShaderModuleCreateInfo createInfo{
+            .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = shaderCode.size(),
+            .pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data())
+        };
 
         if (vkCreateShaderModule(Context::Get().m_LogicalDevice, &createInfo, nullptr, &m_ShaderModule) != VK_SUCCESS)
             EN_ERROR("Shader::Shader() - Failed to create shader module!");
@@ -40,9 +41,9 @@ namespace en
         vkDestroyShaderModule(Context::Get().m_LogicalDevice, m_ShaderModule, nullptr);
     }
 
-    std::vector<char> Shader::ReadShaderFile(std::string shaderPath)
+    std::vector<char> Shader::ReadShaderFile(const std::string path)
     {
-        std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
+        std::ifstream file(path, std::ios::ate | std::ios::binary);
 
         if (!file.is_open())
             EN_ERROR("Shader::ReadShaderFile() - Failed to open shader source file!");

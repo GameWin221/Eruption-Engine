@@ -82,7 +82,7 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, VkExtent2D size, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipLevels)
+        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& mipLevels)
         {
             UseContext();
 
@@ -117,7 +117,7 @@ namespace en
 
             vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
         }
-        void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
+        void CreateImageView(VkImage& image, VkImageView& imageView, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& mipLevels)
         {
             UseContext();
 
@@ -137,7 +137,7 @@ namespace en
         }
         
 #define UNSUPPORTED_ERR default:EN_ERROR("Unsupported layout transition!");break
-        void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, VkCommandBuffer cmdBuffer)
+        void SimpleTransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
         {
             UseContext();
 
@@ -176,38 +176,38 @@ namespace en
                 switch (newLayout)
                 {
                 case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-                    barrier.srcAccessMask = 0;
+                    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
                     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-                    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    sourceStage      = VK_PIPELINE_STAGE_TRANSFER_BIT;
                     destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
                     break;
                 case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                    barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-                    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                    sourceStage     = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                    destinationStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
                     break;
                 case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
-                    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    sourceStage      = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
                     destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
                     break;
                 case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                    barrier.srcAccessMask = 0;
+                    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
                     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-                    sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                    sourceStage      = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                     destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                     break;
                 case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-                    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    sourceStage      = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
                     destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
                     break;
 
@@ -219,106 +219,79 @@ namespace en
                 switch (newLayout)
                 {
                 case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-                    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                    break;
-
-                UNSUPPORTED_ERR;
-                }
-                break;
-
-            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                switch (newLayout)
-                {
-                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-                    sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                    break;
-
-                UNSUPPORTED_ERR;
-                }
-                break;
-
-            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                switch (newLayout)
-                {
-                case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
                     barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-                    sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                    break;
-
-                case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-                    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-
-                    sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-                    break;
-
-                UNSUPPORTED_ERR;
-                }
-                break;
-
-            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-                switch (newLayout)
-                {
-                case VK_IMAGE_LAYOUT_GENERAL:
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-
-                    sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-                    break;
-
-                UNSUPPORTED_ERR;
-                }
-                break;
-
-            case VK_IMAGE_LAYOUT_GENERAL:
-                switch (newLayout)
-                {
-                case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-                    barrier.srcAccessMask = 0;
-                    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-                    sourceStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-                    destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                    break;
-
-                UNSUPPORTED_ERR;
-                }
-                break;
-
-            case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
-                switch (newLayout)
-                {
-                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                    barrier.srcAccessMask = 0;
                     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-                    sourceStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                    sourceStage      = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                     destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                     break;
 
                 UNSUPPORTED_ERR;
                 }
                 break;
-
+            
             UNSUPPORTED_ERR;
             }
 
             vkCmdPipelineBarrier(
                 commandBuffer,
                 sourceStage, destinationStage,
+                0U,
+                0U, nullptr,
+                0U, nullptr,
+                1U, &barrier
+            );
+
+            if (cmdBuffer == VK_NULL_HANDLE)
+            {
+                if (usesTransferQueue)
+                    EndSingleTimeTransferCommands(commandBuffer);
+                else
+                    EndSingleTimeGraphicsCommands(commandBuffer);
+            }
+        }
+        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
+        {
+            UseContext();
+
+            VkCommandBuffer commandBuffer = cmdBuffer;
+
+            bool usesTransferQueue = (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+            const VkImageMemoryBarrier barrier {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+
+                .srcAccessMask = srcAccessMask,
+                .dstAccessMask = dstAccessMask,
+
+                .oldLayout = oldLayout,
+                .newLayout = newLayout,
+
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+                .image = image,
+
+                .subresourceRange {
+                    .aspectMask     = aspectFlags,
+                    .baseMipLevel   = 0U,
+                    .levelCount     = mipLevels,
+                    .baseArrayLayer = 0U,
+                    .layerCount     = 1U,
+                }
+            };
+
+            if (cmdBuffer == VK_NULL_HANDLE)
+            {
+                if (usesTransferQueue)
+                    commandBuffer = BeginSingleTimeTransferCommands();
+                else
+                    commandBuffer = BeginSingleTimeGraphicsCommands();
+            }
+
+            vkCmdPipelineBarrier(
+                commandBuffer,
+                srcStage, dstStage,
                 0U,
                 0U, nullptr,
                 0U, nullptr,
@@ -341,7 +314,7 @@ namespace en
             vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
         }
 
-        void CreateSampler(VkSampler& sampler, VkFilter filtering, uint32_t anisotropy, float maxLod, float mipLodBias)
+        void CreateSampler(VkSampler& sampler, const VkFilter& filtering, const uint32_t& anisotropy, const float& maxLod, const float& mipLodBias)
         {
             UseContext();
 
@@ -376,7 +349,7 @@ namespace en
                 EN_ERROR("Helpers::CreateSampler() - Failed to create texture sampler!");
         }
 
-        void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags)
+        void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags& commandPoolCreateFlags)
         {
             UseContext();
 
@@ -389,7 +362,7 @@ namespace en
                 EN_ERROR("Context::VKCreateCommandPool() - Failed to create a command pool!");
         }
 
-        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool)
+        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t& commandBufferCount, VkCommandPool& commandPool)
         {
             UseContext();
 
@@ -401,7 +374,7 @@ namespace en
             vkAllocateCommandBuffers(ctx.m_LogicalDevice, &commandBufferAllocateInfo, commandBuffers);
         }
         
-        uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+        uint32_t FindMemoryType(const uint32_t& typeFilter, const VkMemoryPropertyFlags& properties)
         {
             UseContext();
 

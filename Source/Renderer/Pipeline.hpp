@@ -20,20 +20,20 @@ namespace en
 
 			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 		};
-		struct RenderingInfo
+		struct BindInfo
 		{
 			std::vector<Attachment> colorAttachments{};
 			Attachment depthAttachment{};
 
 			VkExtent2D extent{};
 		};
-		struct PipelineInfo
+		struct CreateInfo
 		{
 			std::vector<VkFormat> colorFormats{};
 			VkFormat depthFormat{};
 
-			Shader* vShader;
-			Shader* fShader;
+			Shader* vShader = nullptr;
+			Shader* fShader = nullptr;
 
 			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
 			std::vector<VkPushConstantRange> pushConstantRanges{};
@@ -49,11 +49,11 @@ namespace en
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 
-		void CreatePipeline(PipelineInfo& pipeline);
+		void CreatePipeline(const CreateInfo& pipeline);
 
 		~Pipeline();
 
-		void Bind(VkCommandBuffer& commandBuffer, RenderingInfo& info);
+		void Bind(VkCommandBuffer& commandBuffer, const BindInfo& info);
 
 		void Unbind(VkCommandBuffer& commandBuffer);
 
@@ -71,7 +71,7 @@ namespace en
 
 		bool m_Initialised = false;
 
-		PipelineInfo m_LastInfo{};
+		CreateInfo m_LastInfo{};
 	};
 }
 

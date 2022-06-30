@@ -10,7 +10,7 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(std::string name, glm::vec3 color, float metalnessVal, float roughnessVal, float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
+	Material::Material(const std::string& name, const glm::vec3& color, const float& metalnessVal, const float& roughnessVal, const float& normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
 		: m_Name(name), m_Color(color), m_MetalnessVal(metalnessVal), m_RoughnessVal(roughnessVal), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Metalness(metalnessTexture), m_Normal(normalTexture), Asset{ AssetType::Material }
 	{
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
@@ -65,7 +65,7 @@ namespace en
 
 		vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_FRAGMENT_BIT, 64U, sizeof(MatBuffer), &m_MatBuffer);
 	}
-	void Material::UpdateDescriptorSet()
+	void Material::Update()
 	{
 		if (!m_UpdateQueued) return;
 		
@@ -253,6 +253,6 @@ namespace en
 			EN_ERROR("Material::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
 		m_UpdateQueued = true;
-		UpdateDescriptorSet();
+		Update();
 	}
 }

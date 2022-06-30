@@ -15,24 +15,19 @@ namespace en
 		extern VkCommandBuffer BeginSingleTimeTransferCommands();
 		extern void EndSingleTimeTransferCommands(VkCommandBuffer& commandBuffer);
 
-		extern void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, VkExtent2D size, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipLevels = 1U);
-		extern void CreateImageView(VkImage& image, VkImageView& imageView, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels = 1U);
+		extern void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& mipLevels = 1U);
+		extern void CreateImageView(VkImage& image, VkImageView& imageView, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& mipLevels = 1U);
 		extern void DestroyImage(VkImage& image, VkDeviceMemory& memory);
 
-		extern void CreateSampler(VkSampler& sampler, VkFilter filtering = VK_FILTER_LINEAR, uint32_t anisotropy = 0U, float maxLod = 0.0f, float mipLodBias = 0.0f);
+		extern void CreateSampler(VkSampler& sampler, const VkFilter& filtering = VK_FILTER_LINEAR, const uint32_t& anisotropy = 0U, const float& maxLod = 0.0f, const float& mipLodBias = 0.0f);
 		
-		extern void TransitionImageLayout(VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels = 1U, VkCommandBuffer cmdBuffer = VK_NULL_HANDLE);
+		extern void SimpleTransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels = 1U, const VkCommandBuffer& cmdBuffer = VK_NULL_HANDLE);
+		extern void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& mipLevels = 1U, const VkCommandBuffer& cmdBuffer = VK_NULL_HANDLE);
 
-		void CreateCommandPool(VkCommandPool& commandPool, VkCommandPoolCreateFlags commandPoolCreateFlags);
-		void CreateCommandBuffers(VkCommandBuffer* commandBuffers, uint32_t commandBufferCount, VkCommandPool& commandPool);
+		void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags& commandPoolCreateFlags);
+		void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t& commandBufferCount, VkCommandPool& commandPool);
 
-		extern uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-		
-		template<typename T, typename O>
-		T CastTo(O object)
-		{
-			return reinterpret_cast<T>(object);
-		}	
+		extern uint32_t FindMemoryType(const uint32_t& typeFilter, const VkMemoryPropertyFlags& properties);
 	}
 }
 

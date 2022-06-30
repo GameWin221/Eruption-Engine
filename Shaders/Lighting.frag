@@ -17,7 +17,7 @@ struct PointLight
     vec4 positionRadius;
     vec3 color;
 };
-struct Spotlight
+struct SpotLight
 {
     vec3 position;
     float innerCutoff;
@@ -35,11 +35,11 @@ struct DirLight
 layout(binding = 3) uniform UBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
-    Spotlight  sLights[MAX_SPOT_LIGHTS];
+    SpotLight  sLights[MAX_SPOT_LIGHTS];
     DirLight   dLights[MAX_DIR_LIGHTS];
 
     uint activePointLights;
-    uint activeSpotlights;
+    uint activeSpotLights;
     uint activeDirLights;
 
     vec3 ambient;
@@ -142,7 +142,7 @@ vec3 CalculateDirLight(DirLight light, vec3 albedo, float roughness, float metal
 
     return (kD * albedo / PI + specular) * radiance * NdotL;
 }
-vec3 CalculateSpotLight(Spotlight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float theta)
+vec3 CalculateSpotLight(SpotLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float theta)
 {
     float dist = length(position - light.position);
 
@@ -202,7 +202,7 @@ void main()
         if(dist < lightsBuffer.pLights[i].positionRadius.w)
             lighting += CalculatePointLight(lightsBuffer.pLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, dist);
     }
-    for(int i = 0; i < lightsBuffer.activeSpotlights; i++)
+    for(int i = 0; i < lightsBuffer.activeSpotLights; i++)
     {
         vec3 lightToSurfaceDir = normalize(position - lightsBuffer.sLights[i].position);
 

@@ -114,7 +114,7 @@
     <ClCompile Include="Source\Renderer\Pipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\PipelineInput.cpp">
+    <ClCompile Include="Source\Renderer\DescriptorSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp">
@@ -132,9 +132,6 @@
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Lights\Lights.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -142,6 +139,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Swapchain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\ComputeShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -254,7 +254,7 @@
     <ClInclude Include="Source\Renderer\Pipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\PipelineInput.hpp">
+    <ClInclude Include="Source\Renderer\DescriptorSet.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp">
@@ -278,7 +278,7 @@
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp">
+    <ClInclude Include="Source\Renderer\Lights\SpotLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
@@ -293,21 +293,29 @@
     <ClInclude Include="Source\Renderer\Swapchain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\ComputeShader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneMember.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
     <None Include="Shaders\GeometryFragment.frag" />
     <None Include="Shaders\GeometryVertex.vert" />
-    <None Include="Shaders\LightingFrag.frag" />
+    <None Include="Shaders\Lighting.frag" />
     <None Include="Shaders\FullscreenTriVert.vert" />
-    <None Include="Shaders\TonemapFrag.frag" />
-    <None Include="Shaders\DepthFragment.frag" />
-    <None Include="Shaders\DepthVertex.vert" />
-    <None Include="Shaders\FXAA.frag" />
+    <None Include="Shaders\TonemapComp.comp" />
+    <None Include="Shaders\Depth.frag" />
     <None Include="Shaders\SMAA.frag" />
     <None Include="Shaders\Move.frag" />
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="Shaders\GeometryFragment.spv" />
+    <None Include="Shaders\AMD\AMDFXAA.comp" />
+    <None Include="Shaders\AMD\AMDTonemapping.comp" />
+    <None Include="Shaders\NVIDIA\NVFXAA.comp" />
+    <None Include="Shaders\NVIDIA\NVTonemapping.comp" />
+    <None Include="Shaders\Depth.vert" />
+    <None Include="Shaders\Tonemapping.frag" />
+    <None Include="Shaders\FXAA.frag" />
   </ItemGroup>
 </Project>

@@ -12,21 +12,20 @@ namespace en
 	public:
 		struct AttachmentInfo
 		{
-			VkFormat		   format = VK_FORMAT_UNDEFINED;
+			VkFormat		   format			= VK_FORMAT_UNDEFINED;
 			VkImageAspectFlags imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-			VkImageUsageFlags  imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-			VkImageLayout      initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkImageUsageFlags  imageUsageFlags  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			VkImageLayout      initialLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
 		};
 
-		DynamicFramebuffer(std::vector<AttachmentInfo> attachmentInfos, VkExtent2D size, VkFilter filtering = VK_FILTER_LINEAR);
+		DynamicFramebuffer(const std::initializer_list<AttachmentInfo>& attachmentInfos, const VkExtent2D& size, const VkFilter& filtering = VK_FILTER_LINEAR);
 		~DynamicFramebuffer();
 
 		VkSampler m_Sampler;
 
-		std::vector<Image> m_Attachments;
+		std::vector<Image> m_Attachments{};
 
-	private:
-		VkExtent2D m_Size;
+		const VkExtent2D m_Size;
 	};
 }
 

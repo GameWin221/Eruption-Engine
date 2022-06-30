@@ -36,7 +36,7 @@ namespace en
 		m_Matrices.proj = camera->GetProjMatrix();
 		m_Matrices.view = camera->GetViewMatrix();
 
-		m_Buffers[frameIndex]->MapMemory(&m_Matrices, m_Buffers[frameIndex]->GetSize());
+		m_Buffers[frameIndex]->MapMemory(&m_Matrices, m_Buffers[frameIndex]->m_BufferSize);
 	}
 
 	void CameraMatricesBuffer::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t& frameIndex)
@@ -58,28 +58,31 @@ namespace en
 
 		for (int i = 0; i < FRAMES_IN_FLIGHT; i++)
 		{
-			VkDescriptorSetAllocateInfo allocInfo{};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = g_CameraDescriptorPool;
-			allocInfo.descriptorSetCount = 1U;
-			allocInfo.pSetLayouts = &g_CameraDescriptorSetLayout;
+			const VkDescriptorSetAllocateInfo allocInfo{
+				.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool		= g_CameraDescriptorPool,
+				.descriptorSetCount = 1U,
+				.pSetLayouts		= &g_CameraDescriptorSetLayout
+			};
 
 			if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSets[i]) != VK_SUCCESS)
 				EN_ERROR("CameraMatricesBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
-			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = m_Buffers[i]->GetHandle();
-			bufferInfo.offset = 0U;
-			bufferInfo.range = sizeof(CameraMatricesBufferObject);
+			const VkDescriptorBufferInfo bufferInfo{
+				.buffer = m_Buffers[i]->GetHandle(),
+				.offset = 0U,
+				.range  = sizeof(CameraMatricesBufferObject)
+			};
 
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_DescriptorSets[i];
-			descriptorWrite.dstBinding = 0U;
-			descriptorWrite.dstArrayElement = 0U;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrite.descriptorCount = 1U;
-			descriptorWrite.pBufferInfo = &bufferInfo;
+			const VkWriteDescriptorSet descriptorWrite{
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSets[i],
+				.dstBinding		 = 0U,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.pBufferInfo	 = &bufferInfo
+			};
 
 			vkUpdateDescriptorSets(ctx.m_LogicalDevice, 1U, &descriptorWrite, 0U, nullptr);
 		}
@@ -88,30 +91,34 @@ namespace en
 	{
 		UseContext();
 
-		VkDescriptorSetLayoutBinding layoutBinding{};
-		layoutBinding.binding		  = 0U;
-		layoutBinding.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		layoutBinding.descriptorCount = 1U;
-		layoutBinding.stageFlags	  = VK_SHADER_STAGE_VERTEX_BIT;
+		const VkDescriptorSetLayoutBinding layoutBinding{
+			.binding		 = 0U,
+			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = 1U,
+			.stageFlags		 = VK_SHADER_STAGE_VERTEX_BIT
+		};
 
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1U;
-		layoutInfo.pBindings	= &layoutBinding;
+		const VkDescriptorSetLayoutCreateInfo layoutInfo{
+			.sType		  = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = 1U,
+			.pBindings	  = &layoutBinding
+		};
 
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &g_CameraDescriptorSetLayout) != VK_SUCCESS)
 			EN_ERROR("CameraMatricesBuffer::CreateCameraDescriptorPool() - Failed to create descriptor set layout!");
 
-		VkDescriptorPoolSize poolSize{};
-		poolSize.type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSize.descriptorCount = FRAMES_IN_FLIGHT;
+		const VkDescriptorPoolSize poolSize{
+			.type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = FRAMES_IN_FLIGHT
+		};
 
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = 1U;
-		poolInfo.pPoolSizes    = &poolSize;
-		poolInfo.maxSets	   = FRAMES_IN_FLIGHT;
-		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		const VkDescriptorPoolCreateInfo poolInfo{
+			.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+			.maxSets	   = FRAMES_IN_FLIGHT,
+			.poolSizeCount = 1U,
+			.pPoolSizes	   = &poolSize
+		};
 
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &g_CameraDescriptorPool) != VK_SUCCESS)
 			EN_ERROR("CameraMatricesBuffer::CreateCameraDescriptorPool() - Failed to create descriptor pool!");
