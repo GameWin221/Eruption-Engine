@@ -42,7 +42,35 @@ namespace en
 
 		ImGui::Begin("Asset Manager", nullptr, EditorCommons::CommonFlags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-		ImGui::BeginChild("AssetButtons", ImVec2(ImGui::GetWindowSize().x * (1.0f - assetsCoverage), ImGui::GetWindowSize().y * 0.86f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		static char buf[64];
+
+		ImGui::BeginChild("Filtering", ImVec2(320, ImGui::GetWindowSize().y * 0.1f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::InputText("Search...", buf, 64);
+		ImGui::EndChild();
+		int end = 0;
+
+		for (; end < 64; end++)
+			if(buf[end] == char(0))
+				break;
+
+		std::string searchedName(buf, end);
+
+		std::for_each(searchedName.begin(), searchedName.end(), [](char& c) {c = ::tolower(c); });
+
+		static bool showMesh = true;
+		static bool showMaterial = true;
+		static bool showTexture = true;
+
+		ImGui::SameLine();
+		ImGui::BeginChild("FilteringCheckbox", ImVec2(300, ImGui::GetWindowSize().y * 0.1f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::Checkbox("Meshes", &showMesh);
+		ImGui::SameLine();
+		ImGui::Checkbox("Materials", &showMaterial);
+		ImGui::SameLine();
+		ImGui::Checkbox("Textures", &showTexture);
+		ImGui::EndChild();
+
+		ImGui::BeginChild("AssetButtons", ImVec2(230, ImGui::GetWindowSize().y * 0.86f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 		if (ImGui::Button("Import Mesh", buttonSize) && !m_IsCreatingMaterial)
 			m_IsImportingMesh = true;
@@ -60,7 +88,7 @@ namespace en
 
 		ImGui::SameLine();
 
-		const ImVec2 assetPreviewerSize(ImGui::GetWindowSize().x * (assetsCoverage - 0.015f), ImGui::GetWindowSize().y * 0.86f);
+		const ImVec2 assetPreviewerSize(ImGui::GetWindowSize().x * assetsCoverage - 5, ImGui::GetWindowSize().y * 0.86f);
 
 		ImGui::BeginChild("AssetPreviewer", assetPreviewerSize, true);
 
@@ -72,14 +100,39 @@ namespace en
 
 		assets.reserve(meshes.size() + textures.size() + materials.size() + 1);
 
+		if(showMesh)
 		for (const auto& mesh : meshes)
-			assets.emplace_back(mesh->CastTo<Asset>());
+		{
+			std::string name = mesh->GetName();
 
+			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c);});
+
+			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
+				assets.emplace_back(mesh->CastTo<Asset>());
+		}
+
+		if(showTexture)
 		for (const auto& texture : textures)
-			assets.emplace_back(texture->CastTo<Asset>());
+		{
+			std::string name = texture->GetName();
 
+			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c); });
+
+			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
+				assets.emplace_back(texture->CastTo<Asset>());
+		}
+
+		if(showMaterial)
 		for (const auto& material : materials)
-			assets.emplace_back(material->CastTo<Asset>());
+		{
+			std::string name = material->GetName();
+
+			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c); });
+
+			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
+				assets.emplace_back(material->CastTo<Asset>());
+		}
+
 
 		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x + 20.0f));
 
