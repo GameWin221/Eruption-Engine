@@ -42,6 +42,10 @@ namespace en
 
 		EN_SUCCESS("Created GBuffer!")
 
+			InitShadows();
+
+		EN_SUCCESS("Initialized the shadows!")
+
 			UpdateGBufferInput();
 
 		EN_SUCCESS("Created GBuffer descriptor set!")
@@ -119,6 +123,17 @@ namespace en
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
+		vkFreeMemory(Context::Get().m_LogicalDevice, m_Shadows.memory, nullptr);
+
+		vkDestroyImage(Context::Get().m_LogicalDevice, m_Shadows.image, nullptr);
+
+		vkDestroySampler(Context::Get().m_LogicalDevice, m_Shadows.sampler, nullptr);
+
+		for (auto& view : m_Shadows.dirShadowmaps)
+			vkDestroyImageView(Context::Get().m_LogicalDevice, view, nullptr);
+
+		vkDestroyImageView(Context::Get().m_LogicalDevice, m_Shadows.dirShadowmapView, nullptr);
+
 		m_ImGui.Destroy();
 
 		for(auto& fence : m_SubmitFences)
@@ -155,6 +170,13 @@ namespace en
 
 		m_Lights.camera.viewPos = m_MainCamera->m_Position;
 		m_Lights.camera.debugMode = m_DebugMode;
+
+		for (auto& dirLight : dirLights)
+			dirLight.m_ShadowmapIndex = -1;
+
+		for (int i = 0, index = 0; i < m_Lights.lastDirLightsSize && index < MAX_DIR_LIGHT_SHADOWS; i++)
+			if(dirLights[i].m_CastShadows)
+				dirLights[i].m_ShadowmapIndex = index++;
 
 		for (int i = 0; i < m_Lights.lastPointLightsSize; i++)
 		{
@@ -205,14 +227,26 @@ namespace en
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (buffer.direction != light.m_Direction || buffer.color != lightCol)
-				m_Lights.changed = true;
-
 			if (lightCol == glm::vec3(0.0))
 				continue;
 
-			buffer.direction = light.m_Direction;
-			buffer.color = lightCol;
+			if (buffer.direction != light.m_Direction || buffer.color != lightCol || buffer.shadowmapIndex != light.m_ShadowmapIndex)
+			{
+				m_Lights.changed = true;
+
+				glm::mat4 lightProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 500.0f);
+
+				glm::mat4 lightView = glm::lookAt(
+					light.m_Direction * 200.0f,
+					glm::vec3(0.0f, 0.0f, 0.0f),
+					glm::vec3(0.0f, 1.0f, 0.0f)
+				);
+				
+				buffer.shadowmapIndex = light.m_ShadowmapIndex;
+				buffer.lightMat = lightProj * lightView;
+				buffer.direction = light.m_Direction;
+				buffer.color = lightCol;
+			}
 
 			m_Lights.LBO.activeDirLights++;
 		}
@@ -285,17 +319,18 @@ namespace en
 
 		m_CameraMatrices->UpdateMatrices(m_MainCamera, m_FrameIndex);
 
-		// Bind the m_MainCamera once per geometry pass
-		m_CameraMatrices->Bind(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, m_FrameIndex);
+		const glm::mat4 cameraMatrix = m_CameraMatrices->m_Matrices.proj * m_CameraMatrices->m_Matrices.view;
 
-		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
+		for (const auto& [name, object] :m_Scene->m_SceneObjects)
 		{
-			SceneObject* object = sceneObjectPair.second.get();
-
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
-			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
-			object->GetObjectData().Bind(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout);
+			const DepthStageInfo cameraInfo{
+				.modelMatrix = object->GetObjectData().model,
+				.viewProjMatrix = cameraMatrix,
+			};
+
+			vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
 
 			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
@@ -310,6 +345,70 @@ namespace en
 		}
 
 		m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+	}
+	void RendererBackend::ShadowPass()
+	{
+		if (m_SkipFrame || !m_Scene) return;
+
+		for (const auto& dirLight : m_Scene->GetAllDirectionalLights())
+		{
+			if (!dirLight.m_CastShadows || dirLight.m_ShadowmapIndex == -1 || !dirLight.m_Active || dirLight.m_Intensity <= 0.0f || dirLight.m_Color == glm::vec3(0.0f))
+				continue;
+
+			const Pipeline::BindInfo info{
+				.depthAttachment {
+					.imageView = m_Shadows.dirShadowmaps[dirLight.m_ShadowmapIndex],
+
+					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+
+					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+
+					.clearValue {
+						.depthStencil = { 1.0f, 0U}
+					}
+				},
+
+				.extent = VkExtent2D{m_Shadows.shadowmapSize, m_Shadows.shadowmapSize},
+			};
+
+			m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+
+			glm::mat4 lightProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 500.0f);
+
+			glm::mat4 lightView = glm::lookAt(
+				dirLight.m_Direction * 200.0f,
+				glm::vec3(0.0f, 0.0f, 0.0f),
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+
+			glm::mat4 cameraMatrix = lightProj * lightView;
+
+			for (const auto& [name, object] : m_Scene->m_SceneObjects)
+			{
+				if (!object->m_Active || !object->m_Mesh->m_Active) continue;
+
+				const DepthStageInfo cameraInfo{
+					.modelMatrix = object->GetObjectData().model,
+					.viewProjMatrix = cameraMatrix,
+				};
+
+				vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
+
+				for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
+				{
+					if (!subMesh.m_Active) continue;
+
+					subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
+					subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
+
+					vkCmdDrawIndexed(m_CommandBuffers[m_FrameIndex], subMesh.m_IndexBuffer->m_IndicesCount, 1, 0, 0, 0);
+				}
+			}
+
+			m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		}
 	}
 	void RendererBackend::GeometryPass()
 	{
@@ -365,10 +464,8 @@ namespace en
 		// Bind the m_MainCamera once per geometry pass
 		m_CameraMatrices->Bind(m_CommandBuffers[m_FrameIndex], m_GeometryPipeline->m_Layout, m_FrameIndex);
 
-		for (const auto& sceneObjectPair : m_Scene->m_SceneObjects)
+		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
-			auto& object = sceneObjectPair.second;
-
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
@@ -639,6 +736,17 @@ namespace en
 
 		m_CameraMatrices.reset();
 
+		vkFreeMemory(Context::Get().m_LogicalDevice, m_Shadows.memory, nullptr);
+		
+		vkDestroyImage(Context::Get().m_LogicalDevice, m_Shadows.image, nullptr);
+
+		vkDestroySampler(Context::Get().m_LogicalDevice, m_Shadows.sampler, nullptr);
+
+		for (auto& view : m_Shadows.dirShadowmaps)
+			vkDestroyImageView(Context::Get().m_LogicalDevice, view, nullptr);
+
+		vkDestroyImageView(Context::Get().m_LogicalDevice, m_Shadows.dirShadowmapView, nullptr);
+
 		m_Swapchain.reset();
 
 		m_GBuffer.reset();
@@ -663,6 +771,8 @@ namespace en
 
 		CreateGBuffer();
 		CreateHDROffscreen();
+
+		InitShadows();
 
 		UpdateGBufferInput();
 		UpdateSwapchainInputs();
@@ -755,14 +865,28 @@ namespace en
 			.imageSampler = m_GBuffer->m_Sampler
 		};
 
-		const DescriptorSet::BufferInfo buffer{
+		const DescriptorSet::ImageInfo dirShadowmaps{
 			.index = 3U,
+			.imageView = m_Shadows.dirShadowmapView,
+			.imageSampler = VK_NULL_HANDLE,
+			.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			.count = MAX_DIR_LIGHT_SHADOWS
+		};
+
+		const DescriptorSet::ImageInfo sampler {
+			.index = 4U,
+			.imageSampler = m_Shadows.sampler,
+			.type = VK_DESCRIPTOR_TYPE_SAMPLER
+		};
+		
+		const DescriptorSet::BufferInfo buffer{
+			.index = 5U,
 			.buffer = m_Lights.buffer->GetHandle(),
 			.size = sizeof(m_Lights.LBO)
 		};
 
-		auto imageInfos = { albedo, position, normal };
-
+		auto imageInfos = { albedo, position, normal, dirShadowmaps, sampler };
+		
 		if (!m_GBufferInput)
 			m_GBufferInput = std::make_unique<DescriptorSet>(imageInfos, buffer);
 		else
@@ -805,23 +929,47 @@ namespace en
 		}
 	}
 
+	void RendererBackend::InitShadows()
+	{
+		Helpers::CreateImage(m_Shadows.image, m_Shadows.memory, VkExtent2D{ 512, 512 }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS);
+	
+		m_Shadows.dirShadowmaps.resize(MAX_DIR_LIGHT_SHADOWS);
+
+		for (uint32_t i = 0; auto & imageView : m_Shadows.dirShadowmaps)
+		{
+			Helpers::CreateImageView(m_Shadows.image, imageView, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i++);
+
+			Helpers::TransitionImageLayout(
+				m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				i - 1, 1U
+			);
+		}
+
+		Helpers::CreateImageView(m_Shadows.image, m_Shadows.dirShadowmapView, VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 0U, MAX_DIR_LIGHT_SHADOWS);
+	
+		Helpers::CreateSampler(m_Shadows.sampler, VK_FILTER_NEAREST);
+	}
+
 	void RendererBackend::InitDepthPipeline()
 	{
 		m_DepthPipeline = std::make_unique<Pipeline>();
 
 		Shader vShader("Shaders/Depth.spv", ShaderType::Vertex);
 
-		constexpr VkPushConstantRange objectPushConstant {
+		constexpr VkPushConstantRange depthPushConstant {
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset		= 0U,
-			.size		= sizeof(PerObjectData)
+			.size		= sizeof(DepthStageInfo)
 		};
 
 		const Pipeline::CreateInfo pipelineInfo{
 			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
 			.vShader			= &vShader,
 			.descriptorLayouts  = { CameraMatricesBuffer::GetLayout() },
-			.pushConstantRanges = { objectPushConstant },
+			.pushConstantRanges = { depthPushConstant },
 			.useVertexBindings  = true,
 			.enableDepthTest    = true
 		};

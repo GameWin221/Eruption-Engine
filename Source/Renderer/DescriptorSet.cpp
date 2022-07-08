@@ -33,7 +33,7 @@ namespace en
 			const VkDescriptorSetLayoutBinding binding{
 				.binding			= image.index,
 				.descriptorType	    = image.type,
-				.descriptorCount	= 1U,
+				.descriptorCount	= image.count,
 				.stageFlags			= static_cast<VkShaderStageFlags>(image.stage),
 				.pImmutableSamplers = nullptr
 			};

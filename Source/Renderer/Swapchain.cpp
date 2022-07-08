@@ -81,7 +81,7 @@ namespace en
 
 		for (int i = 0; i < m_ImageViews.size(); i++)
 		{
-			Helpers::CreateImageView(m_Images[i], m_ImageViews[i], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+			Helpers::CreateImageView(m_Images[i], m_ImageViews[i], VK_IMAGE_VIEW_TYPE_2D, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 			ChangeLayout(i, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 		}
 	}
@@ -106,15 +106,9 @@ namespace en
 		}
 	}
 	
-	//void Swapchain::ChangeLayout(const VkImageLayout& newLayout, const int& index, const VkCommandBuffer& cmd)
-	//{
-	//	Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, 1U, cmd);
-	//	m_CurrentLayouts[index] = newLayout;
-	//}
-
 	void Swapchain::ChangeLayout(const int& index, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
 	{
-		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 1U, cmd);
+		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, cmd);
 		m_CurrentLayouts[index] = newLayout;
 	}
 

@@ -58,6 +58,7 @@ namespace en
 
 		void DepthPass();
 		void GeometryPass();
+		void ShadowPass();
 		void LightingPass();
 		void TonemappingPass();
 		void AntialiasPass();
@@ -126,6 +127,8 @@ namespace en
 				int debugMode = 0;
 			} camera;
 
+
+
 			std::unique_ptr<MemoryBuffer> buffer;
 
 			uint32_t lastPointLightsSize = 0U;
@@ -135,6 +138,32 @@ namespace en
 			bool changed = false;
 
 		} m_Lights;
+
+		struct Shadows
+		{
+			VkImage image;
+			VkDeviceMemory memory;
+
+			VkSampler sampler;
+
+			std::vector<VkImageView> pointShadowmaps;
+			std::vector<VkImageView> spotShadowmaps;
+			std::vector<VkImageView> dirShadowmaps;
+
+			VkImageView pointShadowmapView;
+			VkImageView spotShadowmapView;
+			VkImageView dirShadowmapView;
+
+			const uint32_t shadowmapSize = 512;
+			const VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
+
+		} m_Shadows;
+
+		struct DepthStageInfo
+		{
+			glm::mat4 modelMatrix;
+			glm::mat4 viewProjMatrix;
+		};
 
 		struct ImGuiVK
 		{
@@ -219,6 +248,8 @@ namespace en
 		void UpdateGBufferInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
+
+		void InitShadows();
 
 		void InitDepthPipeline();
 		void InitGeometryPipeline();

@@ -4,13 +4,14 @@
 #define EN_DIRECTIONALLIGHT_HPP
 
 #include <Scene/SceneMember.hpp>
+#include <Renderer/Image.hpp>
 
 namespace en
 {
 	class DirectionalLight : public SceneMember
 	{
 	public:
-		constexpr DirectionalLight(const glm::vec3& direction, const glm::vec3& color, const float& intensity, const bool& active)
+		DirectionalLight(const glm::vec3& direction, const glm::vec3& color, const float& intensity, const bool& active)
 			: m_Direction(direction), m_Color(color), m_Intensity(intensity), m_Active(active), SceneMember{ SceneMemberType::DirLight } {};
 
 		bool m_Active = true;
@@ -20,6 +21,10 @@ namespace en
 
 		float m_Intensity = 1.0f;
 
+		bool m_CastShadows = false;
+
+		int m_ShadowmapIndex = -1;
+
 		void operator=(const DirectionalLight& other)
 		{
 			m_Active = other.m_Active;
@@ -27,12 +32,19 @@ namespace en
 			m_Color = other.m_Color;
 
 			m_Intensity = other.m_Intensity;
+
+			m_CastShadows = other.m_CastShadows;
+
+			m_ShadowmapIndex = other.m_ShadowmapIndex;
 		}
 
 		struct Buffer
 		{
-			alignas(16) glm::vec3 direction = glm::vec3(1.0, 0.0, 0.0);
+			glm::vec3 direction = glm::vec3(1.0, 0.0, 0.0);
+			int shadowmapIndex = -1;
+
 			alignas(16) glm::vec3 color = glm::vec3(1.0);
+			glm::mat4 lightMat = glm::mat4(1.0);
 		};
 	};
 }

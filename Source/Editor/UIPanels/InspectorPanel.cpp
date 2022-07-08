@@ -196,6 +196,8 @@ namespace en
 		ImGui::DragFloat("Intensity", &chosenDirLight->m_Intensity, 0.1f, 0.0f, 2000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::Checkbox("Active", &chosenDirLight->m_Active);
 
+		ImGui::Checkbox("Cast Shadows", &chosenDirLight->m_CastShadows);
+
 		chosenDirLight->m_Color = glm::clamp(chosenDirLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 
 		chosenDirLight->m_Direction = glm::normalize(chosenDirLight->m_Direction);

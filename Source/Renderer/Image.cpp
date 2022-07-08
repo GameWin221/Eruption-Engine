@@ -6,13 +6,14 @@
 
 namespace en
 {
-	Image::Image(const VkExtent2D& size, const VkFormat& format, const VkImageUsageFlags& usageFlags, const VkImageAspectFlags& aspectFlags, const VkImageLayout& initialLayout, const bool& genMipMaps) : m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
+	Image::Image(const VkExtent2D& size, const VkFormat& format, const VkImageUsageFlags& usageFlags, const VkImageAspectFlags& aspectFlags, const VkImageLayout& initialLayout, const bool& genMipMaps) 
+		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
 	{
 		if(genMipMaps)
 			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
 
-		Helpers::CreateImage(m_Image, m_Memory, m_Size, m_Format, VK_IMAGE_TILING_OPTIMAL, m_UsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_MipLevels);
-		Helpers::CreateImageView(m_Image, m_ImageView, m_Format, m_AspectFlags, m_MipLevels);
+		Helpers::CreateImage(m_Image, m_Memory, m_Size, m_Format, VK_IMAGE_TILING_OPTIMAL, m_UsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1U, m_MipLevels);
+		Helpers::CreateImageView(m_Image, m_ImageView, VK_IMAGE_VIEW_TYPE_2D, m_Format, m_AspectFlags, 0U, 1U, m_MipLevels);
 
 		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_MipLevels);
 		m_CurrentLayout = m_InitialLayout;
@@ -49,7 +50,7 @@ namespace en
 			m_CurrentLayout = m_InitialLayout;
 		}
 	}
-
+	/*
 	void Image::CopyTo(Image* dstImage, const VkCommandBuffer& cmd)
 	{
 #if defined(_DEBUG)
@@ -81,7 +82,8 @@ namespace en
 				.srcSubresource{
 					.aspectMask = m_AspectFlags,
 					.mipLevel	= mipLevel,
-					.layerCount = 1U
+					.layerCount = 1U,
+
 				},
 
 				.dstSubresource{
@@ -143,49 +145,7 @@ namespace en
 
 		vkCmdBlitImage(cmd, m_Image, m_CurrentLayout, dstImage->m_Image, dstImage->m_CurrentLayout, dstImage->m_MipLevels, imageBlitInfos.data(), filter);
 	}
-
-	void Image::BlitTo(VkImage& dstImage, const VkImageLayout& dstImageLayout, const VkImageAspectFlags& dstImageAspect, const VkFilter& filter, const uint32_t& dstImageMipLevels, const VkCommandBuffer& cmd)
-	{
-		std::vector<VkImageBlit> imageBlitInfos(dstImageMipLevels);
-
-		int32_t mipWidth = static_cast<int32_t>(m_Size.width);
-		int32_t mipHeight = static_cast<int32_t>(m_Size.height);
-
-		for (uint32_t mipLevel = 0U; mipLevel < dstImageMipLevels; mipLevel++)
-		{
-			const VkImageBlit imageBlit{
-				.srcSubresource{
-					.aspectMask = m_AspectFlags,
-					.mipLevel = mipLevel,
-					.layerCount = 1U
-				},
-
-				.srcOffsets {
-					{0, 0, 0},
-					{mipWidth, mipHeight, 1}
-				},
-
-				.dstSubresource{
-					.aspectMask = dstImageAspect,
-					.mipLevel = mipLevel,
-					.layerCount = 1U,
-				},
-
-				.dstOffsets {
-					{0, 0, 0},
-					{mipWidth, mipHeight, 1}
-				},
-			};
-
-			imageBlitInfos[mipLevel] = imageBlit;
-
-			if (mipWidth > 1) mipWidth /= 2;
-			if (mipHeight > 1) mipHeight /= 2;
-		}
-
-		vkCmdBlitImage(cmd, m_Image, m_CurrentLayout, dstImage, dstImageLayout, dstImageMipLevels, imageBlitInfos.data(), filter);
-	}
-
+	*/
 	void Image::GenMipMaps()
 	{
 		UseContext();
@@ -224,14 +184,6 @@ namespace en
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			accessFlags = VK_ACCESS_SHADER_READ_BIT;
 			stageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			accessFlags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			stageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			stageFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 			break;
 		default:
 			EN_ERROR("Image::GenMipMaps() - Unknown image layout in mipmap generation!");
@@ -304,14 +256,9 @@ namespace en
 		Helpers::EndSingleTimeGraphicsCommands(cmd);
 	}
 
-	//void Image::ChangeLayout(const VkImageLayout& newLayout, const VkCommandBuffer& cmd)
-	//{
-	//	Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, m_MipLevels, cmd);
-	//	m_CurrentLayout = newLayout;
-	//}
 	void Image::ChangeLayout(const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
 	{
-		Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, m_MipLevels, cmd);
+		Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, m_MipLevels, cmd);
 		m_CurrentLayout = newLayout;
 	}
 }

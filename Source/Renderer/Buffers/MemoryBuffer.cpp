@@ -75,9 +75,9 @@ namespace en
             },
 
             .imageExtent{
-                dstImage->m_Size.width,
-                dstImage->m_Size.height,
-                1U
+                .width  = dstImage->m_Size.width,
+                .height = dstImage->m_Size.height,
+                .depth  = 1U
             }
         };
 

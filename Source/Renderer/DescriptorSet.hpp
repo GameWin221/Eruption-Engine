@@ -17,9 +17,10 @@ namespace en
 			VkSampler     imageSampler = VK_NULL_HANDLE;
 			VkImageLayout imageLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
+			VkDescriptorType	  type  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+			uint32_t count = 1U;
 		};
 		struct BufferInfo
 		{

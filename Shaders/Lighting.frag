@@ -5,16 +5,18 @@
 #define PI 3.14159265359
 
 layout(location = 0) in vec2 fTexcoord;
-
 layout(location = 0) out vec4 FragColor;
 
 layout(binding = 0) uniform sampler2D gColor;
 layout(binding = 1) uniform sampler2D gPosition;
 layout(binding = 2) uniform sampler2D gNormal;
+layout(binding = 3) uniform texture2D dirShadowmaps[MAX_DIR_LIGHT_SHADOWS];
+layout(binding = 4) uniform sampler shadowmapSampler;// TODO:  Bind the sampler 
 
 struct PointLight
 {
-    vec4 positionRadius;
+    vec3 position;
+    float radius;
     vec3 color;
 };
 struct SpotLight
@@ -29,10 +31,12 @@ struct SpotLight
 struct DirLight
 {
     vec3 direction;
+    int shadowmapIndex;
     vec3 color;
+    mat4 projView;
 };
 
-layout(binding = 3) uniform UBO 
+layout(binding = 5) uniform UBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     SpotLight  sLights[MAX_SPOT_LIGHTS];
@@ -93,12 +97,24 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
+float CalculateShadow(vec4 fPosLightSpace, int shadowmapIndex)
+{
+    vec3 projCoords = fPosLightSpace.xyz / fPosLightSpace.w;
+
+    //projCoords = projCoords * 0.5 + 0.5; 
+    float closestDepth = texture(sampler2D(dirShadowmaps[shadowmapIndex], shadowmapSampler), projCoords.xy).r;   
+    float currentDepth = projCoords.z;  
+    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+
+    return shadow;
+}
+
 vec3 CalculatePointLight(PointLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float dist)
 {
-    float attenuation = max(1.0 - dist*dist/(light.positionRadius.w*light.positionRadius.w), 0.0); 
+    float attenuation = max(1.0 - dist*dist/(light.radius*light.radius), 0.0); 
     attenuation *= attenuation;
 
-    vec3 lightDir = normalize(light.positionRadius.xyz - position); 
+    vec3 lightDir = normalize(light.position - position); 
     vec3 H = normalize(lightDir + viewDir);
 
     float cosTheta = max(dot(normal, lightDir), 0.0);
@@ -179,9 +195,9 @@ void main()
     vec4 gNormalSample   = texture(gNormal  , fTexcoord);
     vec4 gPositionSample = texture(gPosition, fTexcoord);
 
-    vec3  albedo    = gColorSample.rgb;
-    vec3  normal    = gNormalSample.rgb;
-    vec3  position  = gPositionSample.rgb;
+    vec3 albedo    = gColorSample.rgb;
+    vec3 normal    = gNormalSample.rgb;
+    vec3 position  = gPositionSample.rgb;
 
     float roughness = gColorSample.a;
     float metalness = gPositionSample.a;
@@ -189,7 +205,8 @@ void main()
     float depth = length(camera.viewPos-position);
 
     vec3 ambient = albedo * lightsBuffer.ambient;
-    vec3 lighting = vec3(0.0f);
+    vec3 lighting = vec3(0.0);
+    float shadow = 0.0;
 
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
 
@@ -197,9 +214,9 @@ void main()
 
     for(int i = 0; i < lightsBuffer.activePointLights; i++)
     {
-        float dist = length(position - lightsBuffer.pLights[i].positionRadius.xyz);
+        float dist = length(position - lightsBuffer.pLights[i].position);
 
-        if(dist < lightsBuffer.pLights[i].positionRadius.w)
+        if(dist < lightsBuffer.pLights[i].radius)
             lighting += CalculatePointLight(lightsBuffer.pLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, dist);
     }
     for(int i = 0; i < lightsBuffer.activeSpotLights; i++)
@@ -213,20 +230,26 @@ void main()
         float epsilon   = innerCutoff - outerCutoff;
         float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);    
 
-        if(theta > outerCutoff) 
+        if(theta > outerCutoff)
             lighting += CalculateSpotLight(lightsBuffer.sLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, theta) * intensity;
     }
     for(int i = 0; i < lightsBuffer.activeDirLights; i++)
     {
+        if(lightsBuffer.dLights[i].shadowmapIndex != -1)
+        {
+            vec4 fPosLightSpace = lightsBuffer.dLights[i].projView * vec4(position, 1.0);
+            shadow += CalculateShadow(fPosLightSpace, lightsBuffer.dLights[i].shadowmapIndex);
+        }
+
         lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal);
     }
-    
+
     vec3 result = vec3(0.0f);
     
     switch(camera.debugMode)
     {
         case 0:
-            result = ambient + lighting;
+            result = lighting * (1.0 - shadow) + ambient;
             break;
         case 1:
             result = albedo;

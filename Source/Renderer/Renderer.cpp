@@ -46,6 +46,7 @@ namespace en
 		m_Backend->BeginRender();
 
 		m_Backend->DepthPass();
+		m_Backend->ShadowPass();
 		m_Backend->GeometryPass();
 		m_Backend->LightingPass();
 		m_Backend->TonemappingPass();
