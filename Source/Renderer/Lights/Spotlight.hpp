@@ -25,6 +25,9 @@ namespace en
 		float m_InnerCutoff = 0.2f;
 		float m_OuterCutoff = 0.4f;
 
+		bool m_CastShadows = false;
+		int m_ShadowmapIndex = -1;
+
 		void operator=(const SpotLight& other)
 		{
 			m_Active	= other.m_Active;
@@ -37,6 +40,9 @@ namespace en
 
 			m_InnerCutoff = other.m_InnerCutoff;
 			m_OuterCutoff = other.m_OuterCutoff;
+
+			m_CastShadows = other.m_CastShadows;
+			m_ShadowmapIndex = other.m_ShadowmapIndex;
 		}
 
 		struct Buffer
@@ -49,6 +55,13 @@ namespace en
 
 			glm::vec3 color = glm::vec3(1.0);
 			float range = 8.0f;
+
+			glm::mat4 lightMat = glm::mat4(1.0);
+
+			int shadowmapIndex = -1;
+			float dummy0;
+			float dummy1;
+			float dummy2;
 		};
 	};
 }

@@ -22,7 +22,6 @@ namespace en
 		float m_Intensity = 1.0f;
 
 		bool m_CastShadows = false;
-
 		int m_ShadowmapIndex = -1;
 
 		void operator=(const DirectionalLight& other)
@@ -34,7 +33,6 @@ namespace en
 			m_Intensity = other.m_Intensity;
 
 			m_CastShadows = other.m_CastShadows;
-
 			m_ShadowmapIndex = other.m_ShadowmapIndex;
 		}
 

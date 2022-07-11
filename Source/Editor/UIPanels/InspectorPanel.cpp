@@ -163,7 +163,7 @@ namespace en
 		outerAngle = chosenSpotLight->m_OuterCutoff * 180.0f;
 		innerAngle = chosenSpotLight->m_InnerCutoff * 180.0f;
 
-		ImGui::DragFloat("Outer Angle", &outerAngle, 1.0f, 0.0f, 180.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::DragFloat("Outer Angle", &outerAngle, 1.0f, 0.0f, 150.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 		innerAngle = std::fmin(innerAngle, outerAngle);
 
@@ -173,6 +173,7 @@ namespace en
 		chosenSpotLight->m_InnerCutoff = innerAngle / 180.0f;
 
 		ImGui::Checkbox("Active", &chosenSpotLight->m_Active);
+		ImGui::Checkbox("Cast Shadows", &chosenSpotLight->m_CastShadows);
 
 		m_LastChosenSceneMember = m_SceneHierarchy->m_ChosenSceneMember;
 	}

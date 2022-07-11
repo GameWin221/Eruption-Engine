@@ -123,16 +123,7 @@ namespace en
 	{
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		vkFreeMemory(Context::Get().m_LogicalDevice, m_Shadows.memory, nullptr);
-
-		vkDestroyImage(Context::Get().m_LogicalDevice, m_Shadows.image, nullptr);
-
-		vkDestroySampler(Context::Get().m_LogicalDevice, m_Shadows.sampler, nullptr);
-
-		for (auto& view : m_Shadows.dirShadowmaps)
-			vkDestroyImageView(Context::Get().m_LogicalDevice, view, nullptr);
-
-		vkDestroyImageView(Context::Get().m_LogicalDevice, m_Shadows.dirShadowmapView, nullptr);
+		DestroyShadows();
 
 		m_ImGui.Destroy();
 
@@ -171,8 +162,21 @@ namespace en
 		m_Lights.camera.viewPos = m_MainCamera->m_Position;
 		m_Lights.camera.debugMode = m_DebugMode;
 
-		for (auto& dirLight : dirLights)
-			dirLight.m_ShadowmapIndex = -1;
+		//for (auto& l : pointLights)
+			//l.m_ShadowmapIndex = -1;
+		for (auto& l : spotLights)
+			l.m_ShadowmapIndex = -1;
+		for (auto& l : dirLights)
+			l.m_ShadowmapIndex = -1;
+
+		/*
+		for (int i = 0, index = 0; i < m_Lights.lastPointLightsSize && index < MAX_POINT_LIGHT_SHADOWS; i++)
+			if (pointLights[i].m_CastShadows)
+				pointLights[i].m_ShadowmapIndex = index++;
+		*/
+		for (int i = 0, index = 0; i < m_Lights.lastSpotLightsSize && index < MAX_SPOT_LIGHT_SHADOWS; i++)
+			if (spotLights[i].m_CastShadows)
+				spotLights[i].m_ShadowmapIndex = index++;
 
 		for (int i = 0, index = 0; i < m_Lights.lastDirLightsSize && index < MAX_DIR_LIGHT_SHADOWS; i++)
 			if(dirLights[i].m_CastShadows)
@@ -181,7 +185,7 @@ namespace en
 		for (int i = 0; i < m_Lights.lastPointLightsSize; i++)
 		{
 			PointLight::Buffer& buffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
-			PointLight& light = pointLights[i];
+			const PointLight& light = pointLights[i];
 
 			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 			const float     lightRad = light.m_Radius * (float)light.m_Active;
@@ -201,52 +205,59 @@ namespace en
 		for (int i = 0; i < m_Lights.lastSpotLightsSize; i++)
 		{
 			SpotLight::Buffer& buffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights];
-			SpotLight& light = spotLights[i];
+			const SpotLight& light = spotLights[i];
 
 			const glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (buffer.position != light.m_Position || buffer.innerCutoff != light.m_InnerCutoff || buffer.direction != light.m_Direction || buffer.outerCutoff != light.m_OuterCutoff || buffer.color != lightColor || buffer.range != light.m_Range)
+			if (buffer.position != light.m_Position || buffer.innerCutoff != light.m_InnerCutoff || buffer.direction != light.m_Direction || buffer.outerCutoff != light.m_OuterCutoff || buffer.color != lightColor || buffer.range != light.m_Range || buffer.shadowmapIndex != light.m_ShadowmapIndex)
+			{
+				glm::mat4 view = glm::lookAt(light.m_Position, light.m_Position + light.m_Direction, glm::vec3(0.0, 1.0, 0.0));
+				glm::mat4 proj = glm::perspective((light.m_OuterCutoff+0.02f) * glm::pi<float>(), 1.0f, 0.01f, light.m_Range);
+
+				buffer.color = lightColor;
+				buffer.range = light.m_Range;
+				buffer.outerCutoff = light.m_OuterCutoff;
+				buffer.position = light.m_Position;
+				buffer.innerCutoff = light.m_InnerCutoff;
+				buffer.direction = light.m_Direction;
+				buffer.shadowmapIndex = light.m_ShadowmapIndex;
+				buffer.lightMat = proj * view;
+
 				m_Lights.changed = true;
+			}
 
 			if (light.m_Range == 0.0f || light.m_Color == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
 				continue;
-
-			buffer.position	   = light.m_Position;
-			buffer.range	   = light.m_Range;
-			buffer.outerCutoff = light.m_OuterCutoff;
-			buffer.innerCutoff = light.m_InnerCutoff;
-			buffer.direction   = light.m_Direction;
-			buffer.color	   = lightColor;
 
 			m_Lights.LBO.activeSpotLights++;
 		}
 		for (int i = 0; i < m_Lights.lastDirLightsSize; i++)
 		{
 			DirectionalLight::Buffer& buffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
-			DirectionalLight& light = dirLights[i];
+			const DirectionalLight& light = dirLights[i];
 
-			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
-
-			if (lightCol == glm::vec3(0.0))
-				continue;
+			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
 			if (buffer.direction != light.m_Direction || buffer.color != lightCol || buffer.shadowmapIndex != light.m_ShadowmapIndex)
 			{
 				m_Lights.changed = true;
 
-				glm::mat4 lightProj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 200.0f);
+				glm::mat4 proj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 200.0f);
 
-				glm::mat4 lightView = glm::lookAt(
+				glm::mat4 view = glm::lookAt(
 					light.m_Direction * 100.0f,
 					glm::vec3(0.00001f),
 					glm::vec3(0.0f, 1.0f, 0.0f)
 				);
 				
-				buffer.shadowmapIndex = light.m_ShadowmapIndex;
-				buffer.lightMat = lightProj * lightView;
-				buffer.direction = light.m_Direction;
 				buffer.color = lightCol;
+				buffer.shadowmapIndex = light.m_ShadowmapIndex;
+				buffer.lightMat = proj * view;
+				buffer.direction = light.m_Direction;
 			}
+
+			if (lightCol == glm::vec3(0.0))
+				continue;
 
 			m_Lights.LBO.activeDirLights++;
 		}
@@ -350,14 +361,92 @@ namespace en
 	{
 		if (m_SkipFrame || !m_Scene) return;
 
-		for (const auto& dirLight : m_Lights.LBO.dirLights)
+		Helpers::TransitionImageLayout(
+			m_Shadows.point.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+			0U, MAX_POINT_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
+
+		Helpers::TransitionImageLayout(
+			m_Shadows.spot.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+			0U, MAX_SPOT_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
+
+		Helpers::TransitionImageLayout(
+			m_Shadows.dir.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+			0U, MAX_DIR_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
+
+		for (int i = 0; i < m_Lights.LBO.activeSpotLights; i++)
 		{
-			if (dirLight.shadowmapIndex == -1)
+			if (m_Lights.LBO.spotLights[i].shadowmapIndex == -1)
 				continue;
 
 			const Pipeline::BindInfo info{
 				.depthAttachment {
-					.imageView = m_Shadows.dirShadowmaps[dirLight.shadowmapIndex],
+					.imageView = m_Shadows.spot.singleViews[m_Lights.LBO.spotLights[i].shadowmapIndex],
+
+					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+
+					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+
+					.clearValue {
+						.depthStencil = { 1.0f, 0U}
+					}
+				},
+
+				.cullMode = VK_CULL_MODE_FRONT_BIT,
+
+				.extent = VkExtent2D{SPOT_SHADOWMAP_RES, SPOT_SHADOWMAP_RES},
+			};
+
+			m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+
+			for (const auto& [name, object] : m_Scene->m_SceneObjects)
+			{
+				if (!object->m_Active || !object->m_Mesh->m_Active) continue;
+
+				const DepthStageInfo cameraInfo{
+					.modelMatrix = object->GetObjectData().model,
+					.viewProjMatrix = m_Lights.LBO.spotLights[i].lightMat,
+				};
+
+				vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
+
+				for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
+				{
+					if (!subMesh.m_Active) continue;
+
+					subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
+					subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
+
+					vkCmdDrawIndexed(m_CommandBuffers[m_FrameIndex], subMesh.m_IndexBuffer->m_IndicesCount, 1, 0, 0, 0);
+				}
+			}
+
+			m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		}
+		for (int i = 0; i < m_Lights.LBO.activeDirLights; i++)
+		{
+			if (m_Lights.LBO.dirLights[i].shadowmapIndex == -1)
+				continue;
+
+			const Pipeline::BindInfo info{
+				.depthAttachment {
+					.imageView = m_Shadows.dir.singleViews[m_Lights.LBO.dirLights[i].shadowmapIndex],
 
 					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 
@@ -383,7 +472,7 @@ namespace en
 
 				const DepthStageInfo cameraInfo{
 					.modelMatrix = object->GetObjectData().model,
-					.viewProjMatrix = dirLight.lightMat,
+					.viewProjMatrix = m_Lights.LBO.dirLights[i].lightMat,
 				};
 
 				vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
@@ -492,13 +581,28 @@ namespace en
 
 		m_HDROffscreen->ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_CommandBuffers[m_FrameIndex]);
 
-		Helpers::TransitionImageLayout(m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+		Helpers::TransitionImageLayout(m_Shadows.point.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0U, MAX_POINT_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
+
+		Helpers::TransitionImageLayout(m_Shadows.spot.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0U, MAX_SPOT_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
+		Helpers::TransitionImageLayout(m_Shadows.dir.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
 			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0U, MAX_DIR_LIGHT_SHADOWS, 1U,
 			m_CommandBuffers[m_FrameIndex]
-		);
+		); 
 
 		const Pipeline::BindInfo info{
 			.colorAttachments{
@@ -524,15 +628,6 @@ namespace en
 		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
 
 		m_LightingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
-
-		Helpers::TransitionImageLayout(
-			m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			0U, MAX_DIR_LIGHT_SHADOWS, 1U,
-			m_CommandBuffers[m_FrameIndex]
-		);
 	}
 	void RendererBackend::TonemappingPass()
 	{
@@ -751,16 +846,7 @@ namespace en
 
 		m_CameraMatrices.reset();
 
-		vkFreeMemory(Context::Get().m_LogicalDevice, m_Shadows.memory, nullptr);
-		
-		vkDestroyImage(Context::Get().m_LogicalDevice, m_Shadows.image, nullptr);
-
-		vkDestroySampler(Context::Get().m_LogicalDevice, m_Shadows.sampler, nullptr);
-
-		for (auto& view : m_Shadows.dirShadowmaps)
-			vkDestroyImageView(Context::Get().m_LogicalDevice, view, nullptr);
-
-		vkDestroyImageView(Context::Get().m_LogicalDevice, m_Shadows.dirShadowmapView, nullptr);
+		DestroyShadows();
 
 		m_Swapchain.reset();
 
@@ -880,20 +966,27 @@ namespace en
 			.imageSampler = m_GBuffer->m_Sampler
 		};
 
-		const DescriptorSet::ImageInfo dirShadowmaps{
+		const DescriptorSet::ImageInfo spotShadowmaps{
 			.index		  = 3U,
-			.imageView	  = m_Shadows.dirShadowmapView,
+			.imageView	  = m_Shadows.spot.sharedView,
 			.imageSampler = m_Shadows.sampler,
 			.type		  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
 		};
-		
+
+		const DescriptorSet::ImageInfo dirShadowmaps{
+			.index		  = 4U,
+			.imageView	  = m_Shadows.dir.sharedView,
+			.imageSampler = m_Shadows.sampler,
+			.type		  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+		};
+
 		const DescriptorSet::BufferInfo buffer{
-			.index	= 4U,
+			.index	= 5U,
 			.buffer = m_Lights.buffer->GetHandle(),
 			.size	= sizeof(m_Lights.LBO)
 		};
 
-		auto imageInfos = { albedo, position, normal, dirShadowmaps };
+		auto imageInfos = { albedo, position, normal, spotShadowmaps, dirShadowmaps };
 		
 		if (!m_GBufferInput)
 			m_GBufferInput = std::make_unique<DescriptorSet>(imageInfos, buffer);
@@ -939,24 +1032,88 @@ namespace en
 
 	void RendererBackend::InitShadows()
 	{
-		Helpers::CreateImage(m_Shadows.image, m_Shadows.memory, VkExtent2D{ DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS);
-	
-		m_Shadows.dirShadowmaps.resize(MAX_DIR_LIGHT_SHADOWS);
+		Helpers::CreateSampler(m_Shadows.sampler, VK_FILTER_NEAREST);
 
-		for (uint32_t i = 0; auto & imageView : m_Shadows.dirShadowmaps)
-			Helpers::CreateImageView(m_Shadows.image, imageView, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i++);
+		// Point
+		Helpers::CreateImage(m_Shadows.point.sharedImage, m_Shadows.point.memory, VkExtent2D{ POINT_SHADOWMAP_RES, POINT_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_POINT_LIGHT_SHADOWS);
+
+		m_Shadows.point.singleViews.resize(MAX_POINT_LIGHT_SHADOWS);
+
+		for (uint32_t i = 0; auto& view : m_Shadows.point.singleViews)
+			Helpers::CreateImageView(m_Shadows.point.sharedImage, view, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i++);
+
+		Helpers::CreateImageView(m_Shadows.point.sharedImage, m_Shadows.point.sharedView, VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 0U, MAX_POINT_LIGHT_SHADOWS);
+
+		// Spot
+		Helpers::CreateImage(m_Shadows.spot.sharedImage, m_Shadows.spot.memory, VkExtent2D{ SPOT_SHADOWMAP_RES, SPOT_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_SPOT_LIGHT_SHADOWS);
+
+		m_Shadows.spot.singleViews.resize(MAX_SPOT_LIGHT_SHADOWS);
+
+		for (uint32_t i = 0; auto & view : m_Shadows.spot.singleViews)
+			Helpers::CreateImageView(m_Shadows.spot.sharedImage, view, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i++);
+
+		Helpers::CreateImageView(m_Shadows.spot.sharedImage, m_Shadows.spot.sharedView, VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 0U, MAX_SPOT_LIGHT_SHADOWS);
+
+
+		// Dir
+		Helpers::CreateImage(m_Shadows.dir.sharedImage, m_Shadows.dir.memory, VkExtent2D{ DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS);
+	
+		m_Shadows.dir.singleViews.resize(MAX_DIR_LIGHT_SHADOWS);
+
+		for (uint32_t i = 0; auto& view : m_Shadows.dir.singleViews)
+			Helpers::CreateImageView(m_Shadows.dir.sharedImage, view, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i++);
 		
-		Helpers::TransitionImageLayout(
-			m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			0U, MAX_DIR_LIGHT_SHADOWS
+		Helpers::CreateImageView(m_Shadows.dir.sharedImage, m_Shadows.dir.sharedView, VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 0U, MAX_DIR_LIGHT_SHADOWS);
+
+		Helpers::TransitionImageLayout(m_Shadows.point.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0U, MAX_POINT_LIGHT_SHADOWS
 		);
 
-		Helpers::CreateImageView(m_Shadows.image, m_Shadows.dirShadowmapView, VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 0U, MAX_DIR_LIGHT_SHADOWS);
-	
-		Helpers::CreateSampler(m_Shadows.sampler, VK_FILTER_NEAREST);
+		Helpers::TransitionImageLayout(m_Shadows.spot.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0U, MAX_SPOT_LIGHT_SHADOWS
+		);
+		Helpers::TransitionImageLayout(m_Shadows.dir.sharedImage, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0U, MAX_DIR_LIGHT_SHADOWS
+		);
+	}
+	void RendererBackend::DestroyShadows()
+	{
+		UseContext();
+
+		vkDestroySampler(ctx.m_LogicalDevice, m_Shadows.sampler, nullptr);
+
+		// Point
+		vkFreeMemory(ctx.m_LogicalDevice, m_Shadows.point.memory, nullptr);
+		vkDestroyImage(ctx.m_LogicalDevice, m_Shadows.point.sharedImage, nullptr);
+		for (auto& view : m_Shadows.point.singleViews)
+			vkDestroyImageView(ctx.m_LogicalDevice, view, nullptr);
+
+		vkDestroyImageView(ctx.m_LogicalDevice, m_Shadows.point.sharedView, nullptr);
+
+		// Spot
+		vkFreeMemory(ctx.m_LogicalDevice, m_Shadows.spot.memory, nullptr);
+		vkDestroyImage(ctx.m_LogicalDevice, m_Shadows.spot.sharedImage, nullptr);
+		for (auto& view : m_Shadows.spot.singleViews)
+			vkDestroyImageView(ctx.m_LogicalDevice, view, nullptr);
+
+		vkDestroyImageView(ctx.m_LogicalDevice, m_Shadows.spot.sharedView, nullptr);
+
+		// Dir
+		vkFreeMemory(ctx.m_LogicalDevice, m_Shadows.dir.memory, nullptr);
+		vkDestroyImage(ctx.m_LogicalDevice, m_Shadows.dir.sharedImage, nullptr);
+		for (auto& view : m_Shadows.dir.singleViews)
+			vkDestroyImageView(ctx.m_LogicalDevice, view, nullptr);
+
+		vkDestroyImageView(ctx.m_LogicalDevice, m_Shadows.dir.sharedView, nullptr);
 	}
 
 	void RendererBackend::InitDepthPipeline()

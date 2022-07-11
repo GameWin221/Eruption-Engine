@@ -141,20 +141,37 @@ namespace en
 
 		struct Shadows
 		{
-			VkImage image;
-			VkDeviceMemory memory;
-
 			VkSampler sampler;
 
-			std::vector<VkImageView> pointShadowmaps;
-			std::vector<VkImageView> spotShadowmaps;
-			std::vector<VkImageView> dirShadowmaps;
-
-			VkImageView pointShadowmapView;
-			VkImageView spotShadowmapView;
-			VkImageView dirShadowmapView;
-
 			const VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
+
+			struct Point 
+			{
+				VkImage sharedImage;
+				VkDeviceMemory memory;
+
+				VkImageView sharedView;
+				std::vector<VkImageView> singleViews;
+
+			} point;
+			struct Spot
+			{
+				VkImage sharedImage;
+				VkDeviceMemory memory;
+
+				VkImageView sharedView;
+				std::vector<VkImageView> singleViews;
+
+			} spot;
+			struct Dir
+			{
+				VkImage sharedImage;
+				VkDeviceMemory memory;
+
+				VkImageView sharedView;
+				std::vector<VkImageView> singleViews;
+
+			} dir;
 
 		} m_Shadows;
 
@@ -234,11 +251,9 @@ namespace en
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
-
 		void ReloadBackendImpl();
 
 		void CreateCommandBuffer();
-
 		void CreateLightsBuffer();
 
 		void CreateGBuffer();
@@ -249,6 +264,7 @@ namespace en
 		void UpdateSwapchainInputs();
 
 		void InitShadows();
+		void DestroyShadows();
 
 		void InitDepthPipeline();
 		void InitGeometryPipeline();

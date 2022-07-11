@@ -121,23 +121,25 @@ namespace en
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
+		
 
 		for (auto& device : devices)
 		{
+			VkPhysicalDeviceProperties properties{};
+			vkGetPhysicalDeviceProperties(device, &properties);
+
 			if (IsDeviceSuitable(device))
 			{
 				m_PhysicalDevice = device;
+				EN_SUCCESS("Picked " + std::string(properties.deviceName) + " as the physical device!");
 				break;
 			}
+			else
+				EN_LOG(std::string(properties.deviceName) + " is not suitable to use as the physical device.");
 		}
 
 		if (m_PhysicalDevice == VK_NULL_HANDLE)
 			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
-
-		VkPhysicalDeviceProperties properties{};
-		vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
-
-		EN_SUCCESS("Picked \"" + std::string(properties.deviceName) + "\" as the physical device!");
 	}
 	void Context::FindQueueFamilies(VkPhysicalDevice& device)
 	{
