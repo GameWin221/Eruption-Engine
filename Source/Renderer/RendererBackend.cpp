@@ -234,11 +234,11 @@ namespace en
 			{
 				m_Lights.changed = true;
 
-				glm::mat4 lightProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 500.0f);
+				glm::mat4 lightProj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 200.0f);
 
 				glm::mat4 lightView = glm::lookAt(
-					light.m_Direction * 200.0f,
-					glm::vec3(0.0f, 0.0f, 0.0f),
+					light.m_Direction * 100.0f,
+					glm::vec3(0.00001f),
 					glm::vec3(0.0f, 1.0f, 0.0f)
 				);
 				
@@ -350,14 +350,14 @@ namespace en
 	{
 		if (m_SkipFrame || !m_Scene) return;
 
-		for (const auto& dirLight : m_Scene->GetAllDirectionalLights())
+		for (const auto& dirLight : m_Lights.LBO.dirLights)
 		{
-			if (!dirLight.m_CastShadows || dirLight.m_ShadowmapIndex == -1 || !dirLight.m_Active || dirLight.m_Intensity <= 0.0f || dirLight.m_Color == glm::vec3(0.0f))
+			if (dirLight.shadowmapIndex == -1)
 				continue;
 
 			const Pipeline::BindInfo info{
 				.depthAttachment {
-					.imageView = m_Shadows.dirShadowmaps[dirLight.m_ShadowmapIndex],
+					.imageView = m_Shadows.dirShadowmaps[dirLight.shadowmapIndex],
 
 					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 
@@ -370,20 +370,12 @@ namespace en
 					}
 				},
 
-				.extent = VkExtent2D{m_Shadows.shadowmapSize, m_Shadows.shadowmapSize},
+				.cullMode = VK_CULL_MODE_FRONT_BIT,
+
+				.extent = VkExtent2D{DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES},
 			};
 
 			m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
-
-			glm::mat4 lightProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 500.0f);
-
-			glm::mat4 lightView = glm::lookAt(
-				dirLight.m_Direction * 200.0f,
-				glm::vec3(0.0f, 0.0f, 0.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-
-			glm::mat4 cameraMatrix = lightProj * lightView;
 
 			for (const auto& [name, object] : m_Scene->m_SceneObjects)
 			{
@@ -391,7 +383,7 @@ namespace en
 
 				const DepthStageInfo cameraInfo{
 					.modelMatrix = object->GetObjectData().model,
-					.viewProjMatrix = cameraMatrix,
+					.viewProjMatrix = dirLight.lightMat,
 				};
 
 				vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
@@ -500,6 +492,14 @@ namespace en
 
 		m_HDROffscreen->ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_CommandBuffers[m_FrameIndex]);
 
+		Helpers::TransitionImageLayout(m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0U, MAX_DIR_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
+
 		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
@@ -510,6 +510,8 @@ namespace en
 				}
 			},
 			 
+			.cullMode = VK_CULL_MODE_FRONT_BIT,
+
 			.extent = m_Swapchain->GetExtent()
 		};
 
@@ -522,6 +524,15 @@ namespace en
 		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
 
 		m_LightingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+
+		Helpers::TransitionImageLayout(
+			m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+			0U, MAX_DIR_LIGHT_SHADOWS, 1U,
+			m_CommandBuffers[m_FrameIndex]
+		);
 	}
 	void RendererBackend::TonemappingPass()
 	{
@@ -543,6 +554,8 @@ namespace en
 					.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE
 				}
 			},
+
+			.cullMode = VK_CULL_MODE_FRONT_BIT,
 
 			.extent = m_Swapchain->GetExtent()
 		};
@@ -572,6 +585,8 @@ namespace en
 					.storeOp     = VK_ATTACHMENT_STORE_OP_STORE
 				}
 			},
+
+			.cullMode = VK_CULL_MODE_FRONT_BIT,
 
 			.extent = m_Swapchain->GetExtent()
 		};
@@ -848,44 +863,37 @@ namespace en
 	void RendererBackend::UpdateGBufferInput()
 	{
 		const DescriptorSet::ImageInfo albedo{
-			.index = 0U,
-			.imageView = m_GBuffer->m_Attachments[0].m_ImageView,
+			.index		  = 0U,
+			.imageView	  = m_GBuffer->m_Attachments[0].m_ImageView,
 			.imageSampler = m_GBuffer->m_Sampler,
 		};
 
 		const DescriptorSet::ImageInfo position{
-			.index = 1U,
-			.imageView = m_GBuffer->m_Attachments[1].m_ImageView,
+			.index		  = 1U,
+			.imageView	  = m_GBuffer->m_Attachments[1].m_ImageView,
 			.imageSampler = m_GBuffer->m_Sampler
 		};
 
 		const DescriptorSet::ImageInfo normal{
-			.index = 2U,
-			.imageView = m_GBuffer->m_Attachments[2].m_ImageView,
+			.index		  = 2U,
+			.imageView	  = m_GBuffer->m_Attachments[2].m_ImageView,
 			.imageSampler = m_GBuffer->m_Sampler
 		};
 
 		const DescriptorSet::ImageInfo dirShadowmaps{
-			.index = 3U,
-			.imageView = m_Shadows.dirShadowmapView,
-			.imageSampler = VK_NULL_HANDLE,
-			.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			.count = MAX_DIR_LIGHT_SHADOWS
-		};
-
-		const DescriptorSet::ImageInfo sampler {
-			.index = 4U,
+			.index		  = 3U,
+			.imageView	  = m_Shadows.dirShadowmapView,
 			.imageSampler = m_Shadows.sampler,
-			.type = VK_DESCRIPTOR_TYPE_SAMPLER
+			.type		  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
 		};
 		
 		const DescriptorSet::BufferInfo buffer{
-			.index = 5U,
+			.index	= 4U,
 			.buffer = m_Lights.buffer->GetHandle(),
-			.size = sizeof(m_Lights.LBO)
+			.size	= sizeof(m_Lights.LBO)
 		};
 
-		auto imageInfos = { albedo, position, normal, dirShadowmaps, sampler };
+		auto imageInfos = { albedo, position, normal, dirShadowmaps };
 		
 		if (!m_GBufferInput)
 			m_GBufferInput = std::make_unique<DescriptorSet>(imageInfos, buffer);
@@ -931,22 +939,20 @@ namespace en
 
 	void RendererBackend::InitShadows()
 	{
-		Helpers::CreateImage(m_Shadows.image, m_Shadows.memory, VkExtent2D{ 512, 512 }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS);
+		Helpers::CreateImage(m_Shadows.image, m_Shadows.memory, VkExtent2D{ DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS);
 	
 		m_Shadows.dirShadowmaps.resize(MAX_DIR_LIGHT_SHADOWS);
 
 		for (uint32_t i = 0; auto & imageView : m_Shadows.dirShadowmaps)
-		{
 			Helpers::CreateImageView(m_Shadows.image, imageView, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i++);
-
-			Helpers::TransitionImageLayout(
-				m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-				i - 1, 1U
-			);
-		}
+		
+		Helpers::TransitionImageLayout(
+			m_Shadows.image, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+			0U, MAX_DIR_LIGHT_SHADOWS
+		);
 
 		Helpers::CreateImageView(m_Shadows.image, m_Shadows.dirShadowmapView, VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 0U, MAX_DIR_LIGHT_SHADOWS);
 	
@@ -1028,8 +1034,7 @@ namespace en
 			.vShader			= &vShader,
 			.fShader			= &fShader,
 			.descriptorLayouts  = { m_GBufferInput->m_DescriptorLayout },
-			.pushConstantRanges = { cameraPushConstant },
-			.cullMode			= VK_CULL_MODE_FRONT_BIT
+			.pushConstantRanges = { cameraPushConstant }
 		};
 
 		m_LightingPipeline->CreatePipeline(pipelineInfo);
@@ -1052,8 +1057,7 @@ namespace en
 			.vShader			= &vShader,
 			.fShader			= &fShader,
 			.descriptorLayouts  = { m_HDRInput->m_DescriptorLayout },
-			.pushConstantRanges = { exposurePushConstant },
-			.cullMode			= VK_CULL_MODE_FRONT_BIT,
+			.pushConstantRanges = { exposurePushConstant }
 		};
 
 		m_TonemappingPipeline->CreatePipeline(pipelineInfo);
@@ -1079,7 +1083,6 @@ namespace en
 			.fShader			= &fShader,
 			.descriptorLayouts  = { m_SwapchainInputs[0]->m_DescriptorLayout},
 			.pushConstantRanges = { antialiasingPushConstant },
-			.cullMode = VK_CULL_MODE_FRONT_BIT,
 		};
 
 		m_AntialiasingPipeline->CreatePipeline(pipelineInfo);

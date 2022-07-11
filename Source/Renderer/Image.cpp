@@ -258,7 +258,7 @@ namespace en
 
 	void Image::ChangeLayout(const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
 	{
-		Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, m_MipLevels, cmd);
+		Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, m_MipLevels, cmd);
 		m_CurrentLayout = newLayout;
 	}
 }

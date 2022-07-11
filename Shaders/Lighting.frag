@@ -10,8 +10,7 @@ layout(location = 0) out vec4 FragColor;
 layout(binding = 0) uniform sampler2D gColor;
 layout(binding = 1) uniform sampler2D gPosition;
 layout(binding = 2) uniform sampler2D gNormal;
-layout(binding = 3) uniform texture2D dirShadowmaps[MAX_DIR_LIGHT_SHADOWS];
-layout(binding = 4) uniform sampler shadowmapSampler;// TODO:  Bind the sampler 
+layout(binding = 3) uniform sampler2DArray dirShadowmaps;
 
 struct PointLight
 {
@@ -36,7 +35,7 @@ struct DirLight
     mat4 projView;
 };
 
-layout(binding = 5) uniform UBO 
+layout(binding = 4) uniform UBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     SpotLight  sLights[MAX_SPOT_LIGHTS];
@@ -97,14 +96,36 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-float CalculateShadow(vec4 fPosLightSpace, int shadowmapIndex)
+const mat4 biasMat = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0 );
+
+float CalculateShadow(vec4 fPosLightSpace, int shadowmapIndex, float bias)
 {
     vec3 projCoords = fPosLightSpace.xyz / fPosLightSpace.w;
 
-    //projCoords = projCoords * 0.5 + 0.5; 
-    float closestDepth = texture(sampler2D(dirShadowmaps[shadowmapIndex], shadowmapSampler), projCoords.xy).r;   
-    float currentDepth = projCoords.z;  
-    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+    if(projCoords.z > 1.0)
+        return 0.0;
+
+    float shadow = 0.0;
+
+#if SOFT_SHADOWS
+    vec2 texelSize = vec2(1.0) / DIR_SHADOWMAP_RES;
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(dirShadowmaps, vec3(projCoords.xy + vec2(x, y) * texelSize, shadowmapIndex)).r; 
+            shadow += projCoords.z - bias > pcfDepth ? 1.0 : 0.0;        
+        }    
+    }
+    shadow /= 9.0;
+#else
+    float closestDepth = texture(dirShadowmaps, vec3(projCoords.xy, shadowmapIndex)).r;    
+    shadow = projCoords.z - bias > closestDepth ? 1.0 : 0.0;
+#endif
 
     return shadow;
 }
@@ -206,7 +227,6 @@ void main()
 
     vec3 ambient = albedo * lightsBuffer.ambient;
     vec3 lighting = vec3(0.0);
-    float shadow = 0.0;
 
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
 
@@ -235,13 +255,15 @@ void main()
     }
     for(int i = 0; i < lightsBuffer.activeDirLights; i++)
     {
+        float shadow = 0.0;
         if(lightsBuffer.dLights[i].shadowmapIndex != -1)
         {
-            vec4 fPosLightSpace = lightsBuffer.dLights[i].projView * vec4(position, 1.0);
-            shadow += CalculateShadow(fPosLightSpace, lightsBuffer.dLights[i].shadowmapIndex);
+            vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView * vec4(position, 1.0);
+            float bias = max(2.0 * SHADOW_BIAS * (1.0 - dot(normal, lightsBuffer.dLights[i].direction)), SHADOW_BIAS);
+            shadow += CalculateShadow(fPosLightSpace, lightsBuffer.dLights[i].shadowmapIndex, bias);
         }
 
-        lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal);
+        lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);
     }
 
     vec3 result = vec3(0.0f);
@@ -249,7 +271,7 @@ void main()
     switch(camera.debugMode)
     {
         case 0:
-            result = lighting * (1.0 - shadow) + ambient;
+            result = lighting + ambient;
             break;
         case 1:
             result = albedo;

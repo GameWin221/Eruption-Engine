@@ -108,7 +108,7 @@ namespace en
 	
 	void Swapchain::ChangeLayout(const int& index, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
 	{
-		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, cmd);
+		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, 1U, cmd);
 		m_CurrentLayouts[index] = newLayout;
 	}
 

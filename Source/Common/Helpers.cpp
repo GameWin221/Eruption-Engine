@@ -270,7 +270,7 @@ namespace en
                     EndSingleTimeGraphicsCommands(commandBuffer);
             }
         }
-        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& layer, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
+        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& layer, const uint32_t& layerCount, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
         {
             UseContext();
 
@@ -297,7 +297,7 @@ namespace en
                     .baseMipLevel   = 0U,
                     .levelCount     = mipLevels,
                     .baseArrayLayer = layer,
-                    .layerCount     = 1U,
+                    .layerCount     = layerCount,
                 }
             };
 

@@ -16,7 +16,7 @@ namespace en
 
 		bool m_Active = true;
 
-		glm::vec3 m_Direction = glm::vec3(1.0, 0.0, 0.0);
+		glm::vec3 m_Direction = glm::vec3(0.0, 1.0, 0.0);
 		glm::vec3 m_Color	  = glm::vec3(1.0);
 
 		float m_Intensity = 1.0f;
@@ -40,10 +40,12 @@ namespace en
 
 		struct Buffer
 		{
-			glm::vec3 direction = glm::vec3(1.0, 0.0, 0.0);
+			glm::vec3 direction = glm::vec3(0.0);
 			int shadowmapIndex = -1;
+			glm::vec3 color = glm::vec3(1.0);
 
-			alignas(16) glm::vec3 color = glm::vec3(1.0);
+			int _alignment;
+
 			glm::mat4 lightMat = glm::mat4(1.0);
 		};
 	};

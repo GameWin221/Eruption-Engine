@@ -154,7 +154,6 @@ namespace en
 			VkImageView spotShadowmapView;
 			VkImageView dirShadowmapView;
 
-			const uint32_t shadowmapSize = 512;
 			const VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
 
 		} m_Shadows;
