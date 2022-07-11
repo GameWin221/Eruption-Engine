@@ -27,6 +27,7 @@ namespace en
 
 		bool m_CastShadows = false;
 		int m_ShadowmapIndex = -1;
+		float m_ShadowSoftness = 1.0f;
 
 		void operator=(const SpotLight& other)
 		{
@@ -43,6 +44,7 @@ namespace en
 
 			m_CastShadows = other.m_CastShadows;
 			m_ShadowmapIndex = other.m_ShadowmapIndex;
+			m_ShadowSoftness = other.m_ShadowSoftness;
 		}
 
 		struct Buffer
@@ -59,7 +61,7 @@ namespace en
 			glm::mat4 lightMat = glm::mat4(1.0);
 
 			int shadowmapIndex = -1;
-			float dummy0;
+			float shadowSoftness = 1.0;
 			float dummy1;
 			float dummy2;
 		};

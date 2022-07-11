@@ -23,6 +23,7 @@ namespace en
 
 		bool m_CastShadows = false;
 		int m_ShadowmapIndex = -1;
+		float m_ShadowSoftness = 1.0f;
 
 		void operator=(const DirectionalLight& other)
 		{
@@ -34,6 +35,7 @@ namespace en
 
 			m_CastShadows = other.m_CastShadows;
 			m_ShadowmapIndex = other.m_ShadowmapIndex;
+			m_ShadowSoftness = other.m_ShadowSoftness;
 		}
 
 		struct Buffer
@@ -42,7 +44,7 @@ namespace en
 			int shadowmapIndex = -1;
 			glm::vec3 color = glm::vec3(1.0);
 
-			int _alignment;
+			float shadowSoftness = 1.0;
 
 			glm::mat4 lightMat = glm::mat4(1.0);
 		};

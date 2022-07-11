@@ -209,7 +209,7 @@ namespace en
 
 			const glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (buffer.position != light.m_Position || buffer.innerCutoff != light.m_InnerCutoff || buffer.direction != light.m_Direction || buffer.outerCutoff != light.m_OuterCutoff || buffer.color != lightColor || buffer.range != light.m_Range || buffer.shadowmapIndex != light.m_ShadowmapIndex)
+			if (buffer.shadowSoftness != light.m_ShadowSoftness || buffer.position != light.m_Position || buffer.innerCutoff != light.m_InnerCutoff || buffer.direction != light.m_Direction || buffer.outerCutoff != light.m_OuterCutoff || buffer.color != lightColor || buffer.range != light.m_Range || buffer.shadowmapIndex != light.m_ShadowmapIndex)
 			{
 				glm::mat4 view = glm::lookAt(light.m_Position, light.m_Position + light.m_Direction, glm::vec3(0.0, 1.0, 0.0));
 				glm::mat4 proj = glm::perspective((light.m_OuterCutoff+0.02f) * glm::pi<float>(), 1.0f, 0.01f, light.m_Range);
@@ -222,6 +222,7 @@ namespace en
 				buffer.direction = light.m_Direction;
 				buffer.shadowmapIndex = light.m_ShadowmapIndex;
 				buffer.lightMat = proj * view;
+				buffer.shadowSoftness = light.m_ShadowSoftness;
 
 				m_Lights.changed = true;
 			}
@@ -238,7 +239,7 @@ namespace en
 
 			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (buffer.direction != light.m_Direction || buffer.color != lightCol || buffer.shadowmapIndex != light.m_ShadowmapIndex)
+			if (buffer.shadowSoftness != light.m_ShadowSoftness || buffer.direction != light.m_Direction || buffer.color != lightCol || buffer.shadowmapIndex != light.m_ShadowmapIndex)
 			{
 				m_Lights.changed = true;
 
@@ -254,6 +255,7 @@ namespace en
 				buffer.shadowmapIndex = light.m_ShadowmapIndex;
 				buffer.lightMat = proj * view;
 				buffer.direction = light.m_Direction;
+				buffer.shadowSoftness = light.m_ShadowSoftness;
 			}
 
 			if (lightCol == glm::vec3(0.0))

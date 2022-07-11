@@ -175,6 +175,9 @@ namespace en
 		ImGui::Checkbox("Active", &chosenSpotLight->m_Active);
 		ImGui::Checkbox("Cast Shadows", &chosenSpotLight->m_CastShadows);
 
+		if (chosenSpotLight->m_CastShadows)
+			ImGui::DragFloat("Shadow Softness", &chosenSpotLight->m_ShadowSoftness, 1.0f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+
 		m_LastChosenSceneMember = m_SceneHierarchy->m_ChosenSceneMember;
 	}
 	void InspectorPanel::InspectDirLight()
@@ -198,6 +201,9 @@ namespace en
 		ImGui::Checkbox("Active", &chosenDirLight->m_Active);
 
 		ImGui::Checkbox("Cast Shadows", &chosenDirLight->m_CastShadows);
+
+		if (chosenDirLight->m_CastShadows)
+			ImGui::DragFloat("Shadow Softness", &chosenDirLight->m_ShadowSoftness, 1.0f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 		chosenDirLight->m_Color = glm::clamp(chosenDirLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 

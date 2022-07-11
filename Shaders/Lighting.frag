@@ -29,12 +29,14 @@ struct SpotLight
     float range;
     mat4 projView;
     int shadowmapIndex;
+    float shadowSoftness;
 };
 struct DirLight
 {
     vec3 direction;
     int shadowmapIndex;
     vec3 color;
+    float shadowSoftness;
     mat4 projView;
 };
 
@@ -105,7 +107,7 @@ const mat4 biasMat = mat4(
 	0.0, 0.0, 1.0, 0.0,
 	0.5, 0.5, 0.0, 1.0 );
 
-float CalculateShadow(vec4 fPosLightSpace, sampler2DArray shadowmaps, int shadowmapIndex, float bias)
+float CalculateShadow(vec4 fPosLightSpace, sampler2DArray shadowmaps, int shadowmapIndex, float bias, float softness)
 {
     vec3 projCoords = fPosLightSpace.xyz / fPosLightSpace.w;
 
@@ -115,16 +117,19 @@ float CalculateShadow(vec4 fPosLightSpace, sampler2DArray shadowmaps, int shadow
     float shadow = 0.0;
 
 #if SOFT_SHADOWS
-    vec2 texelSize = vec2(1.0) / DIR_SHADOWMAP_RES;
-    for(int x = -1; x <= 1; ++x)
+    vec2 texelSize = vec2(1.0) / DIR_SHADOWMAP_RES * softness;
+    for(int x = -SHADOW_PCF_SAMPLE_RATE; x <= SHADOW_PCF_SAMPLE_RATE; ++x)
     {
-        for(int y = -1; y <= 1; ++y)
+        for(int y = -SHADOW_PCF_SAMPLE_RATE; y <= SHADOW_PCF_SAMPLE_RATE; ++y)
         {
-            float pcfDepth = texture(shadowmaps, vec3(projCoords.xy + vec2(x, y) * texelSize, shadowmapIndex)).r; 
+            float pcfDepth = texture(shadowmaps, vec3(projCoords.xy + vec2(float(x)/SHADOW_PCF_SAMPLE_RATE, float(y)/SHADOW_PCF_SAMPLE_RATE) * texelSize, shadowmapIndex)).r; 
             shadow += projCoords.z - bias > pcfDepth ? 1.0 : 0.0;        
         }    
     }
-    shadow /= 9.0;
+
+    float divider = SHADOW_PCF_SAMPLE_RATE * 2.0 + 1.0;
+
+    shadow /= divider * divider;
 #else
     float closestDepth = texture(shadowmaps, vec3(projCoords.xy, shadowmapIndex)).r;    
     shadow = projCoords.z - bias > closestDepth ? 1.0 : 0.0;
@@ -256,7 +261,7 @@ void main()
         {
             vec4 fPosLightSpace = biasMat * lightsBuffer.sLights[i].projView * vec4(position, 1.0);
             float bias = max(0.5 * PERSP_SHADOW_BIAS * (1.0 - dot(normal, lightsBuffer.sLights[i].direction)), PERSP_SHADOW_BIAS);
-            shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, lightsBuffer.sLights[i].shadowmapIndex, bias);
+            shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, lightsBuffer.sLights[i].shadowmapIndex, bias, lightsBuffer.sLights[i].shadowSoftness);
         }
 
         if(theta > outerCutoff)
@@ -269,7 +274,7 @@ void main()
         {
             vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView * vec4(position, 1.0);
             float bias = max(2.0 * ORTHO_SHADOW_BIAS * (1.0 - dot(normal, lightsBuffer.dLights[i].direction)), ORTHO_SHADOW_BIAS);
-            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex, bias);
+            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex, bias, lightsBuffer.dLights[i].shadowSoftness);
         }
 
         lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);
