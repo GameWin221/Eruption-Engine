@@ -127,6 +127,16 @@ namespace en
 		ImGui::DragFloat("Radius", &chosenPointLight->m_Radius, 0.1f, 0.0f, 50.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::Checkbox("Active", &chosenPointLight->m_Active);
 
+		ImGui::Checkbox("Cast Shadows", &chosenPointLight->m_CastShadows);
+
+		if (chosenPointLight->m_CastShadows)
+		{
+			ImGui::DragFloat("Shadow Softness", &chosenPointLight->m_ShadowSoftness, 1.0f, 1.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::DragInt("PCF Sample Count", &chosenPointLight->m_PCFSampleRate, 0.5f, 1, 4, "%d", ImGuiSliderFlags_AlwaysClamp);
+		}
+
+
+
 		chosenPointLight->m_Color = glm::clamp(chosenPointLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 
 		m_LastChosenSceneMember = m_SceneHierarchy->m_ChosenSceneMember;
@@ -176,7 +186,11 @@ namespace en
 		ImGui::Checkbox("Cast Shadows", &chosenSpotLight->m_CastShadows);
 
 		if (chosenSpotLight->m_CastShadows)
-			ImGui::DragFloat("Shadow Softness", &chosenSpotLight->m_ShadowSoftness, 1.0f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		{
+			ImGui::DragFloat("Shadow Softness", &chosenSpotLight->m_ShadowSoftness, 1.0f, 1.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::DragInt("PCF Sample Count", &chosenSpotLight->m_PCFSampleRate, 0.5f, 1, 4, "%d", ImGuiSliderFlags_AlwaysClamp);
+		}
+
 
 		m_LastChosenSceneMember = m_SceneHierarchy->m_ChosenSceneMember;
 	}
@@ -203,7 +217,10 @@ namespace en
 		ImGui::Checkbox("Cast Shadows", &chosenDirLight->m_CastShadows);
 
 		if (chosenDirLight->m_CastShadows)
-			ImGui::DragFloat("Shadow Softness", &chosenDirLight->m_ShadowSoftness, 1.0f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		{
+			ImGui::DragFloat("Shadow Softness", &chosenDirLight->m_ShadowSoftness, 1.0f, 1.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::DragInt("PCF Sample Count", &chosenDirLight->m_PCFSampleRate, 0.5f, 1, 4, "%d", ImGuiSliderFlags_AlwaysClamp);
+		}
 
 		chosenDirLight->m_Color = glm::clamp(chosenDirLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 

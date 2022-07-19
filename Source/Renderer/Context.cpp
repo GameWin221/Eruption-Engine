@@ -188,7 +188,8 @@ namespace en
 		}
 
 		constexpr VkPhysicalDeviceFeatures deviceFeatures{
-			.samplerAnisotropy = VK_TRUE
+			.imageCubeArray	   = VK_TRUE,
+			.samplerAnisotropy = VK_TRUE,
 		};
 
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures{

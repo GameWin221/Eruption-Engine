@@ -4,7 +4,7 @@
 #include <Common/Helpers.hpp>
 namespace en
 {
-	DescriptorSet::DescriptorSet(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
+	DescriptorSet::DescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfo);
 		CreateDescriptorSet();
@@ -22,7 +22,7 @@ namespace en
 	{
 		vkCmdBindDescriptorSets(cmd, bindPoint, layout, index, 1U, &m_DescriptorSet, 0U, nullptr);
 	}
-	void DescriptorSet::CreateDescriptorPool(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
+	void DescriptorSet::CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();
 
@@ -98,7 +98,7 @@ namespace en
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("UniformBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 	}
-	void DescriptorSet::Update(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
+	void DescriptorSet::Update(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();
 

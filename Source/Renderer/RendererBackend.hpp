@@ -127,8 +127,6 @@ namespace en
 				int debugMode = 0;
 			} camera;
 
-
-
 			std::unique_ptr<MemoryBuffer> buffer;
 
 			uint32_t lastPointLightsSize = 0U;
@@ -151,7 +149,29 @@ namespace en
 				VkDeviceMemory memory;
 
 				VkImageView sharedView;
-				std::vector<VkImageView> singleViews;
+				std::vector<std::array<VkImageView, 6>> singleViews;
+
+				std::array<std::array<glm::mat4, 6>, MAX_POINT_LIGHT_SHADOWS> shadowMatrices;
+				std::array<glm::vec3, MAX_POINT_LIGHT_SHADOWS> lightPositions;
+				std::array<float, MAX_POINT_LIGHT_SHADOWS> farPlanes;
+
+				VkImage depthImage;
+				VkImageView depthView;
+				VkDeviceMemory depthMemory;
+
+				//struct OmniShadowBuffer
+				//{
+				//	glm::mat4 viewProj[6 * MAX_POINT_LIGHT_SHADOWS];
+				//	glm::vec3 lightPos[MAX_POINT_LIGHT_SHADOWS];
+				//	float farPlane[MAX_POINT_LIGHT_SHADOWS];
+				//} OSB;
+
+				struct OmniShadowPushConstant
+				{
+					glm::mat4x4 viewProj;
+					glm::mat4x4 model;
+					// last row is (lightPos.x, lightPos.y, lightPos.z, farPlane)
+				};
 
 			} point;
 			struct Spot
@@ -210,6 +230,8 @@ namespace en
 		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
+		std::unique_ptr<Pipeline> m_OmniShadowPipeline;
+
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 
@@ -220,6 +242,9 @@ namespace en
 
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 
+		//std::unique_ptr<MemoryBuffer> m_OmniShadowBuffer;
+
+		//std::unique_ptr<DescriptorSet> m_OmniShadowInput;
 		std::unique_ptr<DescriptorSet> m_GBufferInput;
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
@@ -259,6 +284,7 @@ namespace en
 		void CreateGBuffer();
 		void CreateHDROffscreen();
 
+		void UpdateOmniShadowInput();
 		void UpdateGBufferInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
@@ -267,6 +293,7 @@ namespace en
 		void DestroyShadows();
 
 		void InitDepthPipeline();
+		void InitOmniShadowPipeline();
 		void InitGeometryPipeline();
 		void InitLightingPipeline();
 		void InitTonemappingPipeline();

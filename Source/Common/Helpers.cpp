@@ -82,27 +82,28 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& layers, const uint32_t& mipLevels)
+        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& layers, const uint32_t& mipLevels, const VkImageCreateFlags& flags)
         {
             UseContext();
 
-            const VkImageCreateInfo imageInfo {
-                .sType     = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            const VkImageCreateInfo imageInfo{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                .flags = flags,
                 .imageType = VK_IMAGE_TYPE_2D,
-                .format    = format,
+                .format = format,
 
                 .extent {
-                    .width  = size.width,
+                    .width = size.width,
                     .height = size.height,
-                    .depth  = 1U,
+                    .depth = 1U,
                 },
 
-                .mipLevels     = mipLevels,
-                .arrayLayers   = layers,
-                .samples       = VK_SAMPLE_COUNT_1_BIT,
-                .tiling        = tiling,
-                .usage         = usage,
-                .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
+                .mipLevels = mipLevels,
+                .arrayLayers = layers,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .tiling = tiling,
+                .usage = usage,
+                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             };
 

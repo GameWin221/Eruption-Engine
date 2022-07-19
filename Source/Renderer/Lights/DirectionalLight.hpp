@@ -24,6 +24,7 @@ namespace en
 		bool m_CastShadows = false;
 		int m_ShadowmapIndex = -1;
 		float m_ShadowSoftness = 1.0f;
+		int m_PCFSampleRate = 1;
 
 		void operator=(const DirectionalLight& other)
 		{
@@ -36,6 +37,7 @@ namespace en
 			m_CastShadows = other.m_CastShadows;
 			m_ShadowmapIndex = other.m_ShadowmapIndex;
 			m_ShadowSoftness = other.m_ShadowSoftness;
+			m_PCFSampleRate = other.m_PCFSampleRate;
 		}
 
 		struct Buffer
@@ -45,6 +47,11 @@ namespace en
 			glm::vec3 color = glm::vec3(1.0);
 
 			float shadowSoftness = 1.0;
+			int pcfSampleRate = 1;
+
+			float dummy0;
+			float dummy1;
+			float dummy2;
 
 			glm::mat4 lightMat = glm::mat4(1.0);
 		};

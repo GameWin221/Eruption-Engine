@@ -14,8 +14,8 @@ namespace en
 
 		extern VkCommandBuffer BeginSingleTimeTransferCommands();
 		extern void EndSingleTimeTransferCommands(VkCommandBuffer& commandBuffer);
-
-		extern void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& layers = 1U, const uint32_t& mipLevels = 1U);
+		
+		extern void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& layers = 1U, const uint32_t& mipLevels = 1U, const VkImageCreateFlags& flags = 0U);
 		extern void CreateImageView(VkImage& image, VkImageView& imageView, const VkImageViewType& viewType, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& layer = 0U, const uint32_t& layerCount = 1U, const uint32_t& mipLevels = 1U);
 		extern void DestroyImage(VkImage& image, VkDeviceMemory& memory);
 

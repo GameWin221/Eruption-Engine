@@ -52,6 +52,11 @@ namespace en
 	
 		}
 
+		if (ImGui::CollapsingHeader("Lights and Shadows"))
+		{
+
+		}
+
 		ImGui::End();
 	}
 }
