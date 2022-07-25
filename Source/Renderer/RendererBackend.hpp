@@ -159,13 +159,6 @@ namespace en
 				VkImageView depthView;
 				VkDeviceMemory depthMemory;
 
-				//struct OmniShadowBuffer
-				//{
-				//	glm::mat4 viewProj[6 * MAX_POINT_LIGHT_SHADOWS];
-				//	glm::vec3 lightPos[MAX_POINT_LIGHT_SHADOWS];
-				//	float farPlane[MAX_POINT_LIGHT_SHADOWS];
-				//} OSB;
-
 				struct OmniShadowPushConstant
 				{
 					glm::mat4x4 viewProj;
@@ -242,9 +235,6 @@ namespace en
 
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 
-		//std::unique_ptr<MemoryBuffer> m_OmniShadowBuffer;
-
-		//std::unique_ptr<DescriptorSet> m_OmniShadowInput;
 		std::unique_ptr<DescriptorSet> m_GBufferInput;
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
@@ -265,7 +255,7 @@ namespace en
 		Camera*  m_MainCamera = nullptr;
 		Scene*	 m_Scene	  = nullptr;
 
-		uint32_t m_SwapchainImageIndex = 0U;
+		uint32_t m_SwapchainImageIndex = 0U; // Current swapchain index
 		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
 		
 

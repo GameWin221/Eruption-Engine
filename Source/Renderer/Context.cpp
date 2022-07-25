@@ -11,7 +11,7 @@ constexpr std::array<const char*, 2> deviceExtensions {
 	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 };
 
-#if not defined(NDEBUG)
+#if defined(_DEBUG)
 constexpr bool enableValidationLayers = true;
 #else
 constexpr bool enableValidationLayers = false;
