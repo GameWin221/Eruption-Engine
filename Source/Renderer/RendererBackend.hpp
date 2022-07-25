@@ -58,6 +58,7 @@ namespace en
 
 		void DepthPass();
 		void GeometryPass();
+		void ShadowPass();
 		void LightingPass();
 		void TonemappingPass();
 		void AntialiasPass();
@@ -136,6 +137,63 @@ namespace en
 
 		} m_Lights;
 
+		struct Shadows
+		{
+			VkSampler sampler;
+
+			const VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
+
+			struct Point 
+			{
+				VkImage sharedImage;
+				VkDeviceMemory memory;
+
+				VkImageView sharedView;
+				std::vector<std::array<VkImageView, 6>> singleViews;
+
+				std::array<std::array<glm::mat4, 6>, MAX_POINT_LIGHT_SHADOWS> shadowMatrices;
+				std::array<glm::vec3, MAX_POINT_LIGHT_SHADOWS> lightPositions;
+				std::array<float, MAX_POINT_LIGHT_SHADOWS> farPlanes;
+
+				VkImage depthImage;
+				VkImageView depthView;
+				VkDeviceMemory depthMemory;
+
+				struct OmniShadowPushConstant
+				{
+					glm::mat4x4 viewProj;
+					glm::mat4x4 model;
+					// last row is (lightPos.x, lightPos.y, lightPos.z, farPlane)
+				};
+
+			} point;
+			struct Spot
+			{
+				VkImage sharedImage;
+				VkDeviceMemory memory;
+
+				VkImageView sharedView;
+				std::vector<VkImageView> singleViews;
+
+			} spot;
+			struct Dir
+			{
+				VkImage sharedImage;
+				VkDeviceMemory memory;
+
+				VkImageView sharedView;
+				std::vector<VkImageView> singleViews;
+
+			} dir;
+
+		} m_Shadows;
+
+		struct DepthStageInfo
+		{
+			glm::mat4 modelMatrix;
+			glm::mat4 viewProjMatrix;
+		};
+
 		struct ImGuiVK
 		{
 			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -165,6 +223,8 @@ namespace en
 		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
+		std::unique_ptr<Pipeline> m_OmniShadowPipeline;
+
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 
@@ -195,7 +255,7 @@ namespace en
 		Camera*  m_MainCamera = nullptr;
 		Scene*	 m_Scene	  = nullptr;
 
-		uint32_t m_SwapchainImageIndex = 0U;
+		uint32_t m_SwapchainImageIndex = 0U; // Current swapchain index
 		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
 		
 
@@ -206,21 +266,24 @@ namespace en
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
-
 		void ReloadBackendImpl();
 
 		void CreateCommandBuffer();
-
 		void CreateLightsBuffer();
 
 		void CreateGBuffer();
 		void CreateHDROffscreen();
 
+		void UpdateOmniShadowInput();
 		void UpdateGBufferInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
 
+		void InitShadows();
+		void DestroyShadows();
+
 		void InitDepthPipeline();
+		void InitOmniShadowPipeline();
 		void InitGeometryPipeline();
 		void InitLightingPipeline();
 		void InitTonemappingPipeline();

@@ -21,6 +21,11 @@ namespace en
 		float m_Intensity = 1.0f;
 		float m_Radius	  = 5.0f;
 
+		bool m_CastShadows = false;
+		int m_ShadowmapIndex = -1;
+		float m_ShadowSoftness = 1.0f;
+		int m_PCFSampleRate = 1;
+
 		void operator=(const PointLight& other)
 		{
 			m_Active   = other.m_Active;
@@ -30,15 +35,24 @@ namespace en
 			m_Intensity = other.m_Intensity;
 
 			m_Radius = other.m_Radius;
+
+			m_CastShadows = other.m_CastShadows;
+			m_ShadowmapIndex = other.m_ShadowmapIndex;
+			m_ShadowSoftness = other.m_ShadowSoftness;
+			m_PCFSampleRate = other.m_PCFSampleRate;
 		}
 
 		struct Buffer
 		{
 			glm::vec3 position = glm::vec3(0.0);
-
 			float radius = 5.0f;
+			glm::vec3 color = glm::vec3(1.0);
 
-			alignas(16) glm::vec3 color = glm::vec3(1.0);
+			int shadowmapIndex = -1;
+			float shadowSoftness = 1.0;
+			int pcfSampleRate = 1;
+			float dummy1;
+			float dummy2;
 		};
 	};
 }

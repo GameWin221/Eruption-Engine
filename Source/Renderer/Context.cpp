@@ -11,7 +11,7 @@ constexpr std::array<const char*, 2> deviceExtensions {
 	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 };
 
-#if not defined(NDEBUG)
+#if defined(_DEBUG)
 constexpr bool enableValidationLayers = true;
 #else
 constexpr bool enableValidationLayers = false;
@@ -121,23 +121,25 @@ namespace en
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
+		
 
 		for (auto& device : devices)
 		{
+			VkPhysicalDeviceProperties properties{};
+			vkGetPhysicalDeviceProperties(device, &properties);
+
 			if (IsDeviceSuitable(device))
 			{
 				m_PhysicalDevice = device;
+				EN_SUCCESS("Picked " + std::string(properties.deviceName) + " as the physical device!");
 				break;
 			}
+			else
+				EN_LOG(std::string(properties.deviceName) + " is not suitable to use as the physical device.");
 		}
 
 		if (m_PhysicalDevice == VK_NULL_HANDLE)
 			EN_ERROR("Context.cpp::Context::VKPickPhysicalDevice() - Failed to find a suitable GPU!");
-
-		VkPhysicalDeviceProperties properties{};
-		vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
-
-		EN_SUCCESS("Picked \"" + std::string(properties.deviceName) + "\" as the physical device!");
 	}
 	void Context::FindQueueFamilies(VkPhysicalDevice& device)
 	{
@@ -186,7 +188,8 @@ namespace en
 		}
 
 		constexpr VkPhysicalDeviceFeatures deviceFeatures{
-			.samplerAnisotropy = VK_TRUE
+			.imageCubeArray	   = VK_TRUE,
+			.samplerAnisotropy = VK_TRUE,
 		};
 
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures{

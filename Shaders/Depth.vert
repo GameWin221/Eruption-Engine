@@ -5,18 +5,13 @@ layout(location = 1) in vec3 vNormal;
 layout(location = 2) in vec3 vTangent;
 layout(location = 3) in vec2 vTexcoord;
 
-layout(set = 0, binding = 0) uniform CameraMatricesBufferObject
-{
-    mat4 view;
-    mat4 proj;
-} camera;
-
-layout(push_constant) uniform PerObjectData
+layout(push_constant) uniform DepthInfo
 {
 	mat4 model;
-} object;
+	mat4 viewProj;
+} info;
 
 void main() 
 {
-    gl_Position = camera.proj * camera.view * object.model * vec4(vPos, 1.0);
+    gl_Position = info.viewProj * info.model * vec4(vPos, 1.0);
 }

@@ -82,24 +82,30 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& mipLevels)
+        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& layers, const uint32_t& mipLevels, const VkImageCreateFlags& flags)
         {
             UseContext();
 
-            VkImageCreateInfo imageInfo{};
-            imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-            imageInfo.extent.width  = size.width;
-            imageInfo.extent.height = size.height;
-            imageInfo.extent.depth  = 1U;
-            imageInfo.mipLevels     = mipLevels;
-            imageInfo.arrayLayers   = 1U;
-            imageInfo.format        = format;
-            imageInfo.tiling        = tiling;
-            imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            imageInfo.usage         = usage;
-            imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-            imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+            const VkImageCreateInfo imageInfo{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                .flags = flags,
+                .imageType = VK_IMAGE_TYPE_2D,
+                .format = format,
+
+                .extent {
+                    .width = size.width,
+                    .height = size.height,
+                    .depth = 1U,
+                },
+
+                .mipLevels = mipLevels,
+                .arrayLayers = layers,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .tiling = tiling,
+                .usage = usage,
+                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            };
 
             if (vkCreateImage(ctx.m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS)
                 EN_ERROR("Failed to create image!");
@@ -107,36 +113,38 @@ namespace en
             VkMemoryRequirements memRequirements;
             vkGetImageMemoryRequirements(ctx.m_LogicalDevice, image, &memRequirements);
 
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
+            const VkMemoryAllocateInfo allocInfo {
+                .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                .allocationSize  = memRequirements.size,
+                .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties)
+            };
 
             if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
                 EN_ERROR("Failed to allocate image memory!");
 
             vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
         }
-        void CreateImageView(VkImage& image, VkImageView& imageView, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& mipLevels)
+        void CreateImageView(VkImage& image, VkImageView& imageView, const VkImageViewType& viewType, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& layer, const uint32_t& layerCount, const uint32_t& mipLevels)
         {
-            UseContext();
+            const VkImageViewCreateInfo viewInfo {
+                .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .image    = image,
+                .viewType = viewType,
+                .format   = format,
 
-            VkImageViewCreateInfo viewInfo{};
-            viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            viewInfo.image = image;
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewInfo.format = format;
-            viewInfo.subresourceRange.aspectMask = aspectFlags;
-            viewInfo.subresourceRange.baseMipLevel = 0;
-            viewInfo.subresourceRange.levelCount = mipLevels;
-            viewInfo.subresourceRange.baseArrayLayer = 0;
-            viewInfo.subresourceRange.layerCount = 1;
+                .subresourceRange {
+                    .aspectMask     = aspectFlags,
+                    .baseMipLevel   = 0U,
+                    .levelCount     = mipLevels,
+                    .baseArrayLayer = layer,
+                    .layerCount     = layerCount,
+                }
+            };
 
-            if (vkCreateImageView(ctx.m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
+            if (vkCreateImageView(Context::Get().m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
                 EN_ERROR("Failed to create texture image view!");
         }
         
-#define UNSUPPORTED_ERR default:EN_ERROR("Unsupported layout transition!");break
         void SimpleTransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
         {
             UseContext();
@@ -189,6 +197,13 @@ namespace en
                     sourceStage     = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
                     destinationStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
                     break;
+                case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
+                    barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+                    sourceStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                    destinationStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+                    break;
                 case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
                     barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
                     barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
@@ -211,7 +226,9 @@ namespace en
                     destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
                     break;
 
-                UNSUPPORTED_ERR;
+                default:
+                    EN_ERROR("Unsupported layout transition from VK_IMAGE_LAYOUT_UNDEFINED!"); 
+                    break;
                 }
                 break;
 
@@ -226,11 +243,15 @@ namespace en
                     destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                     break;
 
-                UNSUPPORTED_ERR;
+                default:
+                    EN_ERROR("Unsupported layout transition from VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL!");
+                    break;
                 }
                 break;
             
-            UNSUPPORTED_ERR;
+            default:
+                EN_ERROR("Unsupported oldLayout!");
+                break;
             }
 
             vkCmdPipelineBarrier(
@@ -250,7 +271,7 @@ namespace en
                     EndSingleTimeGraphicsCommands(commandBuffer);
             }
         }
-        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
+        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& layer, const uint32_t& layerCount, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
         {
             UseContext();
 
@@ -276,8 +297,8 @@ namespace en
                     .aspectMask     = aspectFlags,
                     .baseMipLevel   = 0U,
                     .levelCount     = mipLevels,
-                    .baseArrayLayer = 0U,
-                    .layerCount     = 1U,
+                    .baseArrayLayer = layer,
+                    .layerCount     = layerCount,
                 }
             };
 

@@ -25,6 +25,8 @@ namespace en
 			std::vector<Attachment> colorAttachments{};
 			Attachment depthAttachment{};
 
+			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+
 			VkExtent2D extent{};
 		};
 		struct CreateInfo
@@ -45,7 +47,6 @@ namespace en
 
 			VkCompareOp compareOp = VK_COMPARE_OP_LESS;
 
-			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 

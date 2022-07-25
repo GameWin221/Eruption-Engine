@@ -60,6 +60,8 @@ namespace en
 			.extent = info.extent
 		};
 		
+		vkCmdSetCullMode(commandBuffer, info.cullMode);
+
 		vkCmdSetViewport(commandBuffer, 0U, 1U, &viewport);
 
 		vkCmdSetScissor(commandBuffer, 0U, 1U, &scissor);
@@ -142,7 +144,6 @@ namespace en
 			.depthClampEnable		 = VK_FALSE,
 			.rasterizerDiscardEnable = VK_FALSE,
 			.polygonMode			 = pipeline.polygonMode,
-			.cullMode				 = pipeline.cullMode,
 			.frontFace				 = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.depthBiasEnable		 = VK_FALSE,
 			.lineWidth				 = 1.0f
@@ -192,7 +193,7 @@ namespace en
 			.maxDepthBounds		   = 1.0f
 		};
 
-		std::array<VkDynamicState, 2> pipelineDynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		std::array<VkDynamicState, 3> pipelineDynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_CULL_MODE };
 
 		const VkPipelineDynamicStateCreateInfo dynamicState{
 			.sType			   = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,

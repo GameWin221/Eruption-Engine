@@ -17,9 +17,10 @@ namespace en
 			VkSampler     imageSampler = VK_NULL_HANDLE;
 			VkImageLayout imageLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
+			VkDescriptorType	  type  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+			uint32_t count = 1U;
 		};
 		struct BufferInfo
 		{
@@ -32,17 +33,17 @@ namespace en
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		};
 
-		DescriptorSet(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
+		DescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 		~DescriptorSet();
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, const uint32_t& index = 0U, const VkPipelineBindPoint& bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
 
-		void Update(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
+		void Update(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 
 		VkDescriptorSetLayout m_DescriptorLayout;
 
 	private:
-		void CreateDescriptorPool(const std::initializer_list<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
+		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
 		void CreateDescriptorSet();
 
 		VkDescriptorPool m_DescriptorPool;
