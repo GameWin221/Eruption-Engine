@@ -247,7 +247,7 @@ namespace en
 
 		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_MainSemaphores;
 		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_PresentSemaphores;
-
+		
 		const VkClearValue m_BlackClearValue{};
 
 		// References to existing objects

@@ -127,7 +127,7 @@ namespace en
 		{
 			VkPhysicalDeviceProperties properties{};
 			vkGetPhysicalDeviceProperties(device, &properties);
-
+		
 			if (IsDeviceSuitable(device))
 			{
 				m_PhysicalDevice = device;
@@ -336,7 +336,7 @@ namespace en
 			break;
 		}
 
-		std::cerr << message << " validation: " << pCallbackData->pMessage << '\n';
+		std::cerr << "[" << message << "]: " << pCallbackData->pMessage << '\n';
 
 		return VK_FALSE;
 	}

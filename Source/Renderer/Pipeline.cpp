@@ -6,8 +6,6 @@
 
 namespace en
 {
-	static bool s_LoadedRenderingKHR = false;
-
 	Pipeline::~Pipeline()
 	{
 		Destroy();
@@ -20,8 +18,7 @@ namespace en
 		{
 			const Attachment& attachment = info.colorAttachments[i];
 
-			khrColorAttachments[i] =
-			{
+			khrColorAttachments[i] = {
 				.sType		 = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
 				.imageView	 = attachment.imageView,
 				.imageLayout = attachment.imageLayout,
@@ -49,7 +46,7 @@ namespace en
 			.pDepthAttachment = ((depthAttachment.imageView) ? &depthAttachment : nullptr)
 		};
 
-		vkCmdBeginRenderingKHR(commandBuffer, &renderingInfo);
+		vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
 		const VkViewport viewport {
 			.width  = static_cast<float>(info.extent.width),
@@ -61,7 +58,7 @@ namespace en
 		};
 		
 		vkCmdSetCullMode(commandBuffer, info.cullMode);
-
+		
 		vkCmdSetViewport(commandBuffer, 0U, 1U, &viewport);
 
 		vkCmdSetScissor(commandBuffer, 0U, 1U, &scissor);
@@ -70,28 +67,15 @@ namespace en
 	}
 	void Pipeline::Unbind(VkCommandBuffer& commandBuffer)
 	{
-		vkCmdEndRenderingKHR(commandBuffer);
+		vkCmdEndRendering(commandBuffer);
 	}
 	void Pipeline::CreatePipeline(const CreateInfo& pipeline)
 	{
-		if (!m_Initialised)
-		{
-			VkInstance& instance = Context::Get().m_Instance;
-
-			vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(instance, "vkCmdBeginRenderingKHR");
-			vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetInstanceProcAddr(instance, "vkCmdEndRenderingKHR");
-
-			if (!vkCmdBeginRenderingKHR || !vkCmdEndRenderingKHR)
-				throw std::runtime_error("Pipeline::CreatePipeline() - Unable to load vkCmdBeginRenderingKHR and vkCmdEndRenderingKHR");
-		}
-
 		if(pipeline.vShader)
 			m_VShaderPath = pipeline.vShader->m_SourcePath;
 
 		if (pipeline.fShader)
 			m_FShaderPath = pipeline.fShader->m_SourcePath;
-
-		m_LastInfo = pipeline;
 
 		UseContext();
 
@@ -193,7 +177,7 @@ namespace en
 			.maxDepthBounds		   = 1.0f
 		};
 
-		std::array<VkDynamicState, 3> pipelineDynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_CULL_MODE };
+		constexpr std::array<VkDynamicState, 3> pipelineDynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_CULL_MODE };
 
 		const VkPipelineDynamicStateCreateInfo dynamicState{
 			.sType			   = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
@@ -255,8 +239,6 @@ namespace en
 
 		if (vkCreateGraphicsPipelines(ctx.m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
 			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline!");
-
-		m_Initialised = true;
 	}
 
 	void Pipeline::Destroy()

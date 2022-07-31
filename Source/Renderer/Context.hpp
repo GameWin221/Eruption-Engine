@@ -5,15 +5,15 @@
 
 #include <Renderer/Window.hpp>
 
-struct SwapchainSupportDetails
-{
-	VkSurfaceCapabilitiesKHR		capabilities{};
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR>	presentModes;
-};
-
 namespace en
 {
+	struct SwapchainSupportDetails
+	{
+		VkSurfaceCapabilitiesKHR		capabilities{};
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR>	presentModes;
+	};
+
 	class Context
 	{
 	public:

@@ -35,6 +35,7 @@ namespace en
 
 		SwapchainSupportDetails QuerySwapchainSupport();
 		VkSurfaceFormatKHR		ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR		ChooseSwapPresentMode(const bool& vSync, const std::vector<VkPresentModeKHR>& availablePresentModes);
 		VkExtent2D				ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	};
 }

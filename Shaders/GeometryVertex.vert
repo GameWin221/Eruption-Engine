@@ -30,15 +30,15 @@ void main()
     
     // Transform vertex normals and tangents to model space
     fNormal  = normalize(vec3(object.model * vec4(vNormal , 0.0)));
-    vec3 tanget = normalize(vec3(object.model * vec4(vTangent, 0.0)));
+    vec3 tangent = normalize(vec3(object.model * vec4(vTangent, 0.0)));
 
     // Reorthogonalize vertex tangents relatively to normals
-    tanget = normalize(tanget - dot(tanget, fNormal) * fNormal); 
+    tangent = normalize(tangent - dot(tangent, fNormal) * fNormal); 
 
     // Calculate bitangents with cross product
-    vec3 bitangent = normalize(cross(tanget, fNormal));
+    vec3 bitangent = normalize(cross(tangent, fNormal));
 
-    fTBN = mat3(tanget, bitangent, fNormal);
+    fTBN = mat3(tangent, bitangent, fNormal);
     
     fTexcoord = vTexcoord;
 }
