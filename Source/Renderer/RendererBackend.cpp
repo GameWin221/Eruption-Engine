@@ -350,7 +350,7 @@ namespace en
 	void RendererBackend::DepthPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		system("pause");
+		
 		const Pipeline::BindInfo info{
 			.depthAttachment {
 				.imageView	 = m_GBuffer->m_Attachments[3].m_ImageView,
@@ -606,7 +606,7 @@ namespace en
 	void RendererBackend::GeometryPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		system("pause");
+		
 		for (int i = 0; i < 3; i++)
 		{
 			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -682,7 +682,7 @@ namespace en
 	void RendererBackend::LightingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		system("pause");
+		
 		for (int i = 0; i < 3; i++)
 		{
 			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -744,7 +744,7 @@ namespace en
 	void RendererBackend::TonemappingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		system("pause");
+		
 		m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_GENERAL,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -782,7 +782,7 @@ namespace en
 	void RendererBackend::AntialiasPass()
 	{
 		if (m_SkipFrame || !m_Scene || m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
-		system("pause");
+		
 		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
@@ -814,7 +814,7 @@ namespace en
 	void RendererBackend::ImGuiPass()
 	{
 		if (m_SkipFrame || m_ImGuiRenderCallback == nullptr) return;
-		system("pause");
+		
 		m_ImGuiRenderCallback();
 
 		const VkRenderPassBeginInfo renderPassInfo{
@@ -845,7 +845,7 @@ namespace en
 	void RendererBackend::EndRender()
 	{
 		if (m_SkipFrame) return;
-		system("pause");
+		
 		m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 								  0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 								  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
