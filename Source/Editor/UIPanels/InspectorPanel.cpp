@@ -158,12 +158,11 @@ namespace en
 		}
 
 		SPACE();
-
 		ImGui::DragFloat3("Position", (float*)&chosenSpotLight->m_Position, 0.1f);
 		ImGui::DragFloat3("Direction", (float*)&chosenSpotLight->m_Direction, 0.1f, -1.0f, 1.0f);
 		ImGui::ColorEdit3("Color", (float*)&chosenSpotLight->m_Color, ImGuiColorEditFlags_Float);
 
-		chosenSpotLight->m_Direction = glm::normalize(chosenSpotLight->m_Direction);
+		//chosenSpotLight->m_Direction = glm::normalize(chosenSpotLight->m_Direction);
 
 		chosenSpotLight->m_Color = glm::clamp(chosenSpotLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 
@@ -224,7 +223,7 @@ namespace en
 
 		chosenDirLight->m_Color = glm::clamp(chosenDirLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
 
-		chosenDirLight->m_Direction = glm::normalize(chosenDirLight->m_Direction);
+		//chosenDirLight->m_Direction = glm::normalize(chosenDirLight->m_Direction);
 
 		m_LastChosenSceneMember = m_SceneHierarchy->m_ChosenSceneMember;
 	}

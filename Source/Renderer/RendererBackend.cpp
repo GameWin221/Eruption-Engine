@@ -249,7 +249,7 @@ namespace en
 				buffer.outerCutoff = light.m_OuterCutoff;
 				buffer.position = light.m_Position;
 				buffer.innerCutoff = light.m_InnerCutoff;
-				buffer.direction = light.m_Direction;
+				buffer.direction = glm::normalize(light.m_Direction);
 				buffer.shadowmapIndex = light.m_ShadowmapIndex;
 				buffer.lightMat = proj * view;
 				buffer.shadowSoftness = light.m_ShadowSoftness;
@@ -285,7 +285,7 @@ namespace en
 				buffer.color = lightCol;
 				buffer.shadowmapIndex = light.m_ShadowmapIndex;
 				buffer.lightMat = proj * view;
-				buffer.direction = light.m_Direction;
+				buffer.direction = glm::normalize(light.m_Direction);
 				buffer.shadowSoftness = light.m_ShadowSoftness;
 				buffer.pcfSampleRate = light.m_PCFSampleRate;
 			}
@@ -340,8 +340,9 @@ namespace en
 
 		vkResetCommandBuffer(m_CommandBuffers[m_FrameIndex], 0U);
 
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		constexpr VkCommandBufferBeginInfo beginInfo{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+		};
 
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
 			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
@@ -349,7 +350,7 @@ namespace en
 	void RendererBackend::DepthPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-
+		system("pause");
 		const Pipeline::BindInfo info{
 			.depthAttachment {
 				.imageView	 = m_GBuffer->m_Attachments[3].m_ImageView,
@@ -605,7 +606,7 @@ namespace en
 	void RendererBackend::GeometryPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-	
+		system("pause");
 		for (int i = 0; i < 3; i++)
 		{
 			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -681,7 +682,7 @@ namespace en
 	void RendererBackend::LightingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-
+		system("pause");
 		for (int i = 0; i < 3; i++)
 		{
 			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -743,7 +744,7 @@ namespace en
 	void RendererBackend::TonemappingPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		
+		system("pause");
 		m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_GENERAL,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -781,7 +782,7 @@ namespace en
 	void RendererBackend::AntialiasPass()
 	{
 		if (m_SkipFrame || !m_Scene || m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
-
+		system("pause");
 		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
@@ -813,7 +814,7 @@ namespace en
 	void RendererBackend::ImGuiPass()
 	{
 		if (m_SkipFrame || m_ImGuiRenderCallback == nullptr) return;
-
+		system("pause");
 		m_ImGuiRenderCallback();
 
 		const VkRenderPassBeginInfo renderPassInfo{
@@ -844,7 +845,7 @@ namespace en
 	void RendererBackend::EndRender()
 	{
 		if (m_SkipFrame) return;
-
+		system("pause");
 		m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 								  0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 								  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,

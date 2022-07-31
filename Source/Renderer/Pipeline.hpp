@@ -60,19 +60,12 @@ namespace en
 
 		void Destroy();
 
-		PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
-		PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
-
 		VkPipelineLayout m_Layout;
 		VkPipeline		 m_Pipeline;
 
 	private:
 		std::string m_VShaderPath;
 		std::string m_FShaderPath;
-
-		bool m_Initialised = false;
-
-		CreateInfo m_LastInfo{};
 	};
 }
 

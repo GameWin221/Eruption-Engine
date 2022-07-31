@@ -27,7 +27,7 @@ namespace en
 		SwapchainSupportDetails swapChainSupport = QuerySwapchainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode	 = vSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+		VkPresentModeKHR   presentMode   = ChooseSwapPresentMode(vSync, swapChainSupport.presentModes);
 		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -170,6 +170,30 @@ namespace en
 			actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
 			return actualExtent;
+		}
+	}
+	VkPresentModeKHR Swapchain::ChooseSwapPresentMode(const bool& vSync, const std::vector<VkPresentModeKHR>& availablePresentModes)
+	{
+		if (vSync)
+		{
+			return VK_PRESENT_MODE_FIFO_KHR;
+		}
+		else
+		{
+			bool supportsMailbox = false;
+			for (const auto& mode : availablePresentModes)
+			{
+				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+				{
+					supportsMailbox = true;
+					break;
+				}
+			}
+
+			if (supportsMailbox)
+				return VK_PRESENT_MODE_MAILBOX_KHR;
+			else
+				return VK_PRESENT_MODE_IMMEDIATE_KHR;
 		}
 	}
 }
