@@ -9,6 +9,8 @@ namespace en
 {
 	class SpotLight : public SceneMember
 	{
+	friend class RendererBackend;
+
 	public:
 		constexpr SpotLight(const glm::vec3& position, const glm::vec3& direction, const glm::vec3& color, const float& innerCutoff, const float& outerCutoff, const float& range, const float& intensity, const bool& active)
 			: m_Position(position), m_Direction(direction), m_Color(color), m_InnerCutoff(innerCutoff), m_OuterCutoff(outerCutoff), m_Range(range), m_Intensity(intensity), m_Active(active), SceneMember{ SceneMemberType::SpotLight } {};
@@ -26,7 +28,6 @@ namespace en
 		float m_OuterCutoff = 0.4f;
 
 		bool m_CastShadows = false;
-		int m_ShadowmapIndex = -1;
 		float m_ShadowSoftness = 1.0f;
 		int m_PCFSampleRate = 1;
 
@@ -67,6 +68,9 @@ namespace en
 			int pcfSampleRate = 1;
 			float dummy2;
 		};
+
+	private:
+		int m_ShadowmapIndex = -1;
 	};
 }
 

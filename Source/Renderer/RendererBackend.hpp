@@ -31,9 +31,6 @@
 
 #include <Renderer/Swapchain.hpp>
 
-#define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
-#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
-
 namespace en
 {
 	class RendererBackend
@@ -68,6 +65,9 @@ namespace en
 
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera() { return m_MainCamera; };
+
+		void SetShadowCascadesWeight(const float& weight);
+		const float& GetShadowCascadesWeight() const { return m_Shadows.cascadeSplitWeight; }
 
 		Scene* GetScene() { return m_Scene; };
 
@@ -114,17 +114,25 @@ namespace en
 				SpotLight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
 				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
 
-				alignas(4) uint32_t activePointLights = 0U;
-				alignas(4) uint32_t activeSpotLights = 0U;
-				alignas(4) uint32_t activeDirLights = 0U;
+				uint32_t activePointLights = 0U;
+				uint32_t activeSpotLights = 0U;
+				uint32_t activeDirLights = 0U;
+				float dummy0 = 0.0f;
 
-				alignas(16) glm::vec3 ambientLight = glm::vec3(0.0f);
+				glm::vec3 ambientLight = glm::vec3(0.0f);
+				float dummy1 = 0.0f;
+
+				glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
+
+				glm::vec4 frustumSizeRatios[SHADOW_CASCADES]{};
 			} LBO;
 
 			struct LightsCameraInfo
 			{
 				glm::vec3 viewPos = glm::vec3(0.0f);
 				int debugMode = 0;
+
+				glm::mat4 viewMat = glm::mat4(1.0f);
 			} camera;
 
 			std::unique_ptr<MemoryBuffer> buffer;
@@ -185,6 +193,13 @@ namespace en
 				std::vector<VkImageView> singleViews;
 
 			} dir;
+
+			std::array<float, SHADOW_CASCADES> frustumSplits;
+			std::array<glm::vec3, SHADOW_CASCADES> frustumCenters;
+			std::array<float, SHADOW_CASCADES> frustumRadiuses;
+			std::array<float, SHADOW_CASCADES> frustumRadiusRatios;
+
+			float cascadeSplitWeight = 0.9f;
 
 		} m_Shadows;
 
@@ -274,12 +289,13 @@ namespace en
 		void CreateGBuffer();
 		void CreateHDROffscreen();
 
-		void UpdateOmniShadowInput();
 		void UpdateGBufferInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
 
 		void InitShadows();
+		void RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer);
+		void UpdateShadowFrustums();
 		void DestroyShadows();
 
 		void InitDepthPipeline();

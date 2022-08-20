@@ -26,6 +26,9 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera();
 
+		void SetShadowCascadesWeight(float weight);
+		const float& GetShadowCascadesWeight() const;
+
 		static Renderer* Get();
 		void ReloadRenderer();
 

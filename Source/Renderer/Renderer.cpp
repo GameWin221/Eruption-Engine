@@ -46,8 +46,8 @@ namespace en
 		m_Backend->BeginRender();
 
 		m_Backend->DepthPass();
-		m_Backend->ShadowPass();
 		m_Backend->GeometryPass();
+		m_Backend->ShadowPass();
 		m_Backend->LightingPass();
 		m_Backend->TonemappingPass();
 		m_Backend->AntialiasPass();
@@ -68,6 +68,15 @@ namespace en
 	void Renderer::SetVSync(bool vSync)
 	{
 		m_Backend->SetVSync(vSync);
+	}
+
+	void Renderer::SetShadowCascadesWeight(float weight)
+	{
+		m_Backend->SetShadowCascadesWeight(weight);
+	}
+	const float& Renderer::GetShadowCascadesWeight() const
+	{
+		return GetShadowCascadesWeight();
 	}
 
 	Renderer* Renderer::Get()

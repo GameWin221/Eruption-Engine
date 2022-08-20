@@ -131,7 +131,8 @@ namespace en
 			if (IsDeviceSuitable(device))
 			{
 				m_PhysicalDevice = device;
-				EN_SUCCESS("Picked " + std::string(properties.deviceName) + " as the physical device!");
+				m_PhysicalDeviceName = properties.deviceName;
+				EN_SUCCESS("Picked " + m_PhysicalDeviceName + " as the physical device!");
 				break;
 			}
 			else
@@ -320,6 +321,13 @@ namespace en
 	{
 		std::string_view message;
 		
+		if (pCallbackData->pMessage[52] == '0' &&
+			pCallbackData->pMessage[53] == '6' &&
+			pCallbackData->pMessage[54] == '1' &&
+			pCallbackData->pMessage[55] == '9' &&
+			(pCallbackData->pMessage[56] == '5' || pCallbackData->pMessage[56] == '6' || pCallbackData->pMessage[56] == '7'))
+			return VK_FALSE;
+
 		switch (messageSeverity)
 		{
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:

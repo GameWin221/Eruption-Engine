@@ -42,8 +42,9 @@ struct DirLight
     int shadowmapIndex;
     vec3 color;
     float shadowSoftness;
-    int pcfSampleRate; 
-    mat4 projView;
+    int pcfSampleRate;
+    
+    mat4 projView[SHADOW_CASCADES];
 };
 
 layout(binding = 6) uniform UBO 
@@ -55,8 +56,14 @@ layout(binding = 6) uniform UBO
     uint activePointLights;
     uint activeSpotLights;
     uint activeDirLights;
+    float dummy0;
 
     vec3 ambient;
+    float dummy1;
+
+    vec4 cascadeSplitDistances[SHADOW_CASCADES];
+
+    vec4 cascadeRatios[SHADOW_CASCADES];
 
 } lightsBuffer;
 
@@ -64,6 +71,11 @@ layout(push_constant) uniform LightsCameraInfo
 {
 	vec3 viewPos;
     int debugMode;
+
+    vec4 viewRow0;
+    vec4 viewRow1;
+    vec4 viewRow2;
+    vec4 viewRow3;
 } camera;
 
 float WhenNotEqual(float x, float y) {
@@ -111,7 +123,8 @@ const mat4 biasMat = mat4(
 	0.5, 0.0, 0.0, 0.0,
 	0.0, 0.5, 0.0, 0.0,
 	0.0, 0.0, 1.0, 0.0,
-	0.5, 0.5, 0.0, 1.0 );
+	0.5, 0.5, 0.0, 1.0
+);
 
 vec3 pcfSampleOffsets[20] = vec3[](
    vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
@@ -278,6 +291,16 @@ void main()
 
     float depth = length(camera.viewPos-position);
 
+    mat4 viewMat = mat4(camera.viewRow0, camera.viewRow1,camera.viewRow2,camera.viewRow3);
+
+    vec4 viewPos = viewMat * vec4(position, 1.0f);
+
+	int cascade = 0;
+
+    for(int i = 0; i < SHADOW_CASCADES-1; i++)
+        if (-viewPos.z > lightsBuffer.cascadeSplitDistances[i].x)
+		    cascade = i+1;
+
     vec3 ambient = albedo * lightsBuffer.ambient;
     vec3 lighting = vec3(0.0);
 
@@ -324,13 +347,14 @@ void main()
     }
     for(int i = 0; i < lightsBuffer.activeDirLights; i++)
     {
-    
         float shadow = 0.0;
         if(lightsBuffer.dLights[i].shadowmapIndex != -1)
         {
-            vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView * vec4(position, 1.0);
+            vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView[cascade] * vec4(position, 1.0);
             float bias = max(2.0 * DIR_SHADOW_BIAS * (1.0 - dot(normal, lightsBuffer.dLights[i].direction)), DIR_SHADOW_BIAS);
-            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex, lightsBuffer.sLights[i].pcfSampleRate, bias, lightsBuffer.dLights[i].shadowSoftness);
+            float softness = lightsBuffer.dLights[i].shadowSoftness / lightsBuffer.cascadeRatios[cascade].x;
+
+            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex+cascade, lightsBuffer.dLights[i].pcfSampleRate, bias, softness);
         }
         
         lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);
@@ -359,10 +383,24 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
-            result = vec3(texture(dirShadowmaps, vec3(fTexcoord, 0)).r);//vec3(depth);
+            result = vec3(texture(dirShadowmaps, vec3(fTexcoord, 0)).r);
             break;
         case 7:
-            result = vec3((texture(spotShadowmaps, vec3(fTexcoord, 0)).r-0.99)*100.3);//vec3(depth);
+            switch(cascade)
+            {
+                case 0:
+                    result = albedo + vec3(0.2, 0.0, 0.0);
+                    break;
+                case 1:
+                    result = albedo + vec3(0.0, 0.2, 0.0);
+                    break;
+                case 2:
+                    result = albedo + vec3(0.0, 0.0, 0.2);
+                    break;
+                default: 
+                    result = vec3(0.1);
+                    break;
+            }
             break;
     }
     

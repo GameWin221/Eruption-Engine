@@ -9,6 +9,8 @@ namespace en
 {
 	class PointLight : public SceneMember
 	{
+	friend class RendererBackend;
+
 	public:
 		constexpr PointLight(const glm::vec3& position, const glm::vec3& color, const float& intensity, const float& radius, const bool& active)
 			: m_Position(position), m_Color(color), m_Intensity(intensity), m_Radius(radius), m_Active(active), SceneMember{ SceneMemberType::PointLight } {};
@@ -22,7 +24,6 @@ namespace en
 		float m_Radius	  = 5.0f;
 
 		bool m_CastShadows = false;
-		int m_ShadowmapIndex = -1;
 		float m_ShadowSoftness = 1.0f;
 		int m_PCFSampleRate = 1;
 
@@ -54,6 +55,9 @@ namespace en
 			float dummy1;
 			float dummy2;
 		};
+
+	private:
+		int m_ShadowmapIndex = -1;
 	};
 }
 #endif
