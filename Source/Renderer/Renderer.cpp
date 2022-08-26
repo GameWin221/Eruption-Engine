@@ -76,7 +76,7 @@ namespace en
 	}
 	const float& Renderer::GetShadowCascadesWeight() const
 	{
-		return GetShadowCascadesWeight();
+		return m_Backend->GetShadowCascadesWeight();
 	}
 
 	Renderer* Renderer::Get()

@@ -144,28 +144,21 @@ namespace en
 
 	void RendererBackend::UpdateLights()
 	{
-		m_Lights.changed = false;
-
-		if (m_Lights.LBO.ambientLight != m_Scene->m_AmbientColor || m_Lights.lastPointLightsSize != m_Scene->GetAllPointLights().size() || m_Lights.lastSpotLightsSize != m_Scene->GetAllSpotLights().size() || m_Lights.lastDirLightsSize != m_Scene->GetAllDirectionalLights().size())
-			m_Lights.changed = true;
-
 		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
 
 		auto& pointLights = m_Scene->GetAllPointLights();
 		auto& spotLights = m_Scene->GetAllSpotLights();
 		auto& dirLights = m_Scene->GetAllDirectionalLights();
 
-		m_Lights.lastPointLightsSize = pointLights.size();
-		m_Lights.lastSpotLightsSize = spotLights.size();
-		m_Lights.lastDirLightsSize = dirLights.size();
-
 		m_Lights.LBO.activePointLights = 0U;
 		m_Lights.LBO.activeSpotLights = 0U;
 		m_Lights.LBO.activeDirLights = 0U;
 
+		m_CameraMatrices->UpdateMatrices(m_MainCamera, m_FrameIndex);
+
 		m_Lights.camera.viewPos = m_MainCamera->m_Position;
 		m_Lights.camera.debugMode = m_DebugMode;
-		m_Lights.camera.viewMat = m_CameraMatrices->m_Matrices.view;
+		m_Lights.camera.viewMat = m_CameraMatrices->m_Matrices[m_FrameIndex].view;
 
 		for (auto& l : pointLights)
 			l.m_ShadowmapIndex = -1;
@@ -174,55 +167,51 @@ namespace en
 		for (auto& l : dirLights)
 			l.m_ShadowmapIndex = -1;
 
-		UpdateShadowFrustums();
-
-		for (int i = 0, index = 0; i < m_Lights.lastPointLightsSize && index < MAX_POINT_LIGHT_SHADOWS; i++)
+		for (int i = 0, index = 0; i < pointLights.size() && index < MAX_POINT_LIGHT_SHADOWS; i++)
 			if (pointLights[i].m_CastShadows)
 				pointLights[i].m_ShadowmapIndex = index++;
 
-		for (int i = 0, index = 0; i < m_Lights.lastSpotLightsSize && index < MAX_SPOT_LIGHT_SHADOWS; i++)
+		for (int i = 0, index = 0; i < spotLights.size() && index < MAX_SPOT_LIGHT_SHADOWS; i++)
 			if (spotLights[i].m_CastShadows)
 				spotLights[i].m_ShadowmapIndex = index++;
 
-		for (int i = 0, index = 0; i < m_Lights.lastDirLightsSize && index < MAX_DIR_LIGHT_SHADOWS; i++)
+		for (int i = 0, index = 0; i < dirLights.size() && index < MAX_DIR_LIGHT_SHADOWS; i++)
 			if(dirLights[i].m_CastShadows)
 				dirLights[i].m_ShadowmapIndex = index++ * SHADOW_CASCADES;
 
-		for (int i = 0; i < m_Lights.lastPointLightsSize; i++)
+		UpdateShadowFrustums();
+
+		for (int i = 0; i < pointLights.size(); i++)
 		{
 			PointLight::Buffer& buffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
 			const PointLight& light = pointLights[i];
 
-			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
-			const float     lightRad = light.m_Radius * (float)light.m_Active;
+			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+			float     lightRad = light.m_Radius * (float)light.m_Active;
 
-			if (buffer.pcfSampleRate != light.m_PCFSampleRate || buffer.shadowSoftness != light.m_ShadowSoftness || buffer.shadowmapIndex != light.m_ShadowmapIndex || buffer.position != light.m_Position || buffer.radius != lightRad || buffer.color != lightCol)
+			buffer.position = light.m_Position;
+			buffer.color = lightCol;
+			buffer.radius = lightRad;
+			buffer.shadowmapIndex = light.m_ShadowmapIndex;
+			buffer.shadowSoftness = light.m_ShadowSoftness;
+			buffer.pcfSampleRate = light.m_PCFSampleRate;
+			buffer.bias = light.m_ShadowBias;
+
+			if (light.m_ShadowmapIndex != -1)
 			{
-				m_Lights.changed = true;
+				auto& matrices = m_Shadows.point.shadowMatrices;
 
-				buffer.position = light.m_Position;
-				buffer.color = lightCol;
-				buffer.radius = lightRad;
-				buffer.shadowmapIndex = light.m_ShadowmapIndex;
-				buffer.shadowSoftness = light.m_ShadowSoftness;
-				buffer.pcfSampleRate = light.m_PCFSampleRate;
-
-				if (light.m_ShadowmapIndex != -1)
-				{
-					auto& matrices = m_Shadows.point.shadowMatrices;
-
-					const glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, light.m_Radius);
-					
-					matrices[light.m_ShadowmapIndex][0] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 1.0,  0.0,  0.0), glm::vec3(0.0, -1.0, 0.0));
-					matrices[light.m_ShadowmapIndex][1] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3(-1.0,  0.0,  0.0), glm::vec3(0.0, -1.0, 0.0));
-					matrices[light.m_ShadowmapIndex][2] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0,  1.0,  0.0), glm::vec3(0.0, 0.0, 1.0));
-					matrices[light.m_ShadowmapIndex][3] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0, -1.0,  0.0), glm::vec3(0.0, 0.0, -1.0));
-					matrices[light.m_ShadowmapIndex][4] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0,  0.0,  1.0), glm::vec3(0.0, -1.0, 0.0));
-					matrices[light.m_ShadowmapIndex][5] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0,  0.0, -1.0), glm::vec3(0.0, -1.0, 0.0));
+				const glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, light.m_Radius);
 				
-					m_Shadows.point.lightPositions[light.m_ShadowmapIndex] = light.m_Position;
-					m_Shadows.point.farPlanes[light.m_ShadowmapIndex] = light.m_Radius;
-				}
+				matrices[light.m_ShadowmapIndex][0] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 1.0,  0.0,  0.0), glm::vec3(0.0, -1.0, 0.0));
+				matrices[light.m_ShadowmapIndex][1] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3(-1.0,  0.0,  0.0), glm::vec3(0.0, -1.0, 0.0));
+				matrices[light.m_ShadowmapIndex][2] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0,  1.0,  0.0), glm::vec3(0.0, 0.0, 1.0));
+				matrices[light.m_ShadowmapIndex][3] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0, -1.0,  0.0), glm::vec3(0.0, 0.0, -1.0));
+				matrices[light.m_ShadowmapIndex][4] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0,  0.0,  1.0), glm::vec3(0.0, -1.0, 0.0));
+				matrices[light.m_ShadowmapIndex][5] = proj * glm::lookAt(light.m_Position, light.m_Position + glm::vec3( 0.0,  0.0, -1.0), glm::vec3(0.0, -1.0, 0.0));
+			
+				m_Shadows.point.lightPositions[light.m_ShadowmapIndex] = light.m_Position;
+				m_Shadows.point.farPlanes[light.m_ShadowmapIndex] = light.m_Radius;
 			}
 
 			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
@@ -230,57 +219,52 @@ namespace en
 
 			m_Lights.LBO.activePointLights++;
 		}
-		for (int i = 0; i < m_Lights.lastSpotLightsSize; i++)
+		for (int i = 0; i < spotLights.size(); i++)
 		{
 			SpotLight::Buffer& buffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights];
 			const SpotLight& light = spotLights[i];
 
 			const glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (buffer.pcfSampleRate != light.m_PCFSampleRate || buffer.shadowSoftness != light.m_ShadowSoftness || buffer.position != light.m_Position || buffer.innerCutoff != light.m_InnerCutoff || buffer.direction != light.m_Direction || buffer.outerCutoff != light.m_OuterCutoff || buffer.color != lightColor || buffer.range != light.m_Range || buffer.shadowmapIndex != light.m_ShadowmapIndex)
+			buffer.color = lightColor;
+			buffer.range = light.m_Range;
+			buffer.outerCutoff = light.m_OuterCutoff;
+			buffer.position = light.m_Position;
+			buffer.innerCutoff = light.m_InnerCutoff;
+			buffer.direction = glm::normalize(light.m_Direction);
+			buffer.shadowmapIndex = light.m_ShadowmapIndex;
+			buffer.shadowSoftness = light.m_ShadowSoftness;
+			buffer.pcfSampleRate = light.m_PCFSampleRate;
+			buffer.bias = light.m_ShadowBias;
+
+			if (light.m_ShadowmapIndex != -1)
 			{
 				glm::mat4 view = glm::lookAt(light.m_Position, light.m_Position + light.m_Direction, glm::vec3(0.0, 1.0, 0.0));
-				glm::mat4 proj = glm::perspective((light.m_OuterCutoff+0.02f) * glm::pi<float>(), 1.0f, 0.01f, light.m_Range);
-
-				buffer.color = lightColor;
-				buffer.range = light.m_Range;
-				buffer.outerCutoff = light.m_OuterCutoff;
-				buffer.position = light.m_Position;
-				buffer.innerCutoff = light.m_InnerCutoff;
-				buffer.direction = glm::normalize(light.m_Direction);
-				buffer.shadowmapIndex = light.m_ShadowmapIndex;
+				glm::mat4 proj = glm::perspective((light.m_OuterCutoff + 0.02f) * glm::pi<float>(), 1.0f, 0.01f, light.m_Range);
 				buffer.lightMat = proj * view;
-				buffer.shadowSoftness = light.m_ShadowSoftness;
-				buffer.pcfSampleRate = light.m_PCFSampleRate;
-
-				m_Lights.changed = true;
 			}
 
-			if (light.m_Range == 0.0f || light.m_Color == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
+			if (light.m_Range == 0.0f || lightColor == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
 				continue;
 
 			m_Lights.LBO.activeSpotLights++;
 		}
-		for (int i = 0; i < m_Lights.lastDirLightsSize; i++)
+		for (int i = 0; i < dirLights.size(); i++)
 		{
 			DirectionalLight::Buffer& buffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
 			const DirectionalLight& light = dirLights[i];
 
-			const glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			if (buffer.pcfSampleRate != light.m_PCFSampleRate || buffer.shadowSoftness != light.m_ShadowSoftness || buffer.direction != light.m_Direction || buffer.color != lightCol || buffer.shadowmapIndex != light.m_ShadowmapIndex)
-			{
-				m_Lights.changed = true;
+			buffer.color = lightCol;
+			buffer.shadowmapIndex = light.m_ShadowmapIndex;
+			buffer.direction = glm::normalize(light.m_Direction);
+			buffer.shadowSoftness = light.m_ShadowSoftness;
+			buffer.pcfSampleRate = light.m_PCFSampleRate;
+			buffer.bias = light.m_ShadowBias;
 
-				buffer.color = lightCol;
-				buffer.shadowmapIndex = light.m_ShadowmapIndex;
-				buffer.direction = glm::normalize(light.m_Direction);
-				buffer.shadowSoftness = light.m_ShadowSoftness;
-				buffer.pcfSampleRate = light.m_PCFSampleRate;
-
-				if (light.m_ShadowmapIndex != -1)
-					RecalculateShadowMatrices(light, buffer);
-			}
+			if (light.m_ShadowmapIndex != -1)
+				RecalculateShadowMatrices(light, buffer);
 
 			if (lightCol == glm::vec3(0.0))
 				continue;
@@ -288,18 +272,12 @@ namespace en
 			m_Lights.LBO.activeDirLights++;
 		}
 
-		if (m_Lights.changed)
-		{
-			// Reset unused lights
-			memset(m_Lights.LBO.pointLights + m_Lights.LBO.activePointLights, 0, MAX_POINT_LIGHTS - m_Lights.LBO.activePointLights);
-			memset(m_Lights.LBO.spotLights + m_Lights.LBO.activeSpotLights, 0, MAX_SPOT_LIGHTS - m_Lights.LBO.activeSpotLights);
-			memset(m_Lights.LBO.dirLights + m_Lights.LBO.activeDirLights, 0, MAX_DIR_LIGHTS - m_Lights.LBO.activeDirLights);
+		// Reset unused lights
+		memset(m_Lights.LBO.pointLights + m_Lights.LBO.activePointLights, 0, MAX_POINT_LIGHTS - m_Lights.LBO.activePointLights);
+		memset(m_Lights.LBO.spotLights + m_Lights.LBO.activeSpotLights, 0, MAX_SPOT_LIGHTS - m_Lights.LBO.activeSpotLights);
+		memset(m_Lights.LBO.dirLights + m_Lights.LBO.activeDirLights, 0, MAX_DIR_LIGHTS - m_Lights.LBO.activeDirLights);
 
-			MemoryBuffer stagingBuffer(m_Lights.buffer->m_BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			stagingBuffer.MapMemory(&m_Lights.LBO, m_Lights.buffer->m_BufferSize);
-
-			stagingBuffer.CopyTo(m_Lights.buffer.get());
-		}
+		m_Lights.stagingBuffers[m_FrameIndex]->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffers[m_FrameIndex]->m_BufferSize);
 	}
 
 	void RendererBackend::BeginRender()
@@ -333,6 +311,8 @@ namespace en
 
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
 			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
+
+		m_Lights.stagingBuffers[m_FrameIndex]->CopyTo(m_Lights.buffers[m_FrameIndex].get());
 	}
 	void RendererBackend::DepthPass()
 	{
@@ -355,9 +335,7 @@ namespace en
 
 		m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
 
-		m_CameraMatrices->UpdateMatrices(m_MainCamera, m_FrameIndex);
-
-		const glm::mat4 cameraMatrix = m_CameraMatrices->m_Matrices.proj * m_CameraMatrices->m_Matrices.view;
+		glm::mat4 cameraMatrix = m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view;
 
 		for (const auto& [name, object] :m_Scene->m_SceneObjects)
 		{
@@ -706,6 +684,8 @@ namespace en
 			m_CommandBuffers[m_FrameIndex]
 		); 
 
+		vkQueueWaitIdle(m_Ctx->m_TransferQueue);
+
 		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
@@ -725,7 +705,7 @@ namespace en
 
 		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
-		m_GBufferInput->Bind(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout);
+		m_GBufferInputs[m_FrameIndex]->Bind(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout);
 
 		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
 
@@ -936,7 +916,9 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		m_GBufferInput.reset();
+		for(auto& input : m_GBufferInputs)
+			input.reset();
+
 		m_HDRInput.reset();
 		m_SwapchainInputs.clear();
 		//m_OmniShadowInput.reset();
@@ -1024,7 +1006,11 @@ namespace en
 
 	void RendererBackend::CreateLightsBuffer()
 	{
-		m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		for(auto& buffer : m_Lights.buffers)
+			buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	
+		for (auto& buffer : m_Lights.stagingBuffers)
+			buffer = std::make_unique<MemoryBuffer>(m_Lights.buffers[0]->m_BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	}
 
 	void RendererBackend::CreateGBuffer()
@@ -1062,57 +1048,60 @@ namespace en
 
 	void RendererBackend::UpdateGBufferInput()
 	{
-		const DescriptorSet::ImageInfo albedo{
-			.index		  = 0U,
-			.imageView	  = m_GBuffer->m_Attachments[0].m_ImageView,
+		for (uint32_t i = 0U; i < FRAMES_IN_FLIGHT; ++i)
+		{
+			const DescriptorSet::ImageInfo albedo{
+			.index = 0U,
+			.imageView = m_GBuffer->m_Attachments[0].m_ImageView,
 			.imageSampler = m_GBuffer->m_Sampler,
-		};
+			};
 
-		const DescriptorSet::ImageInfo position{
-			.index		  = 1U,
-			.imageView	  = m_GBuffer->m_Attachments[1].m_ImageView,
-			.imageSampler = m_GBuffer->m_Sampler
-		};
+			const DescriptorSet::ImageInfo position{
+				.index = 1U,
+				.imageView = m_GBuffer->m_Attachments[1].m_ImageView,
+				.imageSampler = m_GBuffer->m_Sampler
+			};
 
-		const DescriptorSet::ImageInfo normal{
-			.index		  = 2U,
-			.imageView	  = m_GBuffer->m_Attachments[2].m_ImageView,
-			.imageSampler = m_GBuffer->m_Sampler
-		};
+			const DescriptorSet::ImageInfo normal{
+				.index = 2U,
+				.imageView = m_GBuffer->m_Attachments[2].m_ImageView,
+				.imageSampler = m_GBuffer->m_Sampler
+			};
 
-		const DescriptorSet::ImageInfo pointShadowmaps{
-			.index		  = 3U,
-			.imageView	  = m_Shadows.point.sharedView,
-			.imageSampler = m_Shadows.sampler,
-			.type		  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-		};
+			const DescriptorSet::ImageInfo pointShadowmaps{
+				.index = 3U,
+				.imageView = m_Shadows.point.sharedView,
+				.imageSampler = m_Shadows.sampler,
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+			};
 
-		const DescriptorSet::ImageInfo spotShadowmaps{
-			.index		  = 4U,
-			.imageView	  = m_Shadows.spot.sharedView,
-			.imageSampler = m_Shadows.sampler,
-			.type		  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-		};
+			const DescriptorSet::ImageInfo spotShadowmaps{
+				.index = 4U,
+				.imageView = m_Shadows.spot.sharedView,
+				.imageSampler = m_Shadows.sampler,
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+			};
 
-		const DescriptorSet::ImageInfo dirShadowmaps{
-			.index		  = 5U,
-			.imageView	  = m_Shadows.dir.sharedView,
-			.imageSampler = m_Shadows.sampler,
-			.type		  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-		};
+			const DescriptorSet::ImageInfo dirShadowmaps{
+				.index = 5U,
+				.imageView = m_Shadows.dir.sharedView,
+				.imageSampler = m_Shadows.sampler,
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+			};
 
-		const DescriptorSet::BufferInfo buffer{
-			.index	= 6U,
-			.buffer = m_Lights.buffer->GetHandle(),
-			.size	= sizeof(m_Lights.LBO)
-		};
+			const DescriptorSet::BufferInfo buffer{
+				.index = 6U,
+				.buffer = m_Lights.buffers[i]->GetHandle(),
+				.size = sizeof(m_Lights.LBO)
+			};
 
-		auto imageInfos = { albedo, position, normal, pointShadowmaps, spotShadowmaps, dirShadowmaps };
-		
-		if (!m_GBufferInput)
-			m_GBufferInput = std::make_unique<DescriptorSet>(imageInfos, buffer);
-		else
-			m_GBufferInput->Update(imageInfos, buffer);
+			auto imageInfos = { albedo, position, normal, pointShadowmaps, spotShadowmaps, dirShadowmaps };
+
+			if (!m_GBufferInputs[i])
+				m_GBufferInputs[i] = std::make_unique<DescriptorSet>(imageInfos, buffer);
+			else
+				m_GBufferInputs[i]->Update(imageInfos, buffer);
+		}
 	}
 	void RendererBackend::UpdateHDRInput()
 	{
@@ -1352,7 +1341,7 @@ namespace en
 			.colorFormats		= { m_HDROffscreen->m_Format},
 			.vShader			= &vShader,
 			.fShader			= &fShader,
-			.descriptorLayouts  = { m_GBufferInput->m_DescriptorLayout },
+			.descriptorLayouts  = { m_GBufferInputs[0]->m_DescriptorLayout},
 			.pushConstantRanges = { cameraPushConstant }
 		};
 
@@ -1555,17 +1544,13 @@ namespace en
 	
 	void RendererBackend::RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer)
 	{
-		// Look for "inspiration" at https://github.com/ajweeks/FlexEngine/blob/master/FlexEngine/src/Graphics/Renderer.cpp
-		// and https://github.com/kidrigger/Blaze/blob/7e76de71e2e22f3b5e8c4c2c50c58e6d205646c6/Blaze/rendering/deferred/DirectionLightCaster.hpp
-		// and https://github.com/kidrigger/Blaze/blob/canon/Blaze/rendering/deferred/DirectionLightCaster.cpp
-
 		for (int i = 0; i < SHADOW_CASCADES; ++i)
 		{
-			float& radius = m_Shadows.frustumRadiuses[i];
-			glm::vec3 center = m_Shadows.frustumCenters[i];
+			float radius = m_Shadows.frustums[i].radius;
+			glm::vec3 center = m_Shadows.frustums[i].center;
 
-			glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.0f, 4.0f * radius);
-			glm::mat4 lightView = glm::lookAt(center - 3.0f * -(light.m_Direction+glm::vec3(0.00000001f)) * radius, center, glm::vec3(0, 1, 0));
+			glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.0f, light.m_FarPlane * radius);
+			glm::mat4 lightView = glm::lookAt(center - (light.m_FarPlane-1.0f) * -glm::normalize(light.m_Direction + glm::vec3(0.0000001f, 0, 0.0000001f)) * radius, center, glm::vec3(0, 1, 0));
 
 			glm::mat4 shadowViewProj = lightProj * lightView;
 			glm::vec4 shadowOrigin = shadowViewProj * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) * float(DIR_SHADOWMAP_RES) / 2.0f;
@@ -1580,10 +1565,10 @@ namespace en
 	}
 	void RendererBackend::UpdateShadowFrustums()
 	{
-		float& cNear = m_MainCamera->m_NearPlane;
-		float& cFar = m_MainCamera->m_FarPlane;
+		float cNear = m_MainCamera->m_NearPlane;
+		float cFar = m_MainCamera->m_FarPlane;
 		
-		float& lambda = m_Shadows.cascadeSplitWeight;
+		float lambda = m_Shadows.cascadeSplitWeight;
 
 		float ratio = cFar / cNear;
 		
@@ -1593,13 +1578,13 @@ namespace en
 		
 			float nearPlane = lambda * (cNear * powf(ratio, si)) + (1.0f - lambda) * (cNear + (cFar - cNear) * si);
 			float farPlane = nearPlane * 1.005f;
-			m_Shadows.frustumSplits[i-1] = farPlane;
+			m_Shadows.frustums[i-1].split = farPlane;
 		}
 		
-		m_Shadows.frustumSplits[SHADOW_CASCADES-1] = cFar;
+		m_Shadows.frustums[SHADOW_CASCADES-1].split = cFar;
 
 		for (int i = 0; i < SHADOW_CASCADES; i++)
-			m_Lights.LBO.cascadeSplitDistances[i].x = m_Shadows.frustumSplits[i];
+			m_Lights.LBO.cascadeSplitDistances[i].x = m_Shadows.frustums[i].split;
 
 		glm::vec4 frustumClipSpace[8]
 		{
@@ -1613,7 +1598,8 @@ namespace en
 			{ 1.0f,  1.0f,  1.0f, 1.0f},
 		};
 
-		const glm::mat4 invViewProj = glm::inverse(m_CameraMatrices->m_Matrices.proj * m_CameraMatrices->m_Matrices.view);
+		//glm::mat4 invViewProj = glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view);
+		glm::mat4 invViewProj = glm::inverse(m_MainCamera->GetProjMatrix() * m_MainCamera->GetViewMatrix());
 
 		for (auto& vert : frustumClipSpace)
 		{
@@ -1628,24 +1614,24 @@ namespace en
 
 		for (int i = 0; i < SHADOW_CASCADES; ++i)
 		{
-			float farPlane = m_Shadows.frustumSplits[i];
+			float farPlane = m_Shadows.frustums[i].split;
 			float secTheta = 1.0f / cosine;
 			float cDist = 0.5f * (farPlane + prevFarPlane) * secTheta * secTheta;
-			m_Shadows.frustumCenters[i] = m_MainCamera->GetFront() * cDist + m_MainCamera->m_Position;
+			m_Shadows.frustums[i].center = m_MainCamera->GetFront() * cDist + m_MainCamera->m_Position;
 
 			float nearRatio = prevFarPlane / m_MainCamera->m_FarPlane;
 			glm::vec3 corner = cornerRay * nearRatio + m_MainCamera->m_Position;
 
-			m_Shadows.frustumRadiuses[i] = glm::distance(m_Shadows.frustumCenters[i], corner);
+			m_Shadows.frustums[i].radius = glm::distance(m_Shadows.frustums[i].center, corner);
 
 			prevFarPlane = farPlane;
 		}
 
-		m_Shadows.frustumRadiusRatios[0] = 1.0f;
+		m_Shadows.frustums[0].ratio = 1.0f;
 		for (int i = 1; i < SHADOW_CASCADES; i++)
-			m_Shadows.frustumRadiusRatios[i] = m_Shadows.frustumRadiuses[i] / m_Shadows.frustumRadiuses[0];
+			m_Shadows.frustums[i].ratio = m_Shadows.frustums[i].radius / m_Shadows.frustums[0].radius;
 
 		for (int i = 0; i < SHADOW_CASCADES; i++)
-			m_Lights.LBO.frustumSizeRatios[i].x = m_Shadows.frustumRadiusRatios[i];
+			m_Lights.LBO.frustumSizeRatios[i].x = m_Shadows.frustums[i].ratio;
 	}
 }

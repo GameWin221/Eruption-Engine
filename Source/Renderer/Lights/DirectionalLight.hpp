@@ -23,9 +23,13 @@ namespace en
 
 		float m_Intensity = 1.0f;
 
+		float m_ShadowBias = 0.0005f;
+
 		bool m_CastShadows = false;
 		float m_ShadowSoftness = 1.0f;
 		int m_PCFSampleRate = 1;
+
+		float m_FarPlane = 8.0f;
 
 		void operator=(const DirectionalLight& other)
 		{
@@ -39,6 +43,8 @@ namespace en
 			m_ShadowmapIndex = other.m_ShadowmapIndex;
 			m_ShadowSoftness = other.m_ShadowSoftness;
 			m_PCFSampleRate = other.m_PCFSampleRate;
+
+			m_ShadowBias = other.m_ShadowBias;
 		}
 		
 		struct Buffer
@@ -50,7 +56,7 @@ namespace en
 			float shadowSoftness = 1.0;
 
 			int pcfSampleRate = 1;
-			int dummy0;
+			float bias;
 			int dummy1;
 			int dummy2;
 

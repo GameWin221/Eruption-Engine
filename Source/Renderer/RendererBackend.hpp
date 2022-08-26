@@ -75,7 +75,7 @@ namespace en
 
 		std::function<void()> m_ImGuiRenderCallback;
 
-		enum struct AntialiasingMode : int
+		enum struct AntialiasingMode
 		{
 			FXAA = 0,
 			//SMAA = 1,
@@ -135,13 +135,8 @@ namespace en
 				glm::mat4 viewMat = glm::mat4(1.0f);
 			} camera;
 
-			std::unique_ptr<MemoryBuffer> buffer;
-
-			uint32_t lastPointLightsSize = 0U;
-			uint32_t lastSpotLightsSize = 0U;
-			uint32_t lastDirLightsSize = 0U;
-
-			bool changed = false;
+			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> stagingBuffers;
+			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> buffers;
 
 		} m_Lights;
 
@@ -191,13 +186,16 @@ namespace en
 
 				VkImageView sharedView;
 				std::vector<VkImageView> singleViews;
-
 			} dir;
 
-			std::array<float, SHADOW_CASCADES> frustumSplits;
-			std::array<glm::vec3, SHADOW_CASCADES> frustumCenters;
-			std::array<float, SHADOW_CASCADES> frustumRadiuses;
-			std::array<float, SHADOW_CASCADES> frustumRadiusRatios;
+			struct Cascade
+			{
+				float split, radius, ratio;
+				
+				glm::vec3 center;
+			};
+
+			std::array<Cascade, SHADOW_CASCADES> frustums;
 
 			float cascadeSplitWeight = 0.9f;
 
@@ -250,7 +248,7 @@ namespace en
 
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 
-		std::unique_ptr<DescriptorSet> m_GBufferInput;
+		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_GBufferInputs;
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
 

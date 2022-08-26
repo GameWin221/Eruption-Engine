@@ -27,6 +27,8 @@ namespace en
 		float m_InnerCutoff = 0.2f;
 		float m_OuterCutoff = 0.4f;
 
+		float m_ShadowBias = 0.00005f;
+
 		bool m_CastShadows = false;
 		float m_ShadowSoftness = 1.0f;
 		int m_PCFSampleRate = 1;
@@ -48,6 +50,8 @@ namespace en
 			m_ShadowmapIndex = other.m_ShadowmapIndex;
 			m_ShadowSoftness = other.m_ShadowSoftness;
 			m_PCFSampleRate = other.m_PCFSampleRate;
+
+			m_ShadowBias = other.m_ShadowBias;
 		}
 
 		struct Buffer
@@ -66,7 +70,7 @@ namespace en
 			int shadowmapIndex = -1;
 			float shadowSoftness = 1.0;
 			int pcfSampleRate = 1;
-			float dummy2;
+			float bias;
 		};
 
 	private:

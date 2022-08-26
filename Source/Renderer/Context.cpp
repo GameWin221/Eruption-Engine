@@ -319,8 +319,7 @@ namespace en
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL Context::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 	{
-		std::string_view message;
-		
+		// Hide the glitched dynamic rendering validation layer
 		if (pCallbackData->pMessage[52] == '0' &&
 			pCallbackData->pMessage[53] == '6' &&
 			pCallbackData->pMessage[54] == '1' &&
@@ -331,20 +330,18 @@ namespace en
 		switch (messageSeverity)
 		{
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-			message = "Diagnostic" ;
+			EN_LOG(std::string("[Diagnostic]: ") + pCallbackData->pMessage);
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-			message = "Info";
+			EN_LOG(std::string("[Info]: ") + pCallbackData->pMessage);
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-			message = "Warning";
+			EN_WARN(std::string("[Warning]: ") + pCallbackData->pMessage);
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-			message = "Error";
+			cl::Log(std::string("[Error]: ") + pCallbackData->pMessage + "\n", cl::Level::Error);
 			break;
 		}
-
-		std::cerr << "[" << message << "]: " << pCallbackData->pMessage << '\n';
 
 		return VK_FALSE;
 	}

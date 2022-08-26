@@ -4,7 +4,7 @@
 namespace en
 {
 	// Camera
-	Camera::Camera(CameraInfo& cameraInfo)
+	Camera::Camera(const CameraInfo& cameraInfo)
 	{
 		m_FarPlane  = cameraInfo.farPlane;
 		m_NearPlane = cameraInfo.nearPlane;

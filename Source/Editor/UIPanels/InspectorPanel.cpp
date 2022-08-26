@@ -131,6 +131,7 @@ namespace en
 
 		if (chosenPointLight->m_CastShadows)
 		{
+			ImGui::DragFloat("Shadow Bias", &chosenPointLight->m_ShadowBias, 0.0001f, 0.0f, 1.0f, "%.5f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::DragFloat("Shadow Softness", &chosenPointLight->m_ShadowSoftness, 1.0f, 1.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::DragInt("PCF Sample Count", &chosenPointLight->m_PCFSampleRate, 0.5f, 1, 4, "%d", ImGuiSliderFlags_AlwaysClamp);
 		}
@@ -186,6 +187,7 @@ namespace en
 
 		if (chosenSpotLight->m_CastShadows)
 		{
+			ImGui::DragFloat("Shadow Bias", &chosenSpotLight->m_ShadowBias, 0.0001f, 0.00001f, 0.01f, "%.5f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::DragFloat("Shadow Softness", &chosenSpotLight->m_ShadowSoftness, 1.0f, 1.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::DragInt("PCF Sample Count", &chosenSpotLight->m_PCFSampleRate, 0.5f, 1, 4, "%d", ImGuiSliderFlags_AlwaysClamp);
 		}
@@ -217,8 +219,10 @@ namespace en
 
 		if (chosenDirLight->m_CastShadows)
 		{
+			ImGui::DragFloat("Shadow Bias", &chosenDirLight->m_ShadowBias, 0.0001f, 0.00001f, 0.01f, "%.5f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::DragFloat("Shadow Softness", &chosenDirLight->m_ShadowSoftness, 1.0f, 1.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::DragInt("PCF Sample Count", &chosenDirLight->m_PCFSampleRate, 0.5f, 1, 4, "%d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::DragFloat("Shadow Far Plane", &chosenDirLight->m_FarPlane, 0.5f, 8.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		chosenDirLight->m_Color = glm::clamp(chosenDirLight->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));

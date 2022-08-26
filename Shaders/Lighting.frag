@@ -22,6 +22,7 @@ struct PointLight
 	int shadowmapIndex;
 	float shadowSoftness;
     int pcfSampleRate; 
+    float bias;
 };
 struct SpotLight
 {
@@ -35,6 +36,7 @@ struct SpotLight
     int shadowmapIndex;
     float shadowSoftness;
     int pcfSampleRate; 
+    float bias;
 };
 struct DirLight
 {
@@ -43,6 +45,7 @@ struct DirLight
     vec3 color;
     float shadowSoftness;
     int pcfSampleRate;
+    float bias;
     
     mat4 projView[SHADOW_CASCADES];
 };
@@ -316,10 +319,7 @@ void main()
         
         float shadow = 0.0;
         if(lightsBuffer.pLights[i].shadowmapIndex != -1)
-        {
-            float bias = max(30.0 * POINT_SHADOW_BIAS * (1.0 - dot(normal, normalize(diff)) * 2.0), POINT_SHADOW_BIAS);
-            shadow = CalculateOmniShadows(diff, viewDist, lightsBuffer.pLights[i].radius, lightsBuffer.pLights[i].shadowmapIndex, lightsBuffer.pLights[i].pcfSampleRate, bias, lightsBuffer.pLights[i].shadowSoftness);
-        }
+            shadow = CalculateOmniShadows(diff, viewDist, lightsBuffer.pLights[i].radius, lightsBuffer.pLights[i].shadowmapIndex, lightsBuffer.pLights[i].pcfSampleRate, lightsBuffer.pLights[i].bias, lightsBuffer.pLights[i].shadowSoftness);
         
         if(dist < lightsBuffer.pLights[i].radius)
             lighting += CalculatePointLight(lightsBuffer.pLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, dist) * (1.0-shadow);
@@ -338,8 +338,7 @@ void main()
         if(lightsBuffer.sLights[i].shadowmapIndex != -1)
         {
             vec4 fPosLightSpace = biasMat * lightsBuffer.sLights[i].projView * vec4(position, 1.0);
-            float bias = max(0.5 * SPOT_SHADOW_BIAS * (1.0 - dot(normal, lightsBuffer.sLights[i].direction)), SPOT_SHADOW_BIAS);
-            shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, lightsBuffer.sLights[i].shadowmapIndex, lightsBuffer.sLights[i].pcfSampleRate, bias, lightsBuffer.sLights[i].shadowSoftness);
+            shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, lightsBuffer.sLights[i].shadowmapIndex, lightsBuffer.sLights[i].pcfSampleRate, lightsBuffer.sLights[i].bias, lightsBuffer.sLights[i].shadowSoftness);
         }
         
         if(angleDiff < outerCutoff)
@@ -351,10 +350,9 @@ void main()
         if(lightsBuffer.dLights[i].shadowmapIndex != -1)
         {
             vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView[cascade] * vec4(position, 1.0);
-            float bias = max(2.0 * DIR_SHADOW_BIAS * (1.0 - dot(normal, lightsBuffer.dLights[i].direction)), DIR_SHADOW_BIAS);
             float softness = lightsBuffer.dLights[i].shadowSoftness / lightsBuffer.cascadeRatios[cascade].x;
 
-            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex+cascade, lightsBuffer.dLights[i].pcfSampleRate, bias, softness);
+            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex+cascade, lightsBuffer.dLights[i].pcfSampleRate, lightsBuffer.dLights[i].bias, softness);
         }
         
         lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);

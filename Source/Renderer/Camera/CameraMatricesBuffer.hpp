@@ -27,7 +27,9 @@ namespace en
 		{
 			glm::mat4 view = glm::mat4(1.0f);
 			glm::mat4 proj = glm::mat4(1.0f);
-		} m_Matrices;
+		};
+
+		std::array<CameraMatricesBufferObject, FRAMES_IN_FLIGHT> m_Matrices;
 
 	private:
 		void CreateDescriptorSets();

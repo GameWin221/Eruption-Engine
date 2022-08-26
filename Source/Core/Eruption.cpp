@@ -5,11 +5,12 @@ void Eruption::Init()
 {
 	EN_LOG("Eruption::Init() - Started");
 
-	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.7.0.5";
-	windowInfo.resizable  = true;
-	windowInfo.fullscreen = false;
-	windowInfo.size		  = glm::ivec2(1920, 1080);
+	const en::WindowInfo windowInfo {
+		.title = "Eruption Engine v0.7.1",
+		.size = glm::ivec2(1920, 1080),
+		.fullscreen = false,
+		.resizable = true,
+	};
 
 	m_Window = new en::Window(windowInfo);
 
@@ -25,10 +26,11 @@ void Eruption::Init()
 	m_Editor = new en::EditorLayer;
 	m_Editor->AttachTo(m_Renderer, m_AssetManager, &m_DeltaTime);
 
-	en::CameraInfo cameraInfo{};
-	cameraInfo.dynamicallyScaled = true;
-	cameraInfo.fov = 70.0f;
-	cameraInfo.position = glm::vec3(3.333f, 2.762f, 0.897f);
+	const en::CameraInfo cameraInfo {
+		.fov = 70.0f,
+		.position = glm::vec3(3.333f, 2.762f, 0.897f),
+		.dynamicallyScaled = true,
+	};
 
 	m_Camera = new en::Camera(cameraInfo);
 	m_Camera->m_Yaw = -161.6f;

@@ -14,8 +14,8 @@ namespace en
         ~MemoryBuffer();
 
         void MapMemory(const void* memory, const VkDeviceSize& memorySize);
-        void CopyTo(MemoryBuffer* dstBuffer);
-        void CopyTo(Image* dstImage);
+        void CopyTo(MemoryBuffer* dstBuffer, VkCommandBuffer cmd = VK_NULL_HANDLE);
+        void CopyTo(Image* dstImage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
         const VkBuffer& GetHandle() const { return m_Buffer; };
 
