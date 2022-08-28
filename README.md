@@ -8,6 +8,7 @@ This is my own rendering engine using Vulkan as its graphical API. I started thi
 
 ## Implemented major features:
 - Deferred renderer.
+- Cascaded Shadows
 - PBR Materials.
 - Point, Spot and Directional lights.
 - Soft PCF shadows.
