@@ -1568,6 +1568,10 @@ namespace en
 	}
 	void RendererBackend::UpdateShadowFrustums()
 	{
+		// CSM Implementation heavily inspired with:
+		// Blaze engine by kidrigger - https://github.com/kidrigger/Blaze
+		// Flex Engine by ajweeks - https://github.com/ajweeks/FlexEngine
+		
 		float lambda = m_Shadows.cascadeSplitWeight;
 
 		float ratio = m_Shadows.cascadeFarPlane / m_MainCamera->m_NearPlane;
