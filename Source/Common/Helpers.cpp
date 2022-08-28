@@ -71,10 +71,11 @@ namespace en
 
             vkEndCommandBuffer(commandBuffer);
 
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1U;
-            submitInfo.pCommandBuffers = &commandBuffer;
+            VkSubmitInfo submitInfo {
+                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                .commandBufferCount = 1U,
+                .pCommandBuffers = &commandBuffer,
+            };
 
             vkQueueSubmit(ctx.m_TransferQueue, 1U, &submitInfo, VK_NULL_HANDLE);
             vkQueueWaitIdle(ctx.m_TransferQueue);
@@ -292,7 +293,7 @@ namespace en
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 
                 .image = image,
-
+                
                 .subresourceRange {
                     .aspectMask     = aspectFlags,
                     .baseMipLevel   = 0U,
@@ -327,6 +328,34 @@ namespace en
                     EndSingleTimeGraphicsCommands(commandBuffer);
             }
         }
+
+        void BufferPipelineBarrier(VkBuffer buffer, VkDeviceSize size, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer)
+        {
+            VkBufferMemoryBarrier barrier{
+                .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+
+                .srcAccessMask = srcAccessMask,
+                .dstAccessMask = dstAccessMask,
+
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+                .buffer = buffer,
+
+                .offset = 0U,
+                .size = size,
+            };
+
+            vkCmdPipelineBarrier(
+                cmdBuffer,
+                srcStage, dstStage,
+                0U,
+                0U, nullptr,
+                1U, &barrier,
+                0U, nullptr
+            );
+        }
+
         void DestroyImage(VkImage& image, VkDeviceMemory& memory)
         {
             UseContext();

@@ -144,12 +144,13 @@ void Eruption::CreateExampleScene()
 	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->m_Scale = glm::vec3(1.2f);
 
-	m_ExampleScene->CreatePointLight(glm::vec3(10.9, 1.4, 0.5), glm::vec3(0.4, 1.0, 0.4));
-	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4));
-	m_ExampleScene->CreatePointLight(glm::vec3(-6.8, 1.0,-1.0), glm::vec3(0.2, 0.2, 1.0));
-	m_ExampleScene->CreatePointLight(glm::vec3( 1.2, 2.0,-1.0), glm::vec3(1.0)		    );
+	m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
+	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
+	auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
+	light->m_CastShadows = true;
+	light->m_ShadowBias = 0.00030;
 
-	m_ExampleScene->m_AmbientColor = glm::vec3(0.027f, 0.027f, 0.055f);
+	m_ExampleScene->m_AmbientColor = glm::vec3(0.060f, 0.067f, 0.137f);
 
 	m_AssetManager->GetMaterial("BlueCurtains")->m_NormalStrength  = 0.6f;
 	m_AssetManager->GetMaterial("RedCurtains")->m_NormalStrength   = 0.6f;

@@ -154,11 +154,12 @@ namespace en
 		m_Lights.LBO.activeSpotLights = 0U;
 		m_Lights.LBO.activeDirLights = 0U;
 
-		m_CameraMatrices->UpdateMatrices(m_MainCamera, m_FrameIndex);
+		m_CameraMatrices->m_Matrices[m_FrameIndex].proj = m_MainCamera->GetProjMatrix();
+		m_CameraMatrices->m_Matrices[m_FrameIndex].view = m_MainCamera->GetViewMatrix();
 
-		m_Lights.camera.viewPos = m_MainCamera->m_Position;
-		m_Lights.camera.debugMode = m_DebugMode;
-		m_Lights.camera.viewMat = m_CameraMatrices->m_Matrices[m_FrameIndex].view;
+		m_Lights.LBO.viewPos = m_MainCamera->m_Position;
+		m_Lights.LBO.debugMode = m_DebugMode;
+		m_Lights.LBO.viewMat = m_CameraMatrices->m_Matrices[m_FrameIndex].view;
 
 		for (auto& l : pointLights)
 			l.m_ShadowmapIndex = -1;
@@ -181,10 +182,9 @@ namespace en
 
 		UpdateShadowFrustums();
 
-		for (int i = 0; i < pointLights.size(); i++)
+		for (const auto& light : pointLights)
 		{
 			PointLight::Buffer& buffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
-			const PointLight& light = pointLights[i];
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 			float     lightRad = light.m_Radius * (float)light.m_Active;
@@ -219,12 +219,11 @@ namespace en
 
 			m_Lights.LBO.activePointLights++;
 		}
-		for (int i = 0; i < spotLights.size(); i++)
+		for (const auto& light : spotLights)
 		{
 			SpotLight::Buffer& buffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights];
-			const SpotLight& light = spotLights[i];
 
-			const glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
+			glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
 			buffer.color = lightColor;
 			buffer.range = light.m_Range;
@@ -239,7 +238,7 @@ namespace en
 
 			if (light.m_ShadowmapIndex != -1)
 			{
-				glm::mat4 view = glm::lookAt(light.m_Position, light.m_Position + light.m_Direction, glm::vec3(0.0, 1.0, 0.0));
+				glm::mat4 view = glm::lookAt(light.m_Position, light.m_Position + light.m_Direction + glm::vec3(0.0000001f, 0, 0.0000001f), glm::vec3(0.0, 1.0, 0.0));
 				glm::mat4 proj = glm::perspective((light.m_OuterCutoff + 0.02f) * glm::pi<float>(), 1.0f, 0.01f, light.m_Range);
 				buffer.lightMat = proj * view;
 			}
@@ -249,10 +248,9 @@ namespace en
 
 			m_Lights.LBO.activeSpotLights++;
 		}
-		for (int i = 0; i < dirLights.size(); i++)
+		for (const auto& light : dirLights)
 		{
 			DirectionalLight::Buffer& buffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
-			const DirectionalLight& light = dirLights[i];
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
@@ -277,11 +275,24 @@ namespace en
 		memset(m_Lights.LBO.spotLights + m_Lights.LBO.activeSpotLights, 0, MAX_SPOT_LIGHTS - m_Lights.LBO.activeSpotLights);
 		memset(m_Lights.LBO.dirLights + m_Lights.LBO.activeDirLights, 0, MAX_DIR_LIGHTS - m_Lights.LBO.activeDirLights);
 
-		m_Lights.stagingBuffers[m_FrameIndex]->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffers[m_FrameIndex]->m_BufferSize);
+		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
+
+		m_Lights.stagingBuffer->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffer->m_BufferSize);
+		m_Lights.stagingBuffer->CopyTo(m_Lights.buffers[m_FrameIndex].get(), cmd);
+		// I NEED to check if I don't oversynchronise it
+		m_Lights.buffers[m_FrameIndex]->PipelineBarrier(
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			cmd
+		);
+
+		Helpers::EndSingleTimeGraphicsCommands(cmd);
 	}
 
 	void RendererBackend::BeginRender()
 	{
+		m_CameraMatrices->MapBuffer(m_FrameIndex);
+		
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_MainSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_SwapchainImageIndex);
 
 		m_SkipFrame = false;
@@ -311,8 +322,6 @@ namespace en
 
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
 			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
-
-		m_Lights.stagingBuffers[m_FrameIndex]->CopyTo(m_Lights.buffers[m_FrameIndex].get());
 	}
 	void RendererBackend::DepthPass()
 	{
@@ -343,7 +352,7 @@ namespace en
 
 			const DepthStageInfo cameraInfo{
 				.modelMatrix = object->GetObjectData().model,
-				.viewProjMatrix = cameraMatrix,
+				.viewProjMatrix = cameraMatrix
 			};
 
 			vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
@@ -684,8 +693,6 @@ namespace en
 			m_CommandBuffers[m_FrameIndex]
 		); 
 
-		vkQueueWaitIdle(m_Ctx->m_TransferQueue);
-
 		const Pipeline::BindInfo info{
 			.colorAttachments{
 				{
@@ -702,8 +709,6 @@ namespace en
 		};
 
 		m_LightingPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
-
-		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(Lights::LightsCameraInfo), &m_Lights.camera);
 
 		m_GBufferInputs[m_FrameIndex]->Bind(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout);
 
@@ -997,7 +1002,14 @@ namespace en
 		UpdateShadowFrustums();
 	}
 
-	void RendererBackend::SetShadowCascadesWeight(const float& weight)
+	void RendererBackend::SetShadowCascadesFarPlane(float farPlane)
+	{
+		m_Shadows.cascadeFarPlane = farPlane;
+
+		UpdateShadowFrustums();
+	}
+
+	void RendererBackend::SetShadowCascadesWeight(float weight)
 	{
 		m_Shadows.cascadeSplitWeight = weight;
 
@@ -1009,8 +1021,7 @@ namespace en
 		for(auto& buffer : m_Lights.buffers)
 			buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	
-		for (auto& buffer : m_Lights.stagingBuffers)
-			buffer = std::make_unique<MemoryBuffer>(m_Lights.buffers[0]->m_BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		m_Lights.stagingBuffer = std::make_unique<MemoryBuffer>(m_Lights.buffers[0]->m_BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	}
 
 	void RendererBackend::CreateGBuffer()
@@ -1256,7 +1267,6 @@ namespace en
 		const Pipeline::CreateInfo pipelineInfo{
 			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
 			.vShader			= &vShader,
-			.descriptorLayouts  = { CameraMatricesBuffer::GetLayout() },
 			.pushConstantRanges = { depthPushConstant },
 			.useVertexBindings  = true,
 			.enableDepthTest    = true
@@ -1328,12 +1338,6 @@ namespace en
 	{
 		m_LightingPipeline = std::make_unique<Pipeline>();
 
-		constexpr VkPushConstantRange cameraPushConstant{
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.offset		= 0U,
-			.size		= sizeof(Lights::LightsCameraInfo)
-		};
-
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/Lighting.spv", ShaderType::Fragment);
 
@@ -1342,7 +1346,6 @@ namespace en
 			.vShader			= &vShader,
 			.fShader			= &fShader,
 			.descriptorLayouts  = { m_GBufferInputs[0]->m_DescriptorLayout},
-			.pushConstantRanges = { cameraPushConstant }
 		};
 
 		m_LightingPipeline->CreatePipeline(pipelineInfo);
@@ -1565,23 +1568,20 @@ namespace en
 	}
 	void RendererBackend::UpdateShadowFrustums()
 	{
-		float cNear = m_MainCamera->m_NearPlane;
-		float cFar = m_MainCamera->m_FarPlane;
-		
 		float lambda = m_Shadows.cascadeSplitWeight;
 
-		float ratio = cFar / cNear;
+		float ratio = m_Shadows.cascadeFarPlane / m_MainCamera->m_NearPlane;
 		
 		for (int i = 1; i < SHADOW_CASCADES; i++) 
 		{
 			float si = i / float(SHADOW_CASCADES);
 		
-			float nearPlane = lambda * (cNear * powf(ratio, si)) + (1.0f - lambda) * (cNear + (cFar - cNear) * si);
+			float nearPlane = lambda * (m_MainCamera->m_NearPlane * powf(ratio, si)) + (1.0f - lambda) * (m_MainCamera->m_NearPlane + (m_Shadows.cascadeFarPlane - m_MainCamera->m_NearPlane) * si);
 			float farPlane = nearPlane * 1.005f;
 			m_Shadows.frustums[i-1].split = farPlane;
 		}
 		
-		m_Shadows.frustums[SHADOW_CASCADES-1].split = cFar;
+		m_Shadows.frustums[SHADOW_CASCADES-1].split = m_Shadows.cascadeFarPlane;
 
 		for (int i = 0; i < SHADOW_CASCADES; i++)
 			m_Lights.LBO.cascadeSplitDistances[i].x = m_Shadows.frustums[i].split;
@@ -1598,8 +1598,7 @@ namespace en
 			{ 1.0f,  1.0f,  1.0f, 1.0f},
 		};
 
-		//glm::mat4 invViewProj = glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view);
-		glm::mat4 invViewProj = glm::inverse(m_MainCamera->GetProjMatrix() * m_MainCamera->GetViewMatrix());
+		glm::mat4 invViewProj = glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view);
 
 		for (auto& vert : frustumClipSpace)
 		{
@@ -1619,7 +1618,7 @@ namespace en
 			float cDist = 0.5f * (farPlane + prevFarPlane) * secTheta * secTheta;
 			m_Shadows.frustums[i].center = m_MainCamera->GetFront() * cDist + m_MainCamera->m_Position;
 
-			float nearRatio = prevFarPlane / m_MainCamera->m_FarPlane;
+			float nearRatio = prevFarPlane / m_Shadows.cascadeFarPlane;
 			glm::vec3 corner = cornerRay * nearRatio + m_MainCamera->m_Position;
 
 			m_Shadows.frustums[i].radius = glm::distance(m_Shadows.frustums[i].center, corner);

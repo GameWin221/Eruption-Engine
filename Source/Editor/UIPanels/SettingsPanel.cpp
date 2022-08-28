@@ -54,9 +54,13 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Lights and Shadows"))
 		{
-			static float v = m_Renderer->GetShadowCascadesWeight();
-			if (ImGui::DragFloat("Shadow cascades split weight", &v, 0.01f, 0.05f, 0.95f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-				m_Renderer->SetShadowCascadesWeight(v);
+			static float weight = m_Renderer->GetShadowCascadesWeight();
+			if (ImGui::DragFloat("Shadow cascades split weight", &weight, 0.01f, 0.05f, 0.95f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+				m_Renderer->SetShadowCascadesWeight(weight);
+
+			static float farPlane = m_Renderer->GetShadowCascadesFarPlane();
+			if (ImGui::DragFloat("Shadow cascades far plane", &farPlane, 0.5f, m_Renderer->GetMainCamera()->m_NearPlane, m_Renderer->GetMainCamera()->m_FarPlane, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+				m_Renderer->SetShadowCascadesFarPlane(farPlane);
 		}
 
 		ImGui::End();

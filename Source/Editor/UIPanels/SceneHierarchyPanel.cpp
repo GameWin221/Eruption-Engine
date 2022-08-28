@@ -12,7 +12,7 @@ namespace en
 		if (ImGui::CollapsingHeader("Scene Properties", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::Text("Ambient Color:");
-			ImGui::ColorEdit3("", (float*)&m_Renderer->GetScene()->m_AmbientColor);
+			ImGui::ColorEdit3("", (float*)&m_Renderer->GetScene()->m_AmbientColor, ImGuiColorEditFlags_Float);
 
 			m_Renderer->GetScene()->m_AmbientColor = glm::clamp(m_Renderer->GetScene()->m_AmbientColor, glm::vec3(0.0f), glm::vec3(1.0f));
 

@@ -66,8 +66,11 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera() { return m_MainCamera; };
 
-		void SetShadowCascadesWeight(const float& weight);
-		const float& GetShadowCascadesWeight() const { return m_Shadows.cascadeSplitWeight; }
+		void SetShadowCascadesWeight(float weight);
+		const float GetShadowCascadesWeight() const { return m_Shadows.cascadeSplitWeight; }
+
+		void SetShadowCascadesFarPlane(float farPlane);
+		const float GetShadowCascadesFarPlane() const { return m_Shadows.cascadeFarPlane; }
 
 		Scene* GetScene() { return m_Scene; };
 
@@ -123,19 +126,15 @@ namespace en
 				float dummy1 = 0.0f;
 
 				glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
-
 				glm::vec4 frustumSizeRatios[SHADOW_CASCADES]{};
-			} LBO;
 
-			struct LightsCameraInfo
-			{
 				glm::vec3 viewPos = glm::vec3(0.0f);
 				int debugMode = 0;
 
 				glm::mat4 viewMat = glm::mat4(1.0f);
-			} camera;
+			} LBO;
 
-			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> stagingBuffers;
+			std::unique_ptr<MemoryBuffer> stagingBuffer;
 			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> buffers;
 
 		} m_Lights;
@@ -196,8 +195,9 @@ namespace en
 			};
 
 			std::array<Cascade, SHADOW_CASCADES> frustums;
-
-			float cascadeSplitWeight = 0.9f;
+			
+			float cascadeFarPlane = 140.0f;
+			float cascadeSplitWeight = 0.87f;
 
 		} m_Shadows;
 

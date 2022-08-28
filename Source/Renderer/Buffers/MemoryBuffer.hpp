@@ -17,6 +17,8 @@ namespace en
         void CopyTo(MemoryBuffer* dstBuffer, VkCommandBuffer cmd = VK_NULL_HANDLE);
         void CopyTo(Image* dstImage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
+        void PipelineBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer);
+
         const VkBuffer& GetHandle() const { return m_Buffer; };
 
         const VkDeviceSize m_BufferSize;

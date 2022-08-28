@@ -17,7 +17,7 @@ namespace en
 		CameraMatricesBuffer();
 		~CameraMatricesBuffer();
 
-		void UpdateMatrices(Camera* camera, uint32_t& frameIndex);
+		void MapBuffer(uint32_t frameIndex);
 
 		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t& frameIndex);
 

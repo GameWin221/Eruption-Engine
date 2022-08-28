@@ -68,18 +68,12 @@ layout(binding = 6) uniform UBO
 
     vec4 cascadeRatios[SHADOW_CASCADES];
 
-} lightsBuffer;
-
-layout(push_constant) uniform LightsCameraInfo
-{
-	vec3 viewPos;
+    vec3 viewPos;
     int debugMode;
 
-    vec4 viewRow0;
-    vec4 viewRow1;
-    vec4 viewRow2;
-    vec4 viewRow3;
-} camera;
+    mat4 cameraView;
+
+} lightsBuffer;
 
 float WhenNotEqual(float x, float y) {
     return abs(sign(x - y));
@@ -292,11 +286,9 @@ void main()
     float roughness = gColorSample.a;
     float metalness = gPositionSample.a;
 
-    float depth = length(camera.viewPos-position);
+    float depth = length(lightsBuffer.viewPos-position);
 
-    mat4 viewMat = mat4(camera.viewRow0, camera.viewRow1,camera.viewRow2,camera.viewRow3);
-
-    vec4 viewPos = viewMat * vec4(position, 1.0f);
+    vec4 viewPos = lightsBuffer.cameraView * vec4(position, 1.0f);
 
 	int cascade = 0;
 
@@ -309,8 +301,8 @@ void main()
 
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
 
-    vec3 viewDir = normalize(camera.viewPos - position);
-    float viewDist = length(camera.viewPos - position);
+    vec3 viewDir = normalize(lightsBuffer.viewPos - position);
+    float viewDist = length(lightsBuffer.viewPos - position);
 
     for(int i = 0; i < lightsBuffer.activePointLights; i++)
     {
@@ -360,7 +352,7 @@ void main()
 
     vec3 result = vec3(0.0f);
     
-    switch(camera.debugMode)
+    switch(lightsBuffer.debugMode)
     {
         case 0:
             result = lighting + ambient;

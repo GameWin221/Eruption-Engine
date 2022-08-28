@@ -23,7 +23,7 @@ namespace en
 		float m_Intensity = 1.0f;
 		float m_Radius	  = 5.0f;
 
-		float m_ShadowBias = 0.0027f;
+		float m_ShadowBias = 0.02f;
 
 		bool m_CastShadows = false;
 		float m_ShadowSoftness = 1.0f;

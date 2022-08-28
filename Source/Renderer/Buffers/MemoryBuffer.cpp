@@ -87,4 +87,8 @@ namespace en
         if(!cmd)
             Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }
+    void MemoryBuffer::PipelineBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer)
+    {
+        Helpers::BufferPipelineBarrier(m_Buffer, m_BufferSize, srcAccessMask, dstAccessMask, srcStage, dstStage, cmdBuffer);
+    }
 }
