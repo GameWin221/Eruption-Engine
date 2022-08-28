@@ -261,6 +261,8 @@ namespace en
 	{
 		ImGui::Begin("Debug Menu");
 
+		ImGui::Text(("Physical Device: " + Context::Get().GetPhysicalDeviceName()).c_str());
+
 		if (ImGui::CollapsingHeader("Stats"))
 		{
 			ImGui::Text(("FPS: " + std::to_string(1.0 / *m_DeltaTime)).c_str());
@@ -286,7 +288,8 @@ namespace en
 				case 3: modeName = "Position";      break;
 				case 4: modeName = "Roughness Maps";break;
 				case 5: modeName = "Metalness";	    break;
-				case 6: modeName = "Depth";			break;
+				case 6: modeName = "Shadows";		break;
+				case 7: modeName = "Shadow Cascades";break;
 				default: modeName = "Unknown Mode"; break;
 			}
 

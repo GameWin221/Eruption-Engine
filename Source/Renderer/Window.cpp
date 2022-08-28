@@ -5,7 +5,7 @@ en::Window* g_MainWindow;
 
 namespace en
 {
-	Window::Window(WindowInfo& windowInfo)
+	Window::Window(const WindowInfo& windowInfo)
 	{
 		if (g_MainWindow)
 			EN_ERROR("Window::Window() - Failed to open a window! There is an open window already.");

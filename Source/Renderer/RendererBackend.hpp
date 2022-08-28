@@ -31,9 +31,6 @@
 
 #include <Renderer/Swapchain.hpp>
 
-#define BENCHMARK_START cl::BenchmarkBegin("bxbxb");
-#define BENCHMARK_RESULT std::cout << "Time ms: " << std::setprecision(12) << std::fixed << cl::BenchmarkStop("bxbxb") * 1000.0 << '\n';
-
 namespace en
 {
 	class RendererBackend
@@ -69,13 +66,19 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera() { return m_MainCamera; };
 
+		void SetShadowCascadesWeight(float weight);
+		const float GetShadowCascadesWeight() const { return m_Shadows.cascadeSplitWeight; }
+
+		void SetShadowCascadesFarPlane(float farPlane);
+		const float GetShadowCascadesFarPlane() const { return m_Shadows.cascadeFarPlane; }
+
 		Scene* GetScene() { return m_Scene; };
 
 		int m_DebugMode = 0;
 
 		std::function<void()> m_ImGuiRenderCallback;
 
-		enum struct AntialiasingMode : int
+		enum struct AntialiasingMode
 		{
 			FXAA = 0,
 			//SMAA = 1,
@@ -114,26 +117,25 @@ namespace en
 				SpotLight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
 				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
 
-				alignas(4) uint32_t activePointLights = 0U;
-				alignas(4) uint32_t activeSpotLights = 0U;
-				alignas(4) uint32_t activeDirLights = 0U;
+				uint32_t activePointLights = 0U;
+				uint32_t activeSpotLights = 0U;
+				uint32_t activeDirLights = 0U;
+				float dummy0 = 0.0f;
 
-				alignas(16) glm::vec3 ambientLight = glm::vec3(0.0f);
-			} LBO;
+				glm::vec3 ambientLight = glm::vec3(0.0f);
+				float dummy1 = 0.0f;
 
-			struct LightsCameraInfo
-			{
+				glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
+				glm::vec4 frustumSizeRatios[SHADOW_CASCADES]{};
+
 				glm::vec3 viewPos = glm::vec3(0.0f);
 				int debugMode = 0;
-			} camera;
 
-			std::unique_ptr<MemoryBuffer> buffer;
+				glm::mat4 viewMat = glm::mat4(1.0f);
+			} LBO;
 
-			uint32_t lastPointLightsSize = 0U;
-			uint32_t lastSpotLightsSize = 0U;
-			uint32_t lastDirLightsSize = 0U;
-
-			bool changed = false;
+			std::unique_ptr<MemoryBuffer> stagingBuffer;
+			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> buffers;
 
 		} m_Lights;
 
@@ -183,8 +185,19 @@ namespace en
 
 				VkImageView sharedView;
 				std::vector<VkImageView> singleViews;
-
 			} dir;
+
+			struct Cascade
+			{
+				float split, radius, ratio;
+				
+				glm::vec3 center;
+			};
+
+			std::array<Cascade, SHADOW_CASCADES> frustums;
+			
+			float cascadeFarPlane = 140.0f;
+			float cascadeSplitWeight = 0.87f;
 
 		} m_Shadows;
 
@@ -235,7 +248,7 @@ namespace en
 
 		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
 
-		std::unique_ptr<DescriptorSet> m_GBufferInput;
+		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_GBufferInputs;
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
 
@@ -274,12 +287,13 @@ namespace en
 		void CreateGBuffer();
 		void CreateHDROffscreen();
 
-		void UpdateOmniShadowInput();
 		void UpdateGBufferInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
 
 		void InitShadows();
+		void RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer);
+		void UpdateShadowFrustums();
 		void DestroyShadows();
 
 		void InitDepthPipeline();

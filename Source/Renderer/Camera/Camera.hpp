@@ -12,7 +12,7 @@ namespace en
 	{
 		float fov = 60.0f;
 
-		float farPlane = 300.0f;
+		float farPlane = 200.0f;
 		float nearPlane = 0.01f;
 
 		glm::vec2 size = glm::vec2(1920, 1080);
@@ -27,7 +27,7 @@ namespace en
 	class Camera
 	{
 	public:
-		Camera(CameraInfo& cameraInfo);
+		Camera(const CameraInfo& cameraInfo);
 
 		void LookAt(const glm::vec3& target);
 

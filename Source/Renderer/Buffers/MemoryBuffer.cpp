@@ -51,21 +51,22 @@ namespace en
         memcpy(data, memory, static_cast<size_t>(memorySize));
         vkUnmapMemory(ctx.m_LogicalDevice, m_BufferMemory);
     }
-    void MemoryBuffer::CopyTo(MemoryBuffer* dstBuffer)
+    void MemoryBuffer::CopyTo(MemoryBuffer* dstBuffer, VkCommandBuffer cmd)
     {
-        VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
+        VkCommandBuffer commandBuffer = cmd ? cmd : Helpers::BeginSingleTimeTransferCommands();
 
         const VkBufferCopy copyRegion{ .size = m_BufferSize };
 
         vkCmdCopyBuffer(commandBuffer, m_Buffer, dstBuffer->m_Buffer, 1U, &copyRegion);
 
-        Helpers::EndSingleTimeTransferCommands(commandBuffer);
+        if(!cmd)
+            Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }
-    void MemoryBuffer::CopyTo(Image* dstImage)
+    void MemoryBuffer::CopyTo(Image* dstImage, VkCommandBuffer cmd)
     {
         UseContext();
 
-        VkCommandBuffer commandBuffer = Helpers::BeginSingleTimeTransferCommands();
+        VkCommandBuffer commandBuffer = cmd ? cmd : Helpers::BeginSingleTimeTransferCommands();
 
         const VkBufferImageCopy region{
             .imageSubresource{
@@ -83,6 +84,11 @@ namespace en
 
         vkCmdCopyBufferToImage(commandBuffer, m_Buffer, dstImage->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
 
-        Helpers::EndSingleTimeTransferCommands(commandBuffer);
+        if(!cmd)
+            Helpers::EndSingleTimeTransferCommands(commandBuffer);
+    }
+    void MemoryBuffer::PipelineBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer)
+    {
+        Helpers::BufferPipelineBarrier(m_Buffer, m_BufferSize, srcAccessMask, dstAccessMask, srcStage, dstStage, cmdBuffer);
     }
 }

@@ -5,11 +5,12 @@ void Eruption::Init()
 {
 	EN_LOG("Eruption::Init() - Started");
 
-	en::WindowInfo windowInfo{};
-	windowInfo.title	  = "Eruption Engine v0.7.0.5";
-	windowInfo.resizable  = true;
-	windowInfo.fullscreen = false;
-	windowInfo.size		  = glm::ivec2(1920, 1080);
+	const en::WindowInfo windowInfo {
+		.title = "Eruption Engine v0.7.1",
+		.size = glm::ivec2(1920, 1080),
+		.fullscreen = false,
+		.resizable = true,
+	};
 
 	m_Window = new en::Window(windowInfo);
 
@@ -25,10 +26,11 @@ void Eruption::Init()
 	m_Editor = new en::EditorLayer;
 	m_Editor->AttachTo(m_Renderer, m_AssetManager, &m_DeltaTime);
 
-	en::CameraInfo cameraInfo{};
-	cameraInfo.dynamicallyScaled = true;
-	cameraInfo.fov = 70.0f;
-	cameraInfo.position = glm::vec3(3.333f, 2.762f, 0.897f);
+	const en::CameraInfo cameraInfo {
+		.fov = 70.0f,
+		.position = glm::vec3(3.333f, 2.762f, 0.897f),
+		.dynamicallyScaled = true,
+	};
 
 	m_Camera = new en::Camera(cameraInfo);
 	m_Camera->m_Yaw = -161.6f;
@@ -142,12 +144,13 @@ void Eruption::CreateExampleScene()
 	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->m_Scale = glm::vec3(1.2f);
 
-	m_ExampleScene->CreatePointLight(glm::vec3(10.9, 1.4, 0.5), glm::vec3(0.4, 1.0, 0.4));
-	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4));
-	m_ExampleScene->CreatePointLight(glm::vec3(-6.8, 1.0,-1.0), glm::vec3(0.2, 0.2, 1.0));
-	m_ExampleScene->CreatePointLight(glm::vec3( 1.2, 2.0,-1.0), glm::vec3(1.0)		    );
+	m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
+	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
+	auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
+	light->m_CastShadows = true;
+	light->m_ShadowBias = 0.00030;
 
-	m_ExampleScene->m_AmbientColor = glm::vec3(0.027f, 0.027f, 0.055f);
+	m_ExampleScene->m_AmbientColor = glm::vec3(0.060f, 0.067f, 0.137f);
 
 	m_AssetManager->GetMaterial("BlueCurtains")->m_NormalStrength  = 0.6f;
 	m_AssetManager->GetMaterial("RedCurtains")->m_NormalStrength   = 0.6f;

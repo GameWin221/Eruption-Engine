@@ -53,6 +53,8 @@ namespace en
 		Context(const Context&) = delete;
 		Context& operator=(const Context&) = delete;
 
+		const std::string& GetPhysicalDeviceName() const { return m_PhysicalDeviceName; };
+
 	private:
 		// Vulkan Initialisation
 		void CreateInstance();
@@ -62,6 +64,8 @@ namespace en
 		void FindQueueFamilies(VkPhysicalDevice& device);
 		void CreateLogicalDevice();
 		void CreateCommandPool();
+
+		std::string m_PhysicalDeviceName;
 
 		// Validation Layers and Extensions
 		bool AreValidationLayerSupported();

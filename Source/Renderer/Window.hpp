@@ -20,7 +20,7 @@ namespace en
 	class Window
 	{
 	public:
-		Window(WindowInfo& windowInfo);
+		Window(const WindowInfo& windowInfo);
 		~Window();
 
 		void Close();

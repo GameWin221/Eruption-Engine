@@ -26,6 +26,12 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera();
 
+		void SetShadowCascadesWeight(float weight);
+		const float GetShadowCascadesWeight() const;
+
+		void SetShadowCascadesFarPlane(float farPlane);
+		const float GetShadowCascadesFarPlane() const;
+
 		static Renderer* Get();
 		void ReloadRenderer();
 

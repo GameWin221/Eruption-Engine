@@ -31,12 +31,9 @@ namespace en
 		g_CameraDescriptorPool = VK_NULL_HANDLE;
 	}
 
-	void CameraMatricesBuffer::UpdateMatrices(Camera* camera, uint32_t& frameIndex)
+	void CameraMatricesBuffer::MapBuffer(uint32_t frameIndex)
 	{
-		m_Matrices.proj = camera->GetProjMatrix();
-		m_Matrices.view = camera->GetViewMatrix();
-
-		m_Buffers[frameIndex]->MapMemory(&m_Matrices, m_Buffers[frameIndex]->m_BufferSize);
+		m_Buffers[frameIndex]->MapMemory(&m_Matrices[frameIndex], m_Buffers[frameIndex]->m_BufferSize);
 	}
 
 	void CameraMatricesBuffer::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t& frameIndex)
