@@ -886,7 +886,7 @@ namespace en
 		}
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
-
+		m_Swapchain.reset();
 		m_Swapchain = std::make_unique<Swapchain>(m_VSync);
 
 		CreateGBuffer();
