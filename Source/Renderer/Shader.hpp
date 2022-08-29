@@ -17,14 +17,14 @@ namespace en
 	class Shader
 	{
 	public:
-		Shader(std::string sourcePath, const ShaderType shaderType);
+		Shader(std::string sourcePath, ShaderType shaderType);
 		~Shader();
 
 		VkPipelineShaderStageCreateInfo m_ShaderInfo{};
 
 		const std::string m_SourcePath;
 
-		static std::vector<char> ReadShaderFile(const std::string path);
+		static std::vector<char> ReadShaderFile(const std::string& path);
 
 	private:
 		VkShaderModule m_ShaderModule{};

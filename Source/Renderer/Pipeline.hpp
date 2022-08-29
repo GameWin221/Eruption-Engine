@@ -4,6 +4,10 @@
 #define EN_PIPELINE_HPP
 
 #include <Renderer/Shader.hpp>
+#include <Renderer/DescriptorSet.hpp>
+#include <Renderer/Buffers/VertexBuffer.hpp>
+#include <Renderer/Buffers/IndexBuffer.hpp>
+#include <Assets/Material.hpp>
 
 namespace en
 {
@@ -41,31 +45,37 @@ namespace en
 			std::vector<VkPushConstantRange> pushConstantRanges{};
 
 			bool useVertexBindings = false;
-			bool enableDepthTest = false;
-			bool enableDepthWrite = true;
-			bool blendEnable = false;
+			bool enableDepthTest   = false;
+			bool enableDepthWrite  = true;
+			bool blendEnable	   = false;
 
-			VkCompareOp compareOp = VK_COMPARE_OP_LESS;
-
+			VkCompareOp	  compareOp	  = VK_COMPARE_OP_LESS;
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 
-		void CreatePipeline(const CreateInfo& pipeline);
-
+		Pipeline(const CreateInfo& pipeline);
 		~Pipeline();
 
-		void Bind(VkCommandBuffer& commandBuffer, const BindInfo& info);
+		void BeginRendering(VkCommandBuffer commandBuffer, const BindInfo& info);
 
-		void Unbind(VkCommandBuffer& commandBuffer);
+		void PushConstants(const void* data, uint32_t size, uint32_t offset, VkShaderStageFlags shaderStage);
 
-		void Destroy();
+		void BindDescriptorSet(DescriptorSet* descriptor, uint32_t index = 0U);
+		void BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index = 0U);
+		void BindVertexBuffer(VertexBuffer* buffer);
+		void BindIndexBuffer(IndexBuffer* buffer);
+
+		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1U, uint32_t firstIndex = 0U, uint32_t firstInstance = 0U);
+		void Draw(uint32_t vertexCount, uint32_t instanceCount = 1U, uint32_t firstVertex = 0U, uint32_t firstInstance = 0U);
+
+		void EndRendering();
 
 		VkPipelineLayout m_Layout;
 		VkPipeline		 m_Pipeline;
 
 	private:
-		std::string m_VShaderPath;
-		std::string m_FShaderPath;
+		
+		VkCommandBuffer m_RenderingCommandBuffer;
 	};
 }
 

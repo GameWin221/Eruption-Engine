@@ -31,11 +31,11 @@ namespace en
 		DirectionalLight* CreateDirectionalLight(glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, bool active = true);
 		void DeleteDirectionalLight(uint32_t index);
 
-		std::vector<PointLight>&	   GetAllPointLights()		 { return m_PointLights;	   };
-		std::vector<SpotLight>&		   GetAllSpotLights()		 { return m_SpotLights;		   };
-		std::vector<DirectionalLight>& GetAllDirectionalLights() { return m_DirectionalLights; };
-
 		glm::vec3 m_AmbientColor = glm::vec3(0.0f);
+
+		std::vector<PointLight>		  m_PointLights;
+		std::vector<SpotLight>		  m_SpotLights;
+		std::vector<DirectionalLight> m_DirectionalLights;
 
 		std::vector<SceneObject*> GetAllSceneObjects();
 
@@ -43,10 +43,6 @@ namespace en
 
 	private:
 		std::unordered_map<std::string, std::unique_ptr<SceneObject>> m_SceneObjects;
-
-		std::vector<PointLight>		  m_PointLights;
-		std::vector<SpotLight>		  m_SpotLights;
-		std::vector<DirectionalLight> m_DirectionalLights;
 	};
 }
 

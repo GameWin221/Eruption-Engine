@@ -5,7 +5,7 @@
 
 namespace en
 {
-	MemoryBuffer::MemoryBuffer(const VkDeviceSize& size, const VkBufferUsageFlags& usage, const VkMemoryPropertyFlags& properties) : m_BufferSize(size)
+	MemoryBuffer::MemoryBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) : m_BufferSize(size)
 	{
         UseContext();
 
@@ -16,11 +16,11 @@ namespace en
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE
         };
 
-        if (vkCreateBuffer(ctx.m_LogicalDevice, &bufferInfo, nullptr, &m_Buffer) != VK_SUCCESS)
+        if (vkCreateBuffer(ctx.m_LogicalDevice, &bufferInfo, nullptr, &m_Handle) != VK_SUCCESS)
             EN_ERROR("Failed to create a buffer handle!")
 
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(ctx.m_LogicalDevice, m_Buffer, &memRequirements);
+        vkGetBufferMemoryRequirements(ctx.m_LogicalDevice, m_Handle, &memRequirements);
 
         const VkMemoryAllocateInfo allocInfo{
             .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -31,17 +31,17 @@ namespace en
         if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &m_BufferMemory) != VK_SUCCESS)
             EN_ERROR("Failed to allocate buffer memory!");
 
-        vkBindBufferMemory(ctx.m_LogicalDevice, m_Buffer, m_BufferMemory, 0U);
+        vkBindBufferMemory(ctx.m_LogicalDevice, m_Handle, m_BufferMemory, 0U);
 	}
     MemoryBuffer::~MemoryBuffer()
     {
         UseContext();
 
-        vkDestroyBuffer(ctx.m_LogicalDevice, m_Buffer      , nullptr);
+        vkDestroyBuffer(ctx.m_LogicalDevice, m_Handle      , nullptr);
         vkFreeMemory   (ctx.m_LogicalDevice, m_BufferMemory, nullptr);
     }
 
-    void MemoryBuffer::MapMemory(const void* memory, const VkDeviceSize& memorySize)
+    void MemoryBuffer::MapMemory(const void* memory, VkDeviceSize memorySize)
     {
         UseContext();
 
@@ -57,7 +57,7 @@ namespace en
 
         const VkBufferCopy copyRegion{ .size = m_BufferSize };
 
-        vkCmdCopyBuffer(commandBuffer, m_Buffer, dstBuffer->m_Buffer, 1U, &copyRegion);
+        vkCmdCopyBuffer(commandBuffer, m_Handle, dstBuffer->m_Handle, 1U, &copyRegion);
 
         if(!cmd)
             Helpers::EndSingleTimeTransferCommands(commandBuffer);
@@ -82,13 +82,13 @@ namespace en
             }
         };
 
-        vkCmdCopyBufferToImage(commandBuffer, m_Buffer, dstImage->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
+        vkCmdCopyBufferToImage(commandBuffer, m_Handle, dstImage->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &region);
 
         if(!cmd)
             Helpers::EndSingleTimeTransferCommands(commandBuffer);
     }
     void MemoryBuffer::PipelineBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer)
     {
-        Helpers::BufferPipelineBarrier(m_Buffer, m_BufferSize, srcAccessMask, dstAccessMask, srcStage, dstStage, cmdBuffer);
+        Helpers::BufferPipelineBarrier(m_Handle, m_BufferSize, srcAccessMask, dstAccessMask, srcStage, dstStage, cmdBuffer);
     }
 }

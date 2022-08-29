@@ -12,7 +12,7 @@ namespace en
 	friend class RendererBackend;
 
 	public:
-		constexpr SpotLight(const glm::vec3& position, const glm::vec3& direction, const glm::vec3& color, const float& innerCutoff, const float& outerCutoff, const float& range, const float& intensity, const bool& active)
+		constexpr SpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)
 			: m_Position(position), m_Direction(direction), m_Color(color), m_InnerCutoff(innerCutoff), m_OuterCutoff(outerCutoff), m_Range(range), m_Intensity(intensity), m_Active(active), SceneMember{ SceneMemberType::SpotLight } {};
 
 		bool m_Active = true;

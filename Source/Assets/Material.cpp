@@ -33,6 +33,27 @@ namespace en
 		return g_DefaultMaterial;
 	}
 
+	void Material::SetColor(glm::vec3 color)
+	{
+		m_Color = color;
+		m_UpdateQueued = true;
+	}
+	void Material::SetNormalStrength(float normalStrength)
+	{
+		m_NormalStrength = normalStrength;
+		m_UpdateQueued = true;
+	}
+	void Material::SetMetalness(float metalness)
+	{
+		m_MetalnessVal = metalness;
+		m_UpdateQueued = true;
+	}
+	void Material::SetRoughness(float roughness)
+	{
+		m_RoughnessVal = roughness;
+		m_UpdateQueued = true;
+	}
+
 	void Material::SetAlbedoTexture(Texture* texture)
 	{
 		m_Albedo = texture;
@@ -54,17 +75,6 @@ namespace en
 		m_UpdateQueued = true;
 	}
 
-	void Material::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout)
-	{
-		const bool materialChanged = (m_MatBuffer.color != m_Color || m_MatBuffer.metalnessVal != m_MetalnessVal || m_MatBuffer.roughnessVal != m_RoughnessVal || m_MatBuffer.normalStrength != m_NormalStrength);
-
-		if (materialChanged)
-			UpdateBuffer();
-		
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1U, 1U, &m_DescriptorSet, 0U, nullptr);
-
-		vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_FRAGMENT_BIT, 64U, sizeof(MatBuffer), &m_MatBuffer);
-	}
 	void Material::Update()
 	{
 		if (!m_UpdateQueued) return;

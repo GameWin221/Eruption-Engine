@@ -12,7 +12,7 @@ namespace en
 	friend class RendererBackend;
 
 	public:
-		constexpr PointLight(const glm::vec3& position, const glm::vec3& color, const float& intensity, const float& radius, const bool& active)
+		constexpr PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active)
 			: m_Position(position), m_Color(color), m_Intensity(intensity), m_Radius(radius), m_Active(active), SceneMember{ SceneMemberType::PointLight } {};
 
 		bool m_Active = true;

@@ -36,18 +36,16 @@ namespace en
 		DescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 		~DescriptorSet();
 
-		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, const uint32_t& index = 0U, const VkPipelineBindPoint& bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
-
 		void Update(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
 
 		VkDescriptorSetLayout m_DescriptorLayout;
+		VkDescriptorSet m_DescriptorSet;
 
 	private:
 		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
 		void CreateDescriptorSet();
 
 		VkDescriptorPool m_DescriptorPool;
-		VkDescriptorSet  m_DescriptorSet;
 	};
 }
 

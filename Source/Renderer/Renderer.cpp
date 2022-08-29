@@ -108,7 +108,7 @@ namespace en
 	{
 		m_Backend->m_ImGuiRenderCallback = callback;
 	}
-	void Renderer::SetDebugMode(int& mode)
+	void Renderer::SetDebugMode(int mode)
 	{
 		m_Backend->m_DebugMode = mode;
 	}

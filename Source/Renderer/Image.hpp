@@ -8,7 +8,7 @@ namespace en
 	class Image
 	{
 	public:
-		Image(const VkExtent2D& size, const VkFormat& format, const VkImageUsageFlags& usageFlags, const VkImageAspectFlags& aspectFlags, const VkImageLayout& initialLayout, const bool& genMipMaps = false);
+		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps = false);
 		~Image();
 
 		void SetData(void* data);
@@ -17,7 +17,7 @@ namespace en
 
 		void BlitTo(Image* dstImage, const VkFilter& filter, const VkCommandBuffer& cmd);
 		*/
-		void ChangeLayout(const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd = VK_NULL_HANDLE);
+		void ChangeLayout(VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
 		VkImage		m_Image		= VK_NULL_HANDLE;
 		VkImageView	m_ImageView = VK_NULL_HANDLE;
@@ -29,8 +29,8 @@ namespace en
 
 		const VkFormat m_Format;
 
-		const VkImageLayout& GetLayout()    const { return m_CurrentLayout; };
-		const uint32_t&		 GetMipLevels() const { return m_MipLevels;		};
+		const VkImageLayout GetLayout()    const { return m_CurrentLayout; };
+		const uint32_t		GetMipLevels() const { return m_MipLevels;	   };
 
 		const bool UsesMipMaps() const { return m_MipLevels > 1U; };
 

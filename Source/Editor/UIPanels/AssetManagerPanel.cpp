@@ -367,9 +367,13 @@ namespace en
 			if (ImGui::Button("Save Name"))
 				m_AssetManager->RenameMaterial(chosenMaterial->GetName(), name);
 
-			ImGui::ColorEdit3("Color: ", (float*)&chosenMaterial->m_Color);
+			glm::vec3 col = chosenMaterial->GetColor();
 
-			chosenMaterial->m_Color = glm::clamp(chosenMaterial->m_Color, glm::vec3(0.0f), glm::vec3(1.0f));
+			ImGui::ColorEdit3("Color: ", (float*)&col);
+
+			col = glm::clamp(col, glm::vec3(0.0f), glm::vec3(1.0f));
+
+			chosenMaterial->SetColor(col);
 
 			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -411,8 +415,13 @@ namespace en
 			}
 			ImGui::PopID();
 
+			float rgh = chosenMaterial->GetRoughness();
+
 			if (chosenRoughnessIndex == 0)
-				ImGui::DragFloat("Roughness: ", &chosenMaterial->m_RoughnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				if (ImGui::DragFloat("Roughness: ", &rgh, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+					chosenMaterial->SetRoughness(rgh);
+
+
 
 			SPACE();
 
@@ -429,8 +438,11 @@ namespace en
 			}
 			ImGui::PopID();
 			
+			float nrm = chosenMaterial->GetNormalStrength();
+
 			if (chosenNormalIndex != 0)
-				ImGui::DragFloat("Normal Strength: ", &chosenMaterial->m_NormalStrength, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				if (ImGui::DragFloat("Normal Strength: ", &nrm, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+					chosenMaterial->SetNormalStrength(nrm);
 
 			SPACE();
 
@@ -447,8 +459,11 @@ namespace en
 			}
 			ImGui::PopID();
 
-			if(chosenMetalnessIndex == 0)
-				ImGui::DragFloat("Metalness: ", &chosenMaterial->m_MetalnessVal, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			float mtl = chosenMaterial->GetMetalness();
+
+			if (chosenMetalnessIndex == 0)
+				if (ImGui::DragFloat("Metalness: ", &mtl, 0.01f, 0.0f, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+					chosenMaterial->SetMetalness(mtl);
 		}
 
 		ImGui::End();

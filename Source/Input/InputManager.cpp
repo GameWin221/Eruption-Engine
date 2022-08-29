@@ -46,7 +46,7 @@ namespace en
 			m_LastButtonStates[button] = glfwGetMouseButton(m_Window, button);
 	}
 
-	bool InputManager::IsKey(const Key& key, const InputState& inputState)
+	bool InputManager::IsKey(Key key, InputState inputState)
 	{
 		const int keyState = glfwGetKey(m_Window, (int)key);
 
@@ -65,7 +65,7 @@ namespace en
 			break;
 		}
 	}
-	bool InputManager::IsMouseButton(const Button& button, const InputState& inputState)
+	bool InputManager::IsMouseButton(Button button, InputState inputState)
 	{
 		const int buttonState = glfwGetMouseButton(m_Window, (int)button);
 
@@ -85,7 +85,7 @@ namespace en
 		}
 	}
 
-	void InputManager::SetCursorMode(const CursorMode& cursorMode)
+	void InputManager::SetCursorMode(CursorMode cursorMode)
 	{
 		glfwSetInputMode(m_Window, GLFW_CURSOR, (int)cursorMode);
 		m_CursorMode = cursorMode;

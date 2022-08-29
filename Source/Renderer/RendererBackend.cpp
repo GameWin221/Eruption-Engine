@@ -29,8 +29,7 @@ namespace en
 
 		EN_SUCCESS("Init began!")
 
-			m_Swapchain = std::make_unique<Swapchain>();
-			m_Swapchain->CreateSwapchain(m_VSync);
+			m_Swapchain = std::make_unique<Swapchain>(m_VSync);
 
 		EN_SUCCESS("Created swapchain!")
 
@@ -118,7 +117,7 @@ namespace en
 	{
 		m_Scene = nullptr;
 	}
-	void RendererBackend::SetVSync(const bool& vSync)
+	void RendererBackend::SetVSync(bool vSync)
 	{
 		m_VSync = vSync;
 		m_FramebufferResized = true;
@@ -146,9 +145,9 @@ namespace en
 	{
 		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
 
-		auto& pointLights = m_Scene->GetAllPointLights();
-		auto& spotLights = m_Scene->GetAllSpotLights();
-		auto& dirLights = m_Scene->GetAllDirectionalLights();
+		auto& pointLights = m_Scene->m_PointLights;
+		auto& spotLights = m_Scene->m_SpotLights;
+		auto& dirLights = m_Scene->m_DirectionalLights;
 
 		m_Lights.LBO.activePointLights = 0U;
 		m_Lights.LBO.activeSpotLights = 0U;
@@ -342,34 +341,34 @@ namespace en
 			.extent = m_Swapchain->GetExtent()
 		};
 
-		m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+		m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 		glm::mat4 cameraMatrix = m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view;
 
-		for (const auto& [name, object] :m_Scene->m_SceneObjects)
+		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
+			object->UpdateModelMatrix();
+
 			const DepthStageInfo cameraInfo{
-				.modelMatrix = object->GetObjectData().model,
+				.modelMatrix = object->GetModelMatrix(),
 				.viewProjMatrix = cameraMatrix
 			};
 
-			vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
+			m_DepthPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 			for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
 				if (!subMesh.m_Active) continue;
 
-				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
-				subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-				subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-
-				vkCmdDrawIndexed(m_CommandBuffers[m_FrameIndex], subMesh.m_IndexBuffer->m_IndicesCount, 1, 0, 0, 0);
+				m_DepthPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+				m_DepthPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+				m_DepthPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 			}
 		}
 
-		m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		m_DepthPipeline->EndRendering();
 	}
 	void RendererBackend::ShadowPass()
 	{
@@ -435,13 +434,13 @@ namespace en
 					.extent = VkExtent2D{POINT_SHADOWMAP_RES, POINT_SHADOWMAP_RES},
 				};
 				
-				m_OmniShadowPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+				m_OmniShadowPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 				for (const auto& [name, object] : m_Scene->m_SceneObjects)
 				{
 					if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
-					glm::mat4 model = object->GetObjectData().model;
+					glm::mat4 model = object->GetModelMatrix();
 
 					auto& pos = m_Shadows.point.lightPositions[m_Lights.LBO.pointLights[i].shadowmapIndex];
 					auto& farPlane = m_Shadows.point.farPlanes[m_Lights.LBO.pointLights[i].shadowmapIndex];
@@ -452,25 +451,24 @@ namespace en
 					model[2][3] = pos.z;
 					model[3][3] = farPlane;
 
-					const Shadows::Point::OmniShadowPushConstant pushConstant{
+					const Shadows::Point::OmniShadowPushConstant pushConstant {
 						.viewProj = m_Shadows.point.shadowMatrices[m_Lights.LBO.pointLights[i].shadowmapIndex][j],
 						.model = model,
 					};
 
-					vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_OmniShadowPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(Shadows::Point::OmniShadowPushConstant), &pushConstant);
-
+					m_OmniShadowPipeline->PushConstants(&pushConstant, sizeof(Shadows::Point::OmniShadowPushConstant), 0U, VK_SHADER_STAGE_VERTEX_BIT);
+					
 					for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 					{
 						if (!subMesh.m_Active) continue;
 
-						subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-						subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-
-						vkCmdDrawIndexed(m_CommandBuffers[m_FrameIndex], subMesh.m_IndexBuffer->m_IndicesCount, 1, 0, 0, 0);
+						m_OmniShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+						m_OmniShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+						m_OmniShadowPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 					}
 				}
 
-				m_OmniShadowPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+				m_OmniShadowPipeline->EndRendering();
 
 			}
 		}
@@ -499,31 +497,30 @@ namespace en
 				.extent = VkExtent2D{SPOT_SHADOWMAP_RES, SPOT_SHADOWMAP_RES},
 			};
 
-			m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+			m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 			for (const auto& [name, object] : m_Scene->m_SceneObjects)
 			{
 				if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 				const DepthStageInfo cameraInfo{
-					.modelMatrix = object->GetObjectData().model,
+					.modelMatrix = object->GetModelMatrix(),
 					.viewProjMatrix = m_Lights.LBO.spotLights[i].lightMat,
 				};
 
-				vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
+				m_DepthPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 				for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 				{
 					if (!subMesh.m_Active) continue;
 
-					subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-					subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-
-					vkCmdDrawIndexed(m_CommandBuffers[m_FrameIndex], subMesh.m_IndexBuffer->m_IndicesCount, 1, 0, 0, 0);
+					m_DepthPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+					m_DepthPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+					m_DepthPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 				}
 			}
 
-			m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+			m_DepthPipeline->EndRendering();
 		}
 		for (int i = 0; i < m_Lights.LBO.activeDirLights; i++)
 		{
@@ -552,33 +549,34 @@ namespace en
 					.extent = VkExtent2D{DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES},
 				};
 
-				m_DepthPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+				m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 				for (const auto& [name, object] : m_Scene->m_SceneObjects)
 				{
 					if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 					const DepthStageInfo cameraInfo{
-						.modelMatrix = object->GetObjectData().model,
+						.modelMatrix = object->GetModelMatrix(),
 						.viewProjMatrix = m_Lights.LBO.dirLights[i].lightMat[j],
 					};
 
-					vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_DepthPipeline->m_Layout, VK_SHADER_STAGE_VERTEX_BIT, 0U, sizeof(DepthStageInfo), &cameraInfo);
+					m_DepthPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 					for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 					{
 						if (!subMesh.m_Active) continue;
 
-						subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-						subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-
-						vkCmdDrawIndexed(m_CommandBuffers[m_FrameIndex], subMesh.m_IndexBuffer->m_IndicesCount, 1, 0, 0, 0);
+						m_DepthPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+						m_DepthPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+						m_DepthPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 					}
 				}
 
-				m_DepthPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+				m_DepthPipeline->EndRendering();
 			}
 		}
+
+
 	}
 	void RendererBackend::GeometryPass()
 	{
@@ -629,7 +627,7 @@ namespace en
 			.extent = m_Swapchain->GetExtent()
 		};
 		
-		m_GeometryPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+		m_GeometryPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 		// Bind the m_MainCamera once per geometry pass
 		m_CameraMatrices->Bind(m_CommandBuffers[m_FrameIndex], m_GeometryPipeline->m_Layout, m_FrameIndex);
@@ -638,23 +636,22 @@ namespace en
 		{
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
-			// Bind object data (model matrix) once per SceneObject in the m_RenderQueue
-			object->GetObjectData().Bind(m_CommandBuffers[m_FrameIndex], m_GeometryPipeline->m_Layout);
+			m_GeometryPipeline->PushConstants(&object->GetModelMatrix(), sizeof(glm::mat4), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 			for (auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
 				if (!subMesh.m_Active) continue;
 
-				// Bind SubMesh buffers and material once for each SubMesh in the sceneObject->m_Mesh->m_SubMeshes vector
-				subMesh.m_VertexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-				subMesh.m_IndexBuffer->Bind(m_CommandBuffers[m_FrameIndex]);
-				subMesh.m_Material->Bind(m_CommandBuffers[m_FrameIndex], m_GeometryPipeline->m_Layout);
+				m_GeometryPipeline->PushConstants(subMesh.m_Material->GetMatBufferPtr(), 24U, sizeof(glm::mat4), VK_SHADER_STAGE_FRAGMENT_BIT);
+				m_GeometryPipeline->BindDescriptorSet(subMesh.m_Material->GetDescriptorSet(), 1U);
 
-				subMesh.Draw(m_CommandBuffers[m_FrameIndex]);
+				m_GeometryPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+				m_GeometryPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+				m_GeometryPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 			}
 		}
 
-		m_GeometryPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		m_GeometryPipeline->EndRendering();
 	}
 	void RendererBackend::LightingPass()
 	{
@@ -708,13 +705,11 @@ namespace en
 			.extent = m_Swapchain->GetExtent()
 		};
 
-		m_LightingPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+		m_LightingPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
+		m_LightingPipeline->BindDescriptorSet(m_GBufferInputs[m_FrameIndex].get());
+		m_LightingPipeline->Draw(3U);
 
-		m_GBufferInputs[m_FrameIndex]->Bind(m_CommandBuffers[m_FrameIndex], m_LightingPipeline->m_Layout);
-
-		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
-
-		m_LightingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		m_LightingPipeline->EndRendering();
 	}
 	void RendererBackend::TonemappingPass()
 	{
@@ -742,17 +737,17 @@ namespace en
 			.extent = m_Swapchain->GetExtent()
 		};
 
-		m_TonemappingPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+		m_TonemappingPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 		m_PostProcessParams.exposure.value = m_MainCamera->m_Exposure;
 
-		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_TonemappingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Exposure), &m_PostProcessParams.exposure);
+		m_TonemappingPipeline->PushConstants(&m_PostProcessParams.exposure, sizeof(PostProcessingParams::Exposure), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		m_HDRInput->Bind(m_CommandBuffers[m_FrameIndex], m_TonemappingPipeline->m_Layout);
+		m_TonemappingPipeline->BindDescriptorSet(m_HDRInput.get());
 
-		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
+		m_TonemappingPipeline->Draw(3U);
 
-		m_TonemappingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		m_TonemappingPipeline->EndRendering();
 	}
 	void RendererBackend::AntialiasPass()
 	{
@@ -773,18 +768,18 @@ namespace en
 			.extent = m_Swapchain->GetExtent()
 		};
 
-		m_AntialiasingPipeline->Bind(m_CommandBuffers[m_FrameIndex], info);
+		m_AntialiasingPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 		
-		m_SwapchainInputs[m_SwapchainImageIndex]->Bind(m_CommandBuffers[m_FrameIndex], m_AntialiasingPipeline->m_Layout);
+		m_AntialiasingPipeline->BindDescriptorSet(m_SwapchainInputs[m_SwapchainImageIndex].get());
 
 		m_PostProcessParams.antialiasing.texelSizeX = 1.0f / static_cast<float>(m_Swapchain->GetExtent().width);
 		m_PostProcessParams.antialiasing.texelSizeY = 1.0f / static_cast<float>(m_Swapchain->GetExtent().height);
 
-		vkCmdPushConstants(m_CommandBuffers[m_FrameIndex], m_AntialiasingPipeline->m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0U, sizeof(PostProcessingParams::Antialiasing), &m_PostProcessParams.antialiasing);
+		m_AntialiasingPipeline->PushConstants(&m_PostProcessParams.antialiasing, sizeof(PostProcessingParams::Antialiasing), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		vkCmdDraw(m_CommandBuffers[m_FrameIndex], 3U, 1U, 0U, 0U);
-		
-		m_AntialiasingPipeline->Unbind(m_CommandBuffers[m_FrameIndex]);
+		m_AntialiasingPipeline->Draw(3U);
+
+		m_AntialiasingPipeline->EndRendering();
 	}
 	void RendererBackend::ImGuiPass()
 	{
@@ -892,9 +887,7 @@ namespace en
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
 
-		m_Swapchain = std::make_unique<Swapchain>();
-
-		m_Swapchain->CreateSwapchain(m_VSync);
+		m_Swapchain = std::make_unique<Swapchain>(m_VSync);
 
 		CreateGBuffer();
 		CreateHDROffscreen();
@@ -958,8 +951,7 @@ namespace en
 
 		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, RendererBackend::FramebufferResizeCallback);
 
-		m_Swapchain = std::make_unique<Swapchain>();
-		m_Swapchain->CreateSwapchain(m_VSync);
+		m_Swapchain = std::make_unique<Swapchain>(m_VSync);
 
 		CreateGBuffer();
 		CreateHDROffscreen();
@@ -1102,7 +1094,7 @@ namespace en
 
 			const DescriptorSet::BufferInfo buffer{
 				.index = 6U,
-				.buffer = m_Lights.buffers[i]->GetHandle(),
+				.buffer = m_Lights.buffers[i]->m_Handle,
 				.size = sizeof(m_Lights.LBO)
 			};
 
@@ -1254,8 +1246,6 @@ namespace en
 
 	void RendererBackend::InitDepthPipeline()
 	{
-		m_DepthPipeline = std::make_unique<Pipeline>();
-
 		Shader vShader("Shaders/Depth.spv", ShaderType::Vertex);
 
 		constexpr VkPushConstantRange depthPushConstant {
@@ -1272,12 +1262,10 @@ namespace en
 			.enableDepthTest    = true
 		};
 
-		m_DepthPipeline->CreatePipeline(pipelineInfo);
+		m_DepthPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 	void RendererBackend::InitOmniShadowPipeline()
 	{
-		m_OmniShadowPipeline = std::make_unique<Pipeline>();
-
 		Shader vShader("Shaders/OmniDepthVert.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/OmniDepthFrag.spv", ShaderType::Fragment);
 
@@ -1298,24 +1286,22 @@ namespace en
 			.enableDepthTest = true
 		};
 
-		m_OmniShadowPipeline->CreatePipeline(pipelineInfo);
+		m_OmniShadowPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 	void RendererBackend::InitGeometryPipeline()
 	{
-		m_GeometryPipeline = std::make_unique<Pipeline>();
-
 		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
 
 		constexpr VkPushConstantRange objectPushConstant{
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset		= 0U,
-			.size		= sizeof(PerObjectData),
+			.size		= sizeof(glm::mat4),
 		};
 
 		constexpr VkPushConstantRange materialPushConstant{
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.offset		= sizeof(PerObjectData),
+			.offset		= sizeof(glm::mat4),
 			.size		= 24U,
 		};
 
@@ -1332,12 +1318,10 @@ namespace en
 			.compareOp			= VK_COMPARE_OP_LESS_OR_EQUAL,
 		};
 
-		m_GeometryPipeline->CreatePipeline(pipelineInfo);
+		m_GeometryPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 	void RendererBackend::InitLightingPipeline()
 	{
-		m_LightingPipeline = std::make_unique<Pipeline>();
-
 		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
 		Shader fShader("Shaders/Lighting.spv", ShaderType::Fragment);
 
@@ -1348,12 +1332,10 @@ namespace en
 			.descriptorLayouts  = { m_GBufferInputs[0]->m_DescriptorLayout},
 		};
 
-		m_LightingPipeline->CreatePipeline(pipelineInfo);
+		m_LightingPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 	void RendererBackend::InitTonemappingPipeline()
 	{
-		m_TonemappingPipeline = std::make_unique<Pipeline>();
-
 		constexpr VkPushConstantRange exposurePushConstant {
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.offset		= 0U,
@@ -1371,13 +1353,11 @@ namespace en
 			.pushConstantRanges = { exposurePushConstant }
 		};
 
-		m_TonemappingPipeline->CreatePipeline(pipelineInfo);
+		m_TonemappingPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 	void RendererBackend::InitAntialiasingPipeline()
 	{
 		if (m_PostProcessParams.antialiasingMode == AntialiasingMode::None) return;
-
-		m_AntialiasingPipeline = std::make_unique<Pipeline>();
 
 		constexpr VkPushConstantRange antialiasingPushConstant{
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -1396,7 +1376,7 @@ namespace en
 			.pushConstantRanges = { antialiasingPushConstant },
 		};
 
-		m_AntialiasingPipeline->CreatePipeline(pipelineInfo);
+		m_AntialiasingPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 
 	void RendererBackend::CreateCommandBuffer()

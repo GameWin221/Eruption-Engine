@@ -190,13 +190,14 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Renderer\ComputeShader.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Image.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\DynamicFramebuffer.cpp" />
     <ClCompile Include="Source\Renderer\DescriptorSet.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
@@ -237,8 +238,6 @@
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
     <ClCompile Include="Source\Assets\Material.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
     <ClCompile Include="Source\Assets\AssetManager.cpp" />
     <ClCompile Include="External\STB\stb_image.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -267,7 +266,9 @@
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Renderer\ComputeShader.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Image.hpp" />
     <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
@@ -276,7 +277,6 @@
     <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
     <ClInclude Include="Source\Editor\EditorCommons.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
     <ClInclude Include="Source\Renderer\DynamicFramebuffer.hpp" />
     <ClInclude Include="Source\Renderer\DescriptorSet.hpp" />
     <ClInclude Include="Source\Renderer\Pipeline.hpp" />
@@ -300,8 +300,6 @@
     <ClInclude Include="Source\Assets\Material.hpp" />
     <ClInclude Include="Source\Core\EnPch.hpp" />
     <ClInclude Include="Source\Core\Eruption.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Camera\Camera.hpp" />
     <ClInclude Include="Source\Renderer\Context.hpp" />
     <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
@@ -318,6 +316,7 @@
     <ClInclude Include="Source\Editor\EditorLayer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\SpotLight.hpp" />
     <ClInclude Include="Source\Renderer\Swapchain.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\Vertex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
