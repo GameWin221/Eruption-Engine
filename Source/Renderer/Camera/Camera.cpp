@@ -22,7 +22,7 @@ namespace en
 		UpdateVectors();
 	}
 
-	void Camera::LookAt(const glm::vec3& target)
+	void Camera::LookAt(glm::vec3 target)
 	{
 		glm::vec3 diff = glm::normalize(target - m_Position);
 
@@ -41,6 +41,8 @@ namespace en
 		{
 			int wX, wY;
 			glfwGetWindowSize(en::Window::Get().m_GLFWWindow, &wX, &wY);
+
+			if (wX <= 0 || wY <= 0) return;
 
 			m_Size = glm::vec2(wX, wY);
 		}

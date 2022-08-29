@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	const en::WindowInfo windowInfo {
-		.title = "Eruption Engine v0.7.1",
+		.title = "Eruption Engine v0.7.1.5",
 		.size = glm::ivec2(1920, 1080),
 		.fullscreen = false,
 		.resizable = true,
@@ -152,9 +152,9 @@ void Eruption::CreateExampleScene()
 
 	m_ExampleScene->m_AmbientColor = glm::vec3(0.060f, 0.067f, 0.137f);
 
-	m_AssetManager->GetMaterial("BlueCurtains")->m_NormalStrength  = 0.6f;
-	m_AssetManager->GetMaterial("RedCurtains")->m_NormalStrength   = 0.6f;
-	m_AssetManager->GetMaterial("GreenCurtains")->m_NormalStrength = 0.6f;
+	m_AssetManager->GetMaterial("BlueCurtains")->SetNormalStrength(0.6f);
+	m_AssetManager->GetMaterial("RedCurtains")->SetNormalStrength(0.6f);
+	m_AssetManager->GetMaterial("GreenCurtains")->SetNormalStrength(0.6f);
 
 	m_Renderer->BindScene(m_ExampleScene);
 }

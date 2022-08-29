@@ -19,9 +19,9 @@ namespace en
 
 		void MapBuffer(uint32_t frameIndex);
 
-		void Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t& frameIndex);
+		void Bind(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t frameIndex);
 
-		static VkDescriptorSetLayout& GetLayout();
+		static VkDescriptorSetLayout GetLayout();
 
 		struct CameraMatricesBufferObject
 		{

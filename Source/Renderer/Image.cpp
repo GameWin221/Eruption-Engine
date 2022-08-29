@@ -6,7 +6,7 @@
 
 namespace en
 {
-	Image::Image(const VkExtent2D& size, const VkFormat& format, const VkImageUsageFlags& usageFlags, const VkImageAspectFlags& aspectFlags, const VkImageLayout& initialLayout, const bool& genMipMaps) 
+	Image::Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps) 
 		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
 	{
 		if(genMipMaps)
@@ -256,7 +256,7 @@ namespace en
 		Helpers::EndSingleTimeGraphicsCommands(cmd);
 	}
 
-	void Image::ChangeLayout(const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
+	void Image::ChangeLayout(VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd)
 	{
 		Helpers::TransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, m_MipLevels, cmd);
 		m_CurrentLayout = newLayout;

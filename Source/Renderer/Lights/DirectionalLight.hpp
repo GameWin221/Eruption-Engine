@@ -13,7 +13,7 @@ namespace en
 	friend class RendererBackend;
 
 	public:
-		DirectionalLight(const glm::vec3& direction, const glm::vec3& color, const float& intensity, const bool& active)
+		DirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity, bool active)
 			: m_Direction(direction), m_Color(color), m_Intensity(intensity), m_Active(active), SceneMember{ SceneMemberType::DirLight } {};
 
 		bool m_Active = true;

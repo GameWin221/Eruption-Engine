@@ -15,9 +15,7 @@ namespace en
 	class SubMesh : public Asset
 	{
 	public:
-		SubMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material);
-
-		void Draw(VkCommandBuffer& cmd);
+		SubMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, Material* material);
 
 		Material* m_Material;
 

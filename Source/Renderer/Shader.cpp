@@ -3,7 +3,7 @@
 
 namespace en
 {
-    Shader::Shader(std::string sourcePath, const ShaderType shaderType) : m_SourcePath(sourcePath)
+    Shader::Shader(std::string sourcePath, ShaderType shaderType) : m_SourcePath(sourcePath)
     {
         auto shaderCode = Shader::ReadShaderFile(m_SourcePath);
 
@@ -41,7 +41,7 @@ namespace en
         vkDestroyShaderModule(Context::Get().m_LogicalDevice, m_ShaderModule, nullptr);
     }
 
-    std::vector<char> Shader::ReadShaderFile(const std::string path)
+    std::vector<char> Shader::ReadShaderFile(const std::string& path)
     {
         std::ifstream file(path, std::ios::ate | std::ios::binary);
 

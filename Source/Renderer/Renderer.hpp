@@ -38,7 +38,7 @@ namespace en
 		RendererBackend::PostProcessingParams& GetPPParams();
 
 		void SetUIRenderCallback(std::function<void()> callback);
-		void SetDebugMode(int& mode);
+		void SetDebugMode(int mode);
 		void SetVSync(bool vSync);
 
 	private:

@@ -19,7 +19,7 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Mesh();
+		Mesh() : Asset{ AssetType::Mesh } {};
 
 		std::vector<SubMesh> m_SubMeshes;
 

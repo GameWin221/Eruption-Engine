@@ -18,10 +18,6 @@ namespace en
 		vkDestroyDescriptorPool(ctx.m_LogicalDevice, m_DescriptorPool, nullptr);
 	}
 	
-	void DescriptorSet::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, const uint32_t& index, const VkPipelineBindPoint& bindPoint)
-	{
-		vkCmdBindDescriptorSets(cmd, bindPoint, layout, index, 1U, &m_DescriptorSet, 0U, nullptr);
-	}
 	void DescriptorSet::CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo)
 	{
 		UseContext();

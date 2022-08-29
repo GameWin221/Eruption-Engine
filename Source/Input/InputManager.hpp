@@ -89,17 +89,17 @@ namespace en
 		void UpdateMouse();
 		void UpdateInput();
 
-		bool IsKey		  (const Key& key	   , const InputState& inputState = InputState::Down);
-		bool IsMouseButton(const Button& button, const InputState& inputState = InputState::Down);
+		bool IsKey		  (Key key	    , InputState inputState = InputState::Down);
+		bool IsMouseButton(Button button, InputState inputState = InputState::Down);
 
-		void SetCursorMode(const CursorMode& cursorMode);
+		void SetCursorMode(CursorMode cursorMode);
 
 		float m_MouseSensitivity = 1.0f;
 
-		const glm::vec2   GetMousePosition()    const;
-		const glm::vec2   GetMouseVelocity()    const { return m_MouseVel * m_MouseSensitivity; };
-		const float		  GetScrollWheelDelta() const { return m_ScrollVel; };
-		const CursorMode& GetCursorMode()       const { return m_CursorMode; };
+		const glm::vec2  GetMousePosition()    const;
+		const glm::vec2  GetMouseVelocity()    const { return m_MouseVel * m_MouseSensitivity; };
+		const float		 GetScrollWheelDelta() const { return m_ScrollVel; };
+		const CursorMode GetCursorMode()       const { return m_CursorMode; };
 
 	private:
 		CursorMode m_CursorMode;

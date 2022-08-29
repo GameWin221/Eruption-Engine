@@ -5,30 +5,15 @@
 
 namespace en
 {
-	Swapchain::~Swapchain()
-	{
-		UseContext();
-
-		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
-
-		for (auto& imageView : m_ImageViews)
-			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
-
-		for (auto& framebuffer : m_Framebuffers)
-			vkDestroyFramebuffer(ctx.m_LogicalDevice, framebuffer, nullptr);
-
-		m_CurrentLayouts.clear();
-	}
-	
-	void Swapchain::CreateSwapchain(const bool& vSync)
+	Swapchain::Swapchain(bool vSync)
 	{
 		UseContext();
 
 		SwapchainSupportDetails swapChainSupport = QuerySwapchainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-		VkPresentModeKHR   presentMode   = ChooseSwapPresentMode(vSync, swapChainSupport.presentModes);
-		VkExtent2D		   extent		 = ChooseSwapExtent(swapChainSupport.capabilities);
+		VkPresentModeKHR   presentMode = ChooseSwapPresentMode(vSync, swapChainSupport.presentModes);
+		VkExtent2D		   extent = ChooseSwapExtent(swapChainSupport.capabilities);
 
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
@@ -36,19 +21,19 @@ namespace en
 			imageCount = swapChainSupport.capabilities.maxImageCount;
 
 		VkSwapchainCreateInfoKHR createInfo{
-			.sType			  = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-			.surface		  = ctx.m_WindowSurface,
-			.minImageCount	  = imageCount,
-			.imageFormat	  = surfaceFormat.format,
-			.imageColorSpace  = surfaceFormat.colorSpace,
-			.imageExtent	  = extent,
+			.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+			.surface = ctx.m_WindowSurface,
+			.minImageCount = imageCount,
+			.imageFormat = surfaceFormat.format,
+			.imageColorSpace = surfaceFormat.colorSpace,
+			.imageExtent = extent,
 			.imageArrayLayers = 1U,
-			.imageUsage		  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			.preTransform	  = swapChainSupport.capabilities.currentTransform,
-			.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-			.presentMode	  = presentMode,
-			.clipped		  = VK_TRUE,
-			.oldSwapchain     = VK_NULL_HANDLE,
+			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.preTransform = swapChainSupport.capabilities.currentTransform,
+			.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			.presentMode = presentMode,
+			.clipped = VK_TRUE,
+			.oldSwapchain = VK_NULL_HANDLE,
 		};
 
 		uint32_t queueFamilyIndices[] = { ctx.m_QueueFamilies.graphics.value(), ctx.m_QueueFamilies.present.value() };
@@ -85,7 +70,22 @@ namespace en
 			ChangeLayout(i, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 		}
 	}
-	void Swapchain::CreateSwapchainFramebuffers(const VkRenderPass& inputRenderpass)
+	Swapchain::~Swapchain()
+	{
+		UseContext();
+
+		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
+
+		for (auto& imageView : m_ImageViews)
+			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
+
+		for (auto& framebuffer : m_Framebuffers)
+			vkDestroyFramebuffer(ctx.m_LogicalDevice, framebuffer, nullptr);
+
+		m_CurrentLayouts.clear();
+	}
+	
+	void Swapchain::CreateSwapchainFramebuffers(VkRenderPass inputRenderpass)
 	{
 		m_Framebuffers.resize(m_ImageViews.size());
 
@@ -106,7 +106,7 @@ namespace en
 		}
 	}
 	
-	void Swapchain::ChangeLayout(const int& index, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const VkCommandBuffer& cmd)
+	void Swapchain::ChangeLayout(int index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd)
 	{
 		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, 1U, cmd);
 		m_CurrentLayouts[index] = newLayout;
@@ -172,7 +172,7 @@ namespace en
 			return actualExtent;
 		}
 	}
-	VkPresentModeKHR Swapchain::ChooseSwapPresentMode(const bool& vSync, const std::vector<VkPresentModeKHR>& availablePresentModes)
+	VkPresentModeKHR Swapchain::ChooseSwapPresentMode(bool vSync, const std::vector<VkPresentModeKHR>& availablePresentModes)
 	{
 		if (vSync)
 		{

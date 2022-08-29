@@ -36,12 +36,12 @@ namespace en
 		m_Buffers[frameIndex]->MapMemory(&m_Matrices[frameIndex], m_Buffers[frameIndex]->m_BufferSize);
 	}
 
-	void CameraMatricesBuffer::Bind(VkCommandBuffer& cmd, VkPipelineLayout& layout, uint32_t& frameIndex)
+	void CameraMatricesBuffer::Bind(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t frameIndex)
 	{
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0U, 1U, &m_DescriptorSets[frameIndex], 0U, nullptr);
 	}
 
-	VkDescriptorSetLayout& CameraMatricesBuffer::GetLayout()
+	VkDescriptorSetLayout CameraMatricesBuffer::GetLayout()
 	{
 		if (g_CameraDescriptorPool == VK_NULL_HANDLE)
 			CreateCameraDescriptorPool();
@@ -66,7 +66,7 @@ namespace en
 				EN_ERROR("CameraMatricesBuffer::CreateDescriptorSet() - Failed to allocate descriptor sets!");
 
 			const VkDescriptorBufferInfo bufferInfo{
-				.buffer = m_Buffers[i]->GetHandle(),
+				.buffer = m_Buffers[i]->m_Handle,
 				.offset = 0U,
 				.range  = sizeof(CameraMatricesBufferObject)
 			};

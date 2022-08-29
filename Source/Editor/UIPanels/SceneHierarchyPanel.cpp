@@ -96,9 +96,9 @@ namespace en
 			
 			SPACE();
 
-			auto& pointLights = m_Renderer->GetScene()->GetAllPointLights();
-			auto& spotLights  = m_Renderer->GetScene()->GetAllSpotLights();
-			auto& dirLights   = m_Renderer->GetScene()->GetAllDirectionalLights();
+			auto& pointLights = m_Renderer->GetScene()->m_PointLights;
+			auto& spotLights  = m_Renderer->GetScene()->m_SpotLights;
+			auto& dirLights   = m_Renderer->GetScene()->m_DirectionalLights;
 
 			ImGui::PushStyleColor(ImGuiCol_Button, m_ElementColor);
 			for (uint32_t i = 0U; i < pointLights.size(); i++)

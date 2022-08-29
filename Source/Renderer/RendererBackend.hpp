@@ -43,7 +43,7 @@ namespace en
 		void BindScene(Scene* scene);
 		void UnbindScene();
 
-		void SetVSync(const bool& vSync);
+		void SetVSync(bool vSync);
 
 		void WaitForGPUIdle();
 

@@ -6,7 +6,8 @@
 
 namespace en
 {
-	DynamicFramebuffer::DynamicFramebuffer(const std::initializer_list<AttachmentInfo>& attachmentInfos, const VkExtent2D& size, const VkFilter& filtering) : m_Size(size)
+	DynamicFramebuffer::DynamicFramebuffer(const std::initializer_list<AttachmentInfo>& attachmentInfos, VkExtent2D size, VkFilter filtering) 
+		: m_Size(size)
 	{
 		// Prevent reallocations
 		m_Attachments.reserve(attachmentInfos.size());
