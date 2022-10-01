@@ -20,6 +20,7 @@ private:
 	void Update();
 	void Render();
 
+	void UpdateExampleScene();
 	void CreateExampleScene();
 
 	en::EditorLayer*   m_Editor = nullptr;

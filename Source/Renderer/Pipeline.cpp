@@ -132,12 +132,21 @@ namespace en
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
-		if (pipeline.vShader)
-			shaderStages.emplace_back(pipeline.vShader->m_ShaderInfo);
+		std::unique_ptr<Shader> vShader;
+		std::unique_ptr<Shader> fShader;  
 
-		if (pipeline.fShader)
-			shaderStages.emplace_back(pipeline.fShader->m_ShaderInfo);
-
+		if (!pipeline.vShader.empty())
+		{
+			vShader = std::make_unique<Shader>(pipeline.vShader, ShaderType::Vertex);
+			shaderStages.emplace_back(vShader->m_ShaderInfo);
+		}
+			
+		if (!pipeline.fShader.empty())
+		{
+			fShader = std::make_unique<Shader>(pipeline.fShader, ShaderType::Fragment);
+			shaderStages.emplace_back(fShader->m_ShaderInfo);
+		}
+			
 		if (shaderStages.empty())
 			EN_ERROR("Pipeline::CreatePipeline() - No shaders stages specified!");
 

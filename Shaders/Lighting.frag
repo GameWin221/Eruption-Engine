@@ -323,7 +323,7 @@ void main()
         float innerCutoff = lightsBuffer.sLights[i].innerCutoff / 2.0 * PI;
         float outerCutoff = lightsBuffer.sLights[i].outerCutoff / 2.0 * PI;
 
-        float angleDiff = RadiansBetweenDirs(lightsBuffer.sLights[i].direction, lightToSurfaceDir);
+        float angleDiff = min(RadiansBetweenDirs(lightsBuffer.sLights[i].direction, lightToSurfaceDir), outerCutoff);
         float intensity = pow(min(1.0 - (angleDiff-innerCutoff) / (outerCutoff-innerCutoff), 1.0), 2.0);
 
         float shadow = 0.0;
@@ -333,8 +333,7 @@ void main()
             shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, lightsBuffer.sLights[i].shadowmapIndex, lightsBuffer.sLights[i].pcfSampleRate, lightsBuffer.sLights[i].bias, lightsBuffer.sLights[i].shadowSoftness);
         }
         
-        if(angleDiff < outerCutoff)
-            lighting += CalculateSpotLight(lightsBuffer.sLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * intensity * (1.0 - shadow);
+        lighting += CalculateSpotLight(lightsBuffer.sLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * intensity * (1.0 - shadow);
     }
     for(int i = 0; i < lightsBuffer.activeDirLights; i++)
     {

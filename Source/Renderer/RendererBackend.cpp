@@ -69,9 +69,13 @@ namespace en
 
 		EN_SUCCESS("Created depth pipeline!")
 
+			InitShadowPipeline();
+
+		EN_SUCCESS("Created shadow pipeline!")
+
 			InitOmniShadowPipeline();
 
-		EN_SUCCESS("Created omnidirectional pipeline!")
+		EN_SUCCESS("Created omnidirectional shadow pipeline!")
 
 			InitGeometryPipeline();
 
@@ -167,12 +171,69 @@ namespace en
 		for (auto& l : dirLights)
 			l.m_ShadowmapIndex = -1;
 
+		// Sorting light casters by distance to use only the closest ones
+
+		float maxShadowDist = std::numeric_limits<float>::max();
+
+		int shadowCount = 0;
+		for (const auto& l : pointLights)
+			shadowCount += l.m_CastShadows;
+
+		// If more than 'MAX_POINT_LIGHT_SHADOWS' pointlights cast shadows
+		if (shadowCount > MAX_POINT_LIGHT_SHADOWS)
+		{
+			std::vector<PointLight*> shadowedLights;
+			shadowedLights.reserve(shadowCount);
+
+			// Make a vector out of lights that cast shadows
+			for (auto& l : pointLights)
+				if (l.m_CastShadows)
+					shadowedLights.emplace_back(&l);
+
+			// Sort the lights by the distance to the camera in a growing order
+			std::sort(shadowedLights.begin(), shadowedLights.end(),
+			[this](const PointLight* a, const PointLight* b) -> bool {
+					return glm::distance(m_MainCamera->m_Position, a->m_Position) < glm::distance(m_MainCamera->m_Position, b->m_Position);
+			});
+				
+			// Maximum distance of active shadowcasters is the distance to the 'MAX_POINT_LIGHT_SHADOWS' light from the camera
+			maxShadowDist = glm::distance(m_MainCamera->m_Position, shadowedLights[MAX_POINT_LIGHT_SHADOWS]->m_Position);
+		}
+
 		for (int i = 0, index = 0; i < pointLights.size() && index < MAX_POINT_LIGHT_SHADOWS; i++)
-			if (pointLights[i].m_CastShadows)
-				pointLights[i].m_ShadowmapIndex = index++;
+			if (pointLights[i].m_CastShadows && glm::distance(m_MainCamera->m_Position, pointLights[i].m_Position) < maxShadowDist) 
+				pointLights[i].m_ShadowmapIndex = index++; // Set the shadowmap index if the light casts shadows and is closer to the camera than the max distance
+
+
+		maxShadowDist = std::numeric_limits<float>::max();
+
+		shadowCount = 0;
+		for (const auto& l : spotLights)
+			shadowCount += l.m_CastShadows;
+
+		// If more than 'MAX_SPOT_LIGHT_SHADOWS' spotlights cast shadows
+		if (shadowCount > MAX_SPOT_LIGHT_SHADOWS)
+		{
+			std::vector<SpotLight*> shadowedLights;
+			shadowedLights.reserve(shadowCount);
+
+			// Make a vector out of lights that cast shadows
+			for (auto& l : spotLights)
+				if (l.m_CastShadows)
+					shadowedLights.emplace_back(&l);
+
+			// Sort the lights by the distance to the camera in a growing order
+			std::sort(shadowedLights.begin(), shadowedLights.end(),
+				[this](const SpotLight* a, const SpotLight* b) -> bool {
+					return glm::distance(m_MainCamera->m_Position, a->m_Position) < glm::distance(m_MainCamera->m_Position, b->m_Position);
+				});
+
+			// Maximum distance of active shadowcasters is the distance to the 'MAX_SPOT_LIGHT_SHADOWS' light from the camera
+			maxShadowDist = glm::distance(m_MainCamera->m_Position, shadowedLights[MAX_SPOT_LIGHT_SHADOWS]->m_Position);
+		}
 
 		for (int i = 0, index = 0; i < spotLights.size() && index < MAX_SPOT_LIGHT_SHADOWS; i++)
-			if (spotLights[i].m_CastShadows)
+			if (spotLights[i].m_CastShadows && glm::distance(m_MainCamera->m_Position, spotLights[i].m_Position) < maxShadowDist)
 				spotLights[i].m_ShadowmapIndex = index++;
 
 		for (int i = 0, index = 0; i < dirLights.size() && index < MAX_DIR_LIGHT_SHADOWS; i++)
@@ -278,7 +339,7 @@ namespace en
 
 		m_Lights.stagingBuffer->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffer->m_BufferSize);
 		m_Lights.stagingBuffer->CopyTo(m_Lights.buffers[m_FrameIndex].get(), cmd);
-		// I NEED to check if I don't oversynchronise it
+
 		m_Lights.buffers[m_FrameIndex]->PipelineBarrier(
 			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -431,7 +492,7 @@ namespace en
 
 					.cullMode = VK_CULL_MODE_FRONT_BIT,
 
-					.extent = VkExtent2D{POINT_SHADOWMAP_RES, POINT_SHADOWMAP_RES},
+					.extent = VkExtent2D{m_Shadows.point.resolution, m_Shadows.point.resolution},
 				};
 				
 				m_OmniShadowPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
@@ -494,10 +555,10 @@ namespace en
 
 				.cullMode = VK_CULL_MODE_FRONT_BIT,
 
-				.extent = VkExtent2D{SPOT_SHADOWMAP_RES, SPOT_SHADOWMAP_RES},
+				.extent = VkExtent2D{m_Shadows.spot.resolution, m_Shadows.spot.resolution},
 			};
 
-			m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
+			m_ShadowPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 			for (const auto& [name, object] : m_Scene->m_SceneObjects)
 			{
@@ -508,19 +569,19 @@ namespace en
 					.viewProjMatrix = m_Lights.LBO.spotLights[i].lightMat,
 				};
 
-				m_DepthPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
+				m_ShadowPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 				for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 				{
 					if (!subMesh.m_Active) continue;
 
-					m_DepthPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
-					m_DepthPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
-					m_DepthPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
+					m_ShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+					m_ShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+					m_ShadowPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 				}
 			}
 
-			m_DepthPipeline->EndRendering();
+			m_ShadowPipeline->EndRendering();
 		}
 		for (int i = 0; i < m_Lights.LBO.activeDirLights; i++)
 		{
@@ -546,10 +607,10 @@ namespace en
 
 					.cullMode = VK_CULL_MODE_FRONT_BIT,
 
-					.extent = VkExtent2D{DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES},
+					.extent = VkExtent2D{m_Shadows.dir.resolution, m_Shadows.dir.resolution},
 				};
 
-				m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
+				m_ShadowPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
 				for (const auto& [name, object] : m_Scene->m_SceneObjects)
 				{
@@ -560,19 +621,19 @@ namespace en
 						.viewProjMatrix = m_Lights.LBO.dirLights[i].lightMat[j],
 					};
 
-					m_DepthPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
+					m_ShadowPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 					for (const auto& subMesh : object->m_Mesh->m_SubMeshes)
 					{
 						if (!subMesh.m_Active) continue;
 
-						m_DepthPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
-						m_DepthPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
-						m_DepthPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
+						m_ShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer.get());
+						m_ShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer.get());
+						m_ShadowPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 					}
 				}
 
-				m_DepthPipeline->EndRendering();
+				m_ShadowPipeline->EndRendering();
 			}
 		}
 
@@ -919,9 +980,8 @@ namespace en
 
 		m_HDRInput.reset();
 		m_SwapchainInputs.clear();
-		//m_OmniShadowInput.reset();
-
 		m_DepthPipeline.reset();
+		m_ShadowPipeline.reset();
 		m_OmniShadowPipeline.reset();
 		m_GeometryPipeline.reset();
 		m_LightingPipeline.reset();
@@ -963,6 +1023,7 @@ namespace en
 		UpdateHDRInput();
 
 		InitDepthPipeline();
+		InitShadowPipeline();
 		InitOmniShadowPipeline();
 		InitGeometryPipeline();
 		InitLightingPipeline();
@@ -999,6 +1060,34 @@ namespace en
 		m_Shadows.cascadeFarPlane = farPlane;
 
 		UpdateShadowFrustums();
+	}
+
+	void RendererBackend::SetPointShadowResolution(uint32_t resolution)
+	{
+		m_Shadows.point.resolution = resolution;
+
+		ReloadBackend();
+	}
+
+	void RendererBackend::SetSpotShadowResolution(uint32_t resolution)
+	{
+		m_Shadows.spot.resolution = resolution;
+
+		ReloadBackend();
+	}
+
+	void RendererBackend::SetDirShadowResolution(uint32_t resolution)
+	{
+		m_Shadows.dir.resolution = resolution;
+
+		ReloadBackend();
+	}
+
+	void RendererBackend::SetShadowFormat(VkFormat format)
+	{
+		m_Shadows.shadowFormat = format;
+
+		ReloadBackend();
 	}
 
 	void RendererBackend::SetShadowCascadesWeight(float weight)
@@ -1148,7 +1237,7 @@ namespace en
 		Helpers::CreateSampler(m_Shadows.sampler, VK_FILTER_NEAREST);
 
 		// Point
-		Helpers::CreateImage(m_Shadows.point.sharedImage, m_Shadows.point.memory, VkExtent2D{ POINT_SHADOWMAP_RES, POINT_SHADOWMAP_RES }, VK_FORMAT_R32_SFLOAT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 6 * MAX_POINT_LIGHT_SHADOWS, 1U, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+		Helpers::CreateImage(m_Shadows.point.sharedImage, m_Shadows.point.memory, VkExtent2D{ m_Shadows.point.resolution, m_Shadows.point.resolution }, VK_FORMAT_R32_SFLOAT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 6 * MAX_POINT_LIGHT_SHADOWS, 1U, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
 		m_Shadows.point.singleViews.resize(MAX_POINT_LIGHT_SHADOWS);
 
@@ -1158,11 +1247,11 @@ namespace en
 
 		Helpers::CreateImageView(m_Shadows.point.sharedImage, m_Shadows.point.sharedView, VK_IMAGE_VIEW_TYPE_CUBE_ARRAY, VK_FORMAT_R32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 0U, 6 * MAX_POINT_LIGHT_SHADOWS);
 
-		Helpers::CreateImage(m_Shadows.point.depthImage, m_Shadows.point.depthMemory, VkExtent2D{ POINT_SHADOWMAP_RES, POINT_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		Helpers::CreateImage(m_Shadows.point.depthImage, m_Shadows.point.depthMemory, VkExtent2D{ m_Shadows.point.resolution, m_Shadows.point.resolution }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		Helpers::CreateImageView(m_Shadows.point.depthImage, m_Shadows.point.depthView, VK_IMAGE_VIEW_TYPE_2D, m_Shadows.shadowFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 		// Spot
-		Helpers::CreateImage(m_Shadows.spot.sharedImage, m_Shadows.spot.memory, VkExtent2D{ SPOT_SHADOWMAP_RES, SPOT_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_SPOT_LIGHT_SHADOWS);
+		Helpers::CreateImage(m_Shadows.spot.sharedImage, m_Shadows.spot.memory, VkExtent2D{ m_Shadows.spot.resolution, m_Shadows.spot.resolution }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_SPOT_LIGHT_SHADOWS);
 
 		m_Shadows.spot.singleViews.resize(MAX_SPOT_LIGHT_SHADOWS);
 
@@ -1173,7 +1262,7 @@ namespace en
 
 
 		// Dir
-		Helpers::CreateImage(m_Shadows.dir.sharedImage, m_Shadows.dir.memory, VkExtent2D{ DIR_SHADOWMAP_RES, DIR_SHADOWMAP_RES }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS * SHADOW_CASCADES);
+		Helpers::CreateImage(m_Shadows.dir.sharedImage, m_Shadows.dir.memory, VkExtent2D{ m_Shadows.dir.resolution, m_Shadows.dir.resolution }, m_Shadows.shadowFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MAX_DIR_LIGHT_SHADOWS * SHADOW_CASCADES);
 	
 		m_Shadows.dir.singleViews.resize(MAX_DIR_LIGHT_SHADOWS * SHADOW_CASCADES);
 
@@ -1246,8 +1335,6 @@ namespace en
 
 	void RendererBackend::InitDepthPipeline()
 	{
-		Shader vShader("Shaders/Depth.spv", ShaderType::Vertex);
-
 		constexpr VkPushConstantRange depthPushConstant {
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset		= 0U,
@@ -1256,7 +1343,7 @@ namespace en
 
 		const Pipeline::CreateInfo pipelineInfo{
 			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
-			.vShader			= &vShader,
+			.vShader			= "Shaders/Depth.spv",
 			.pushConstantRanges = { depthPushConstant },
 			.useVertexBindings  = true,
 			.enableDepthTest    = true
@@ -1264,11 +1351,26 @@ namespace en
 
 		m_DepthPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
+	void RendererBackend::InitShadowPipeline()
+	{
+		constexpr VkPushConstantRange depthPushConstant{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0U,
+			.size = sizeof(DepthStageInfo)
+		};
+
+		const Pipeline::CreateInfo pipelineInfo{
+			.depthFormat = m_Shadows.shadowFormat,
+			.vShader = "Shaders/Depth.spv",
+			.pushConstantRanges = { depthPushConstant },
+			.useVertexBindings = true,
+			.enableDepthTest = true
+		};
+
+		m_ShadowPipeline = std::make_unique<Pipeline>(pipelineInfo);
+	}
 	void RendererBackend::InitOmniShadowPipeline()
 	{
-		Shader vShader("Shaders/OmniDepthVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/OmniDepthFrag.spv", ShaderType::Fragment);
-
 		constexpr VkPushConstantRange depthPushConstant{
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset = 0U,
@@ -1278,8 +1380,8 @@ namespace en
 		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats = { VK_FORMAT_R32_SFLOAT },
 			.depthFormat = m_Shadows.shadowFormat,
-			.vShader = &vShader,
-			.fShader = &fShader,
+			.vShader = "Shaders/OmniDepthVert.spv",
+			.fShader = "Shaders/OmniDepthFrag.spv",
 			.descriptorLayouts = {},
 			.pushConstantRanges = { depthPushConstant },
 			.useVertexBindings = true,
@@ -1290,9 +1392,6 @@ namespace en
 	}
 	void RendererBackend::InitGeometryPipeline()
 	{
-		Shader vShader("Shaders/GeometryVertex.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/GeometryFragment.spv", ShaderType::Fragment);
-
 		constexpr VkPushConstantRange objectPushConstant{
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset		= 0U,
@@ -1308,8 +1407,8 @@ namespace en
 		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_GBuffer->m_Attachments[0].m_Format, m_GBuffer->m_Attachments[1].m_Format, m_GBuffer->m_Attachments[2].m_Format },
 			.depthFormat		= m_GBuffer->m_Attachments[3].m_Format,
-			.vShader			= &vShader,
-			.fShader			= &fShader,
+			.vShader			= "Shaders/GeometryVertex.spv",
+			.fShader			= "Shaders/GeometryFragment.spv",
 			.descriptorLayouts  = { CameraMatricesBuffer::GetLayout(), Material::GetLayout() },
 			.pushConstantRanges = { objectPushConstant, materialPushConstant },
 			.useVertexBindings  = true,
@@ -1322,13 +1421,10 @@ namespace en
 	}
 	void RendererBackend::InitLightingPipeline()
 	{
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/Lighting.spv", ShaderType::Fragment);
-
 		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_HDROffscreen->m_Format},
-			.vShader			= &vShader,
-			.fShader			= &fShader,
+			.vShader			= "Shaders/FullscreenTriVert.spv",
+			.fShader			= "Shaders/Lighting.spv",
 			.descriptorLayouts  = { m_GBufferInputs[0]->m_DescriptorLayout},
 		};
 
@@ -1342,13 +1438,10 @@ namespace en
 			.size		= sizeof(PostProcessingParams::Exposure)
 		};
 
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/Tonemapping.spv", ShaderType::Fragment);
-
 		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_Swapchain->GetFormat() },
-			.vShader			= &vShader,
-			.fShader			= &fShader,
+			.vShader			= "Shaders/FullscreenTriVert.spv",
+			.fShader			= "Shaders/Tonemapping.spv",
 			.descriptorLayouts  = { m_HDRInput->m_DescriptorLayout },
 			.pushConstantRanges = { exposurePushConstant }
 		};
@@ -1365,13 +1458,10 @@ namespace en
 			.size = sizeof(PostProcessingParams::Antialiasing)
 		};
 
-		Shader vShader("Shaders/FullscreenTriVert.spv", ShaderType::Vertex);
-		Shader fShader("Shaders/FXAA.spv", ShaderType::Fragment);
-
 		const Pipeline::CreateInfo pipelineInfo{
 			.colorFormats		= { m_Swapchain->GetFormat() },
-			.vShader			= &vShader,
-			.fShader			= &fShader,
+			.vShader			= "Shaders/FullscreenTriVert.spv",
+			.fShader			= "Shaders/FXAA.spv",
 			.descriptorLayouts  = { m_SwapchainInputs[0]->m_DescriptorLayout},
 			.pushConstantRanges = { antialiasingPushConstant },
 		};
@@ -1536,9 +1626,9 @@ namespace en
 			glm::mat4 lightView = glm::lookAt(center - (light.m_FarPlane-1.0f) * -glm::normalize(light.m_Direction + glm::vec3(0.0000001f, 0, 0.0000001f)) * radius, center, glm::vec3(0, 1, 0));
 
 			glm::mat4 shadowViewProj = lightProj * lightView;
-			glm::vec4 shadowOrigin = shadowViewProj * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) * float(DIR_SHADOWMAP_RES) / 2.0f;
+			glm::vec4 shadowOrigin = shadowViewProj * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) * float(m_Shadows.dir.resolution) / 2.0f;
 
-			glm::vec4 shadowOffset = (glm::round(shadowOrigin) - shadowOrigin) * 2.0f / float(DIR_SHADOWMAP_RES) * glm::vec4(1, 1, 0, 0);
+			glm::vec4 shadowOffset = (glm::round(shadowOrigin) - shadowOrigin) * 2.0f / float(m_Shadows.dir.resolution) * glm::vec4(1, 1, 0, 0);
 
 			glm::mat4 shadowProj = lightProj;
 			shadowProj[3] += shadowOffset;

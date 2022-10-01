@@ -66,11 +66,27 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera() { return m_MainCamera; };
 
+
 		void SetShadowCascadesWeight(float weight);
 		const float GetShadowCascadesWeight() const { return m_Shadows.cascadeSplitWeight; }
 
 		void SetShadowCascadesFarPlane(float farPlane);
 		const float GetShadowCascadesFarPlane() const { return m_Shadows.cascadeFarPlane; }
+
+
+
+		void SetPointShadowResolution(uint32_t resolution);
+		const float GetPointShadowResolution() const { return m_Shadows.point.resolution; }
+
+		void SetSpotShadowResolution(uint32_t resolution);
+		const float GetSpotShadowResolution() const { return m_Shadows.spot.resolution; }
+
+		void SetDirShadowResolution(uint32_t resolution);
+		const float GetDirShadowResolution() const { return m_Shadows.dir.resolution; }
+
+
+		void SetShadowFormat(VkFormat format);
+		const VkFormat GetShadowFormat() const { return m_Shadows.shadowFormat; }
 
 		Scene* GetScene() { return m_Scene; };
 
@@ -142,8 +158,8 @@ namespace en
 		struct Shadows
 		{
 			VkSampler sampler;
-
-			const VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
+			
+			VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
 
 			struct Point 
 			{
@@ -161,6 +177,8 @@ namespace en
 				VkImageView depthView;
 				VkDeviceMemory depthMemory;
 
+				uint32_t resolution = 1024;
+
 				struct OmniShadowPushConstant
 				{
 					glm::mat4x4 viewProj;
@@ -177,6 +195,8 @@ namespace en
 				VkImageView sharedView;
 				std::vector<VkImageView> singleViews;
 
+				uint32_t resolution = 2048;
+
 			} spot;
 			struct Dir
 			{
@@ -185,6 +205,8 @@ namespace en
 
 				VkImageView sharedView;
 				std::vector<VkImageView> singleViews;
+
+				uint32_t resolution = 4096;
 			} dir;
 
 			struct Cascade
@@ -236,6 +258,7 @@ namespace en
 		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
+		std::unique_ptr<Pipeline> m_ShadowPipeline;
 		std::unique_ptr<Pipeline> m_OmniShadowPipeline;
 
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
@@ -271,7 +294,6 @@ namespace en
 		uint32_t m_SwapchainImageIndex = 0U; // Current swapchain index
 		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
 		
-
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
@@ -297,6 +319,7 @@ namespace en
 		void DestroyShadows();
 
 		void InitDepthPipeline();
+		void InitShadowPipeline();
 		void InitOmniShadowPipeline();
 		void InitGeometryPipeline();
 		void InitLightingPipeline();

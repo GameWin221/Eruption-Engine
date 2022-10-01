@@ -26,11 +26,27 @@ namespace en
 		void SetMainCamera(Camera* camera);
 		Camera* GetMainCamera();
 
+
 		void SetShadowCascadesWeight(float weight);
 		const float GetShadowCascadesWeight() const;
 
 		void SetShadowCascadesFarPlane(float farPlane);
 		const float GetShadowCascadesFarPlane() const;
+
+
+
+		void SetPointShadowResolution(uint32_t resolution);
+		const float GetPointShadowResolution() const;
+
+		void SetSpotShadowResolution(uint32_t resolution);
+		const float GetSpotShadowResolution() const;
+
+		void SetDirShadowResolution(uint32_t resolution);
+		const float GetDirShadowResolution() const;
+
+
+		void SetShadowFormat(VkFormat format);
+		const VkFormat GetShadowFormat() const;
 
 		static Renderer* Get();
 		void ReloadRenderer();
