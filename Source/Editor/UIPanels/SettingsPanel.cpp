@@ -61,6 +61,29 @@ namespace en
 			static float farPlane = m_Renderer->GetShadowCascadesFarPlane();
 			if (ImGui::DragFloat("Shadow cascades far plane", &farPlane, 0.5f, m_Renderer->GetMainCamera()->m_NearPlane, m_Renderer->GetMainCamera()->m_FarPlane, "%.2f", ImGuiSliderFlags_AlwaysClamp))
 				m_Renderer->SetShadowCascadesFarPlane(farPlane);
+
+			static int pRes = m_Renderer->GetPointShadowResolution();
+			static int sRes = m_Renderer->GetSpotShadowResolution();
+			static int dRes = m_Renderer->GetDirShadowResolution();
+
+			if (ImGui::DragInt("Point shadows resolution", &pRes, 2, 16, 8192, "%d", ImGuiSliderFlags_AlwaysClamp))
+				m_Renderer->SetPointShadowResolution(pRes);
+
+			if (ImGui::DragInt("Spot shadows resolution", &sRes, 2, 16, 8192, "%d", ImGuiSliderFlags_AlwaysClamp))
+				m_Renderer->SetSpotShadowResolution(sRes);
+
+			if (ImGui::DragInt("Directional shadows resolution", &dRes, 2, 16, 8192, "%d", ImGuiSliderFlags_AlwaysClamp))
+				m_Renderer->SetDirShadowResolution(dRes);
+
+			bool enabled32BitShadows = (m_Renderer->GetShadowFormat() == VK_FORMAT_D32_SFLOAT);
+
+			if (ImGui::Checkbox("32 Bit Shadowmaps", &enabled32BitShadows))
+			{
+				if (enabled32BitShadows)
+					m_Renderer->SetShadowFormat(VK_FORMAT_D32_SFLOAT);
+				else
+					m_Renderer->SetShadowFormat(VK_FORMAT_D16_UNORM);
+			}
 		}
 
 		ImGui::End();

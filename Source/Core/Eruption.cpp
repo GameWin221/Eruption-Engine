@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	const en::WindowInfo windowInfo {
-		.title = "Eruption Engine v0.7.1.5",
+		.title = "Eruption Engine v0.7.2",
 		.size = glm::ivec2(1920, 1080),
 		.fullscreen = false,
 		.resizable = true,
@@ -47,11 +47,11 @@ void Eruption::Update()
 {
 	static std::chrono::high_resolution_clock::time_point lastFrame;
 
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - lastFrame);
+	auto now = std::chrono::high_resolution_clock::now();
 
-	lastFrame = std::chrono::high_resolution_clock::now();
+	m_DeltaTime = std::chrono::duration<double>(now - lastFrame).count();
 
-	m_DeltaTime = duration.count() / 1000000.0;
+	lastFrame = now;
 
 	m_Window->PollEvents();
 	m_Input->UpdateMouse();
@@ -108,6 +108,8 @@ void Eruption::Update()
 	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, std::fmin(30.0 * m_DeltaTime, 1.0));
 	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, std::fmin(30.0 * m_DeltaTime, 1.0));
 
+	UpdateExampleScene();
+
 	m_Input->UpdateInput();
 
 	m_Renderer->Update();
@@ -119,6 +121,27 @@ void Eruption::Update()
 void Eruption::Render()
 {
 	m_Renderer->Render();
+}
+
+void Eruption::UpdateExampleScene()
+{
+	constexpr glm::vec3 pLight0A(  8.1f, 2.1f, -4.1f);
+	constexpr glm::vec3 pLight0B(-10.7f, 2.1f, -4.1f);
+		 
+	constexpr glm::vec3 dLight0A( 0.5f, 1.0f,  0.1f);
+	constexpr glm::vec3 dLight0B(-0.1f, 1.0f, -0.3f);
+
+	static double i = 0.0;
+
+	double cycle0 = sin(i) * 0.5 + 0.5;
+	double cycle2 = cos(i) * 0.5 + 0.5;
+	if(!m_ExampleScene->m_PointLights.empty())
+		m_ExampleScene->m_PointLights[0].m_Position = glm::mix(pLight0A, pLight0B, cycle0);
+
+	if (!m_ExampleScene->m_DirectionalLights.empty())
+		m_ExampleScene->m_DirectionalLights[0].m_Direction = glm::mix(dLight0A, dLight0B, cycle2);
+
+	i += m_DeltaTime / 4.0;
 }
 
 void Eruption::CreateExampleScene()

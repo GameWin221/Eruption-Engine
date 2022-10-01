@@ -88,6 +88,42 @@ namespace en
 		return m_Backend->GetShadowCascadesFarPlane();
 	}
 
+	void Renderer::SetPointShadowResolution(uint32_t resolution)
+	{
+		m_Backend->SetPointShadowResolution(resolution);
+	}
+	const float Renderer::GetPointShadowResolution() const
+	{
+		return m_Backend->GetPointShadowResolution();
+	}
+
+	void Renderer::SetSpotShadowResolution(uint32_t resolution)
+	{
+		m_Backend->SetSpotShadowResolution(resolution);
+	}
+	const float Renderer::GetSpotShadowResolution() const
+	{
+		return m_Backend->GetSpotShadowResolution();
+	}
+
+	void Renderer::SetDirShadowResolution(uint32_t resolution)
+	{
+		m_Backend->SetDirShadowResolution(resolution);
+	}
+	const float Renderer::GetDirShadowResolution() const
+	{
+		return m_Backend->GetDirShadowResolution();
+	}
+
+	void Renderer::SetShadowFormat(VkFormat format)
+	{
+		m_Backend->SetShadowFormat(format);
+	}
+	const VkFormat Renderer::GetShadowFormat() const
+	{
+		return m_Backend->GetShadowFormat();
+	}
+
 	Renderer* Renderer::Get()
 	{
 		if (!g_CurrentRenderer)

@@ -38,8 +38,8 @@ namespace en
 			std::vector<VkFormat> colorFormats{};
 			VkFormat depthFormat{};
 
-			Shader* vShader = nullptr;
-			Shader* fShader = nullptr;
+			std::string vShader = "";
+			std::string fShader = "";
 
 			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
 			std::vector<VkPushConstantRange> pushConstantRanges{};

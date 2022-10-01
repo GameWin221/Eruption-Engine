@@ -177,7 +177,7 @@ namespace en
 
 		innerAngle = std::fmin(innerAngle, outerAngle);
 
-		ImGui::DragFloat("Inner Angle", &innerAngle, 1.0f, 0.0f, outerAngle, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::DragFloat("Inner Angle", &innerAngle, 1.0f, 0.0f, outerAngle-0.001f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 		chosenSpotLight->m_OuterCutoff = outerAngle / 180.0f;
 		chosenSpotLight->m_InnerCutoff = innerAngle / 180.0f;
