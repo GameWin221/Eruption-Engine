@@ -316,5 +316,6 @@
     <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\OmniDepthVert.vert" />
     <None Include="Shaders\OmniDepthFrag.frag" />
+    <None Include="Shaders\SSAO.frag" />
   </ItemGroup>
 </Project>

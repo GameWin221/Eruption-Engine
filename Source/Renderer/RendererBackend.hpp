@@ -55,6 +55,7 @@ namespace en
 
 		void DepthPass();
 		void GeometryPass();
+		void SSAOPass();
 		void ShadowPass();
 		void LightingPass();
 		void TonemappingPass();
@@ -97,7 +98,12 @@ namespace en
 		enum struct AntialiasingMode
 		{
 			FXAA = 0,
-			//SMAA = 1,
+			None = 1
+		};
+
+		enum struct AmbientOcclusionMode
+		{
+			SSAO = 0,
 			None = 1
 		};
 
@@ -109,6 +115,7 @@ namespace en
 			} exposure;
 
 			AntialiasingMode antialiasingMode = AntialiasingMode::FXAA;
+			AmbientOcclusionMode ambientOcclusionMode = AmbientOcclusionMode::None;
 
 			struct Antialiasing
 			{
@@ -121,6 +128,16 @@ namespace en
 				float texelSizeX = 1.0f / 1920.0f;
 				float texelSizeY = 1.0f / 1080.0f;
 			} antialiasing;
+
+			struct AmbientOcclusion
+			{
+				float screenWidth = 1920.0f;
+				float screenHeight = 1080.0f;
+				
+				float radius = 0.5f;
+				float bias = 0.025f;
+				float multiplier = 1.0f;
+			} ambientOcclusion;
 
 		} m_PostProcessParams;
 
@@ -262,6 +279,7 @@ namespace en
 		std::unique_ptr<Pipeline> m_OmniShadowPipeline;
 
 		std::unique_ptr<Pipeline> m_GeometryPipeline;
+		std::unique_ptr<Pipeline> m_SSAOPipeline;
 		std::unique_ptr<Pipeline> m_LightingPipeline;
 
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
@@ -276,6 +294,10 @@ namespace en
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
 
 		std::unique_ptr<Image> m_HDROffscreen;
+
+		std::unique_ptr<Image> m_SSAOTarget;
+		std::unique_ptr<MemoryBuffer> m_SSAOBuffer;
+		std::unique_ptr<DescriptorSet> m_SSAOInput;
 
 		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
@@ -305,13 +327,16 @@ namespace en
 
 		void CreateCommandBuffer();
 		void CreateLightsBuffer();
+		void CreateSSAOBuffer();
 
 		void CreateGBuffer();
 		void CreateHDROffscreen();
+		void CreateSSAOTarget();
 
 		void UpdateGBufferInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
+		void UpdateSSAOInput();
 
 		void InitShadows();
 		void RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer);
@@ -322,6 +347,7 @@ namespace en
 		void InitShadowPipeline();
 		void InitOmniShadowPipeline();
 		void InitGeometryPipeline();
+		void InitSSAOPipeline();
 		void InitLightingPipeline();
 		void InitTonemappingPipeline();
 		void InitAntialiasingPipeline();

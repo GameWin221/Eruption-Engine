@@ -7,5 +7,6 @@
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\FXAA.frag -o %~dp0\FXAA.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\OmniDepthVert.vert -o %~dp0\OmniDepthVert.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\OmniDepthFrag.frag -o %~dp0\OmniDepthFrag.spv
+%VULKAN_SDK%/Bin/glslc.exe %~dp0\SSAO.frag -o %~dp0\SSAO.spv
 
 pause

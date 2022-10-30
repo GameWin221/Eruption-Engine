@@ -92,7 +92,7 @@ namespace en
 			.binding		 = 0U,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = 1U,
-			.stageFlags		 = VK_SHADER_STAGE_VERTEX_BIT
+			.stageFlags		 = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
 		};
 
 		const VkDescriptorSetLayoutCreateInfo layoutInfo{

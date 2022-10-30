@@ -13,6 +13,7 @@ layout(binding = 2) uniform sampler2D gNormal;
 layout(binding = 3) uniform samplerCubeArray pointShadowmaps;
 layout(binding = 4) uniform sampler2DArray spotShadowmaps;
 layout(binding = 5) uniform sampler2DArray dirShadowmaps;
+layout(binding = 6) uniform sampler2D SSAO;
 
 struct PointLight
 {
@@ -50,7 +51,7 @@ struct DirLight
     mat4 projView[SHADOW_CASCADES];
 };
 
-layout(binding = 6) uniform UBO 
+layout(binding = 7) uniform UBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     SpotLight  sLights[MAX_SPOT_LIGHTS];
@@ -141,7 +142,7 @@ float CalculateShadow(vec4 fPosLightSpace, sampler2DArray shadowmaps, int shadow
     float shadow = 0.0;
 
 #if SOFT_SHADOWS
-    vec2 texelSize = vec2(1.0) / DIR_SHADOWMAP_RES * softness;
+    vec2 texelSize = vec2(1.0) / 2048 * softness;
     for(int x = -sampleCount; x <= sampleCount; ++x)
     {
         for(int y = -sampleCount; y <= sampleCount; ++y)
@@ -273,6 +274,23 @@ float RadiansBetweenDirs(vec3 a, vec3 b)
 	return angleRadians;
 }
 
+float GetBlurredAO()
+{
+    vec2 texelSize = 1.0 / vec2(textureSize(SSAO, 0));
+
+    float result = 0.0;
+    for (int x = -2; x < 2; ++x) 
+    {
+        for (int y = -2; y < 2; ++y) 
+        {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            result += texture(SSAO, fTexcoord + offset).r;
+        }
+    }
+
+    return result / 16.0;
+}
+
 void main() 
 {
     vec4 gColorSample    = texture(gColor   , fTexcoord);
@@ -282,6 +300,12 @@ void main()
     vec3 albedo    = gColorSample.rgb;
     vec3 normal    = gNormalSample.rgb;
     vec3 position  = gPositionSample.rgb;
+
+    #if BLUR_SSAO
+    float ao = 1.0 - GetBlurredAO();
+    #else
+    float ao = 1.0 - texture(SSAO, fTexcoord).r;
+    #endif
 
     float roughness = gColorSample.a;
     float metalness = gPositionSample.a;
@@ -296,7 +320,7 @@ void main()
         if (-viewPos.z > lightsBuffer.cascadeSplitDistances[i].x)
 		    cascade = i+1;
 
-    vec3 ambient = albedo * lightsBuffer.ambient;
+    vec3 ambient = albedo * lightsBuffer.ambient * ao;
     vec3 lighting = vec3(0.0);
 
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
@@ -372,7 +396,7 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
-            result = vec3(texture(dirShadowmaps, vec3(fTexcoord, 0)).r);
+            result = vec3(ao);
             break;
         case 7:
             switch(cascade)

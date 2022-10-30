@@ -25,12 +25,12 @@ void main()
 {
     gl_Position = camera.proj * camera.view * object.model * vec4(vPos, 1.0);
 
-    // Transform vertex positions to model space
+    // Transform vertex positions to world space
     fPosition = vec3(object.model * vec4(vPos, 1.0));
     
-    // Transform vertex normals and tangents to model space
+    // Transform vertex normals and tangents to world space
     fNormal  = normalize(vec3(object.model * vec4(vNormal , 0.0)));
-    vec3 tangent = normalize(vec3(object.model * vec4(vTangent, 0.0)));
+    vec3 tangent = normalize(vec3(camera.view * object.model * vec4(vTangent, 0.0)));
 
     // Reorthogonalize vertex tangents relatively to normals
     tangent = normalize(tangent - dot(tangent, fNormal) * fNormal); 

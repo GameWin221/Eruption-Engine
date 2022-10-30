@@ -47,6 +47,7 @@ namespace en
 
 		m_Backend->DepthPass();
 		m_Backend->GeometryPass();
+		m_Backend->SSAOPass();
 		m_Backend->ShadowPass();
 		m_Backend->LightingPass();
 		m_Backend->TonemappingPass();

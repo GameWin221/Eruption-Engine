@@ -37,9 +37,21 @@ namespace en
 
 		EN_SUCCESS("Created lights buffer!");
 
+			CreateSSAOBuffer();
+
+		EN_SUCCESS("Created SSAO buffer!");
+
 			CreateGBuffer();
 
 		EN_SUCCESS("Created GBuffer!")
+
+			CreateHDROffscreen();
+
+		EN_SUCCESS("Created high dynamic range image!")
+
+			CreateSSAOTarget();
+
+		EN_SUCCESS("Created SSAO target image!")
 
 			InitShadows();
 
@@ -49,10 +61,6 @@ namespace en
 
 		EN_SUCCESS("Created GBuffer descriptor set!")
 
-			CreateHDROffscreen();
-
-		EN_SUCCESS("Created high dynamic range image!")
-
 			UpdateSwapchainInputs();
 
 		EN_SUCCESS("Created swapchain images descriptor sets!")
@@ -60,6 +68,10 @@ namespace en
 			UpdateHDRInput();
 
 		EN_SUCCESS("Created high dynamic range image descriptor set!")
+
+			UpdateSSAOInput();
+
+		EN_SUCCESS("Created SSAO descriptor set!")
 
 			CreateCommandBuffer();
 
@@ -80,6 +92,10 @@ namespace en
 			InitGeometryPipeline();
 
 		EN_SUCCESS("Created geometry pipeline!")
+
+			InitSSAOPipeline();
+
+		EN_SUCCESS("Created SSAO pipeline!")
 
 			InitLightingPipeline();
 
@@ -386,7 +402,7 @@ namespace en
 	void RendererBackend::DepthPass()
 	{
 		if (m_SkipFrame || !m_Scene) return;
-		
+
 		const Pipeline::BindInfo info{
 			.depthAttachment {
 				.imageView	 = m_GBuffer->m_Attachments[3].m_ImageView,
@@ -678,7 +694,7 @@ namespace en
 				.imageView   = m_GBuffer->m_Attachments[3].m_ImageView,
 				.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 				.loadOp		 = VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp	 = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE,
 
 				.clearValue {
 					.depthStencil = { 1.0f, 0U}
@@ -713,11 +729,7 @@ namespace en
 		}
 
 		m_GeometryPipeline->EndRendering();
-	}
-	void RendererBackend::LightingPass()
-	{
-		if (m_SkipFrame || !m_Scene) return;
-		
+
 		for (int i = 0; i < 3; i++)
 		{
 			m_GBuffer->m_Attachments[i].ChangeLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -725,6 +737,58 @@ namespace en
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				m_CommandBuffers[m_FrameIndex]);
 		}
+	}
+	void RendererBackend::SSAOPass()
+	{
+		if (m_SkipFrame || !m_Scene || m_PostProcessParams.ambientOcclusionMode == AmbientOcclusionMode::None)
+			return;
+			
+		m_SSAOTarget->ChangeLayout(
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			m_CommandBuffers[m_FrameIndex]
+		);
+
+		const Pipeline::BindInfo info{
+			.colorAttachments {
+				{
+					.imageView   = m_SSAOTarget->m_ImageView,
+					.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR,
+					.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE,
+				}
+			},
+
+			.cullMode = VK_CULL_MODE_FRONT_BIT,
+
+			.extent = m_Swapchain->GetExtent()
+		};
+
+		m_SSAOPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
+
+		m_PostProcessParams.ambientOcclusion.screenWidth = static_cast<float>(m_Swapchain->GetExtent().width);
+		m_PostProcessParams.ambientOcclusion.screenHeight = static_cast<float>(m_Swapchain->GetExtent().height);
+
+		m_SSAOPipeline->PushConstants(&m_PostProcessParams.ambientOcclusion, sizeof(PostProcessingParams::AmbientOcclusion), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+		m_SSAOPipeline->BindDescriptorSet(m_SSAOInput.get(), 1U);
+		m_CameraMatrices->Bind(m_CommandBuffers[m_FrameIndex], m_SSAOPipeline->m_Layout, m_FrameIndex);
+		
+		m_SSAOPipeline->Draw(3U);
+
+		m_SSAOPipeline->EndRendering();
+
+		m_SSAOTarget->ChangeLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			m_CommandBuffers[m_FrameIndex]
+		);
+	}
+	void RendererBackend::LightingPass()
+	{
+		if (m_SkipFrame || !m_Scene) return;
 
 		m_HDROffscreen->ChangeLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_CommandBuffers[m_FrameIndex]);
 
@@ -939,7 +1003,7 @@ namespace en
 	void RendererBackend::RecreateFramebuffer()
 	{
 		int width = 0, height = 0;
-		glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
+
 		while (width == 0 || height == 0)
 		{
 			glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
@@ -952,10 +1016,12 @@ namespace en
 
 		CreateGBuffer();
 		CreateHDROffscreen();
+		CreateSSAOTarget();
 
 		UpdateGBufferInput();
 		UpdateSwapchainInputs();
 		UpdateHDRInput();
+		UpdateSSAOInput();
 
 		m_Swapchain->CreateSwapchainFramebuffers(m_ImGui.renderPass);
 
@@ -979,16 +1045,19 @@ namespace en
 			input.reset();
 
 		m_HDRInput.reset();
+		m_SSAOInput.reset();
 		m_SwapchainInputs.clear();
 		m_DepthPipeline.reset();
 		m_ShadowPipeline.reset();
 		m_OmniShadowPipeline.reset();
 		m_GeometryPipeline.reset();
+		m_SSAOPipeline.reset();
 		m_LightingPipeline.reset();
 		m_TonemappingPipeline.reset();
 		m_AntialiasingPipeline.reset();
 
 		m_CameraMatrices.reset();
+		m_SSAOBuffer.reset();
 
 		DestroyShadows();
 
@@ -996,6 +1065,7 @@ namespace en
 
 		m_GBuffer.reset();
 		m_HDROffscreen.reset();
+		m_SSAOTarget.reset();
 
 		for (auto& cmd : m_CommandBuffers)
 			vkResetCommandBuffer(cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
@@ -1015,17 +1085,21 @@ namespace en
 
 		CreateGBuffer();
 		CreateHDROffscreen();
+		CreateSSAOTarget();
+		CreateSSAOBuffer();
 
 		InitShadows();
 
 		UpdateGBufferInput();
 		UpdateSwapchainInputs();
 		UpdateHDRInput();
+		UpdateSSAOInput();
 
 		InitDepthPipeline();
 		InitShadowPipeline();
 		InitOmniShadowPipeline();
 		InitGeometryPipeline();
+		InitSSAOPipeline();
 		InitLightingPipeline();
 		InitTonemappingPipeline();
 		InitAntialiasingPipeline();
@@ -1068,14 +1142,12 @@ namespace en
 
 		ReloadBackend();
 	}
-
 	void RendererBackend::SetSpotShadowResolution(uint32_t resolution)
 	{
 		m_Shadows.spot.resolution = resolution;
 
 		ReloadBackend();
 	}
-
 	void RendererBackend::SetDirShadowResolution(uint32_t resolution)
 	{
 		m_Shadows.dir.resolution = resolution;
@@ -1089,7 +1161,6 @@ namespace en
 
 		ReloadBackend();
 	}
-
 	void RendererBackend::SetShadowCascadesWeight(float weight)
 	{
 		m_Shadows.cascadeSplitWeight = weight;
@@ -1104,7 +1175,56 @@ namespace en
 	
 		m_Lights.stagingBuffer = std::make_unique<MemoryBuffer>(m_Lights.buffers[0]->m_BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	}
+	void RendererBackend::CreateSSAOBuffer()
+	{
+		std::uniform_real_distribution<float> dist(0.0, 1.0);
+		std::default_random_engine gen;
 
+		std::array<glm::vec4, 64> kernels;
+		std::array<glm::vec4, 16> noise;
+
+		for (int i = 0; i < kernels.size(); ++i)
+		{
+			glm::vec3 sample(
+				dist(gen) * 2.0f - 1.0f,
+				dist(gen) * 2.0f - 1.0f,
+				dist(gen)
+			);
+
+			sample = glm::normalize(sample);
+			sample *= dist(gen);
+
+			float scale = (float)i / 64.0f;
+			sample *= glm::mix(0.1f, 1.0f, scale * scale);
+
+			kernels[i] = glm::vec4(sample, 0.0f);
+
+		}
+
+		for (int i = 0; i < noise.size(); ++i)
+		{
+			noise[i] = glm::vec4(
+				dist(gen) * 2.0f - 1.0f,
+				dist(gen) * 2.0f - 1.0f,
+				0.0f,
+				0.0f
+			);
+		}
+
+		std::array<glm::vec4, kernels.size() + noise.size()> data;
+
+		std::move(kernels.begin(), kernels.end(), data.begin());
+		std::move(noise.begin(), noise.end(), data.begin() + kernels.size());
+
+		constexpr VkDeviceSize dataSize = sizeof(glm::vec4) * data.size();
+
+		MemoryBuffer stagingBuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		stagingBuffer.MapMemory(data.data(), dataSize);
+
+		m_SSAOBuffer = std::make_unique<MemoryBuffer>(dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		stagingBuffer.CopyTo(m_SSAOBuffer.get());
+	}
 	void RendererBackend::CreateGBuffer()
 	{
 		const DynamicFramebuffer::AttachmentInfo albedo {
@@ -1125,7 +1245,7 @@ namespace en
 		constexpr DynamicFramebuffer::AttachmentInfo depth {
 			.format			  = VK_FORMAT_D32_SFLOAT,
 			.imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT,
-			.imageUsageFlags  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			.imageUsageFlags  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.initialLayout	  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
 
@@ -1137,15 +1257,24 @@ namespace en
 	{
 		m_HDROffscreen = std::make_unique<Image>(m_Swapchain->GetExtent(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	}
+	void RendererBackend::CreateSSAOTarget()
+	{
+		m_SSAOTarget = std::make_unique<Image>(
+			m_Swapchain->GetExtent(), VK_FORMAT_R16_SFLOAT, 
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+			VK_IMAGE_ASPECT_COLOR_BIT, 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		);
+	}
 
 	void RendererBackend::UpdateGBufferInput()
 	{
 		for (uint32_t i = 0U; i < FRAMES_IN_FLIGHT; ++i)
 		{
 			const DescriptorSet::ImageInfo albedo{
-			.index = 0U,
-			.imageView = m_GBuffer->m_Attachments[0].m_ImageView,
-			.imageSampler = m_GBuffer->m_Sampler,
+				.index = 0U,
+				.imageView = m_GBuffer->m_Attachments[0].m_ImageView,
+				.imageSampler = m_GBuffer->m_Sampler,
 			};
 
 			const DescriptorSet::ImageInfo position{
@@ -1181,13 +1310,19 @@ namespace en
 				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
 			};
 
-			const DescriptorSet::BufferInfo buffer{
+			const DescriptorSet::ImageInfo ssao {
 				.index = 6U,
+				.imageView = m_SSAOTarget->m_ImageView,
+				.imageSampler = m_GBuffer->m_Sampler,
+			};
+
+			const DescriptorSet::BufferInfo buffer{
+				.index = 7U,
 				.buffer = m_Lights.buffers[i]->m_Handle,
 				.size = sizeof(m_Lights.LBO)
 			};
 
-			auto imageInfos = { albedo, position, normal, pointShadowmaps, spotShadowmaps, dirShadowmaps };
+			auto imageInfos = { albedo, position, normal, pointShadowmaps, spotShadowmaps, dirShadowmaps, ssao };
 
 			if (!m_GBufferInputs[i])
 				m_GBufferInputs[i] = std::make_unique<DescriptorSet>(imageInfos, buffer);
@@ -1230,6 +1365,33 @@ namespace en
 			else
 				m_SwapchainInputs[i]->Update(imageInfo);
 		}
+	}
+	void RendererBackend::UpdateSSAOInput()
+	{
+		const DescriptorSet::ImageInfo position{
+			.index = 0U,
+			.imageView = m_GBuffer->m_Attachments[1].m_ImageView,
+			.imageSampler = m_GBuffer->m_Sampler
+		};
+
+		const DescriptorSet::ImageInfo normal{
+			.index = 1U,
+			.imageView = m_GBuffer->m_Attachments[2].m_ImageView,
+			.imageSampler = m_GBuffer->m_Sampler
+		};
+		
+		const DescriptorSet::BufferInfo SSAOBuffer{
+			.index = 2U,
+			.buffer = m_SSAOBuffer->m_Handle,
+			.size = m_SSAOBuffer->m_BufferSize
+		};
+
+		auto imageInfos = { position , normal };
+
+		if (!m_SSAOInput)
+			m_SSAOInput = std::make_unique<DescriptorSet>(imageInfos, SSAOBuffer);
+		else
+			m_SSAOInput->Update(imageInfos, SSAOBuffer);
 	}
 
 	void RendererBackend::InitShadows()
@@ -1418,6 +1580,25 @@ namespace en
 		};
 
 		m_GeometryPipeline = std::make_unique<Pipeline>(pipelineInfo);
+	}
+	void RendererBackend::InitSSAOPipeline()
+	{
+		constexpr VkPushConstantRange ssaoPushConstant { 
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset = 0U,
+			.size = sizeof(PostProcessingParams::AmbientOcclusion),
+		};
+
+		const Pipeline::CreateInfo pipelineInfo{
+			.colorFormats = { m_SSAOTarget->m_Format},
+			.vShader = "Shaders/FullscreenTriVert.spv",
+			.fShader = "Shaders/SSAO.spv",
+			.descriptorLayouts = { m_CameraMatrices->GetLayout(), m_SSAOInput->m_DescriptorLayout},
+			.pushConstantRanges = { ssaoPushConstant }
+			
+		};
+
+		m_SSAOPipeline = std::make_unique<Pipeline>(pipelineInfo);
 	}
 	void RendererBackend::InitLightingPipeline()
 	{
