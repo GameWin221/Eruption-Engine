@@ -1,3 +1,5 @@
+%VULKAN_SDK%/Bin/glslc.exe %~dp0\ForwardClusteredVert.vert -o %~dp0\ForwardClusteredVert.spv
+%VULKAN_SDK%/Bin/glslc.exe %~dp0\ForwardClusteredFrag.frag -o %~dp0\ForwardClusteredFrag.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\GeometryVertex.vert -o %~dp0\GeometryVertex.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\GeometryFragment.frag -o %~dp0\GeometryFragment.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\FullscreenTriVert.vert -o %~dp0\FullscreenTriVert.spv

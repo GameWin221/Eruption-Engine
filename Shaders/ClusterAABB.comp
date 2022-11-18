@@ -1,0 +1,83 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_y = 1) in;
+
+struct ClusterAABB {
+    vec4 min;
+    vec4 max;
+};
+
+layout (std430, binding = 0) buffer AABBClustersBuffer {
+    ClusterAABB clusters[];
+} aabbBuffer;
+
+layout(push_constant) uniform ScreenToViewPushConstant {
+    mat4 inverseProj;
+
+    uvec4 tileSizes;
+    uvec2 screenSize;
+
+    float zNear;
+    float zFar;
+} screenToView;
+
+vec4 ScreenToView(vec4 screenPos)
+{
+    vec2 NDC = screenPos.xy / screenToView.screenSize.xy;
+    NDC.y = 1.0 - NDC.y;
+    NDC = NDC * 2.0 - 1.0;
+
+    vec4 clip = vec4(NDC, screenPos.z, screenPos.w);
+
+    vec4 view = screenToView.inverseProj * clip;
+
+    view = view / view.w;
+
+    return view;
+}
+
+vec3 LineViewPlaneIntersection(vec3 P, float zDistance)
+{
+    const vec3 zNormal = vec3(0.0, 0.0, 1.0);
+
+    // Intersection length for the line and the plane
+    float t = zDistance / dot(zNormal, P);
+
+    // Returning the intersection point
+    return t * P;
+}
+
+void main()
+{
+    //Per cluster variables
+    uint tileSizePx = screenToView.tileSizes[3];
+    uint tileIndex = gl_WorkGroupID.x +
+                     gl_WorkGroupID.y * gl_NumWorkGroups.x +
+                     gl_WorkGroupID.z * (gl_NumWorkGroups.x * gl_NumWorkGroups.y);
+
+    //Calculating the min and max point in screen space
+    vec4 maxPoint_sS = vec4(vec2(gl_WorkGroupID.x + 1, gl_WorkGroupID.y + 1) * tileSizePx, 0.0, 1.0); // Top Right
+    vec4 minPoint_sS = vec4(gl_WorkGroupID.xy * tileSizePx, 0.0, 1.0); // Bottom left
+
+    //Pass min and max to view space
+    vec3 maxPoint_vS = ScreenToView(maxPoint_sS).xyz;
+    vec3 minPoint_vS = ScreenToView(minPoint_sS).xyz;
+
+    //Near and far values of the cluster in view space
+    //We use equation (2) directly to obtain the tile values
+    float tileNear  = -screenToView.zNear * pow(screenToView.zFar / screenToView.zNear, gl_WorkGroupID.z / float(gl_NumWorkGroups.z));
+    float tileFar   = -screenToView.zNear * pow(screenToView.zFar / screenToView.zNear, (gl_WorkGroupID.z + 1) / float(gl_NumWorkGroups.z));
+
+    //Finding the 4 intersection points made from each point to the cluster near/far plane
+    vec3 minPointNear = LineViewPlaneIntersection(minPoint_vS, tileNear);
+    vec3 minPointFar  = LineViewPlaneIntersection(minPoint_vS, tileFar);
+    vec3 maxPointNear = LineViewPlaneIntersection(maxPoint_vS, tileNear);
+    vec3 maxPointFar  = LineViewPlaneIntersection(maxPoint_vS, tileFar);
+
+    vec3 minPointAABB = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
+    vec3 maxPointAABB = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
+
+    //Saving the AABB at the tile linear index
+    //Cluster is just a SSBO made of a struct of 2 vec4's
+    aabbBuffer.clusters[tileIndex].min = vec4(minPointAABB, 0.0);
+    aabbBuffer.clusters[tileIndex].max = vec4(maxPointAABB, 0.0);
+}

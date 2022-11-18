@@ -323,5 +323,10 @@
     <None Include="Shaders\OmniDepthVert.vert" />
     <None Include="Shaders\OmniDepthFrag.frag" />
     <None Include="Shaders\SSAO.frag" />
+    <None Include="Shaders\ClusterAABB.comp" />
+    <None Include="Shaders\ActiveClusterCulling.comp" />
+    <None Include="Shaders\ClusterLightCulling.comp" />
+    <None Include="Shaders\ForwardClusteredVert.vert" />
+    <None Include="Shaders\ForwardClusteredFrag.frag" />
   </ItemGroup>
 </Project>

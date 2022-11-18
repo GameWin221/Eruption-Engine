@@ -322,10 +322,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
+    <None Include="Shaders\ActiveClusterCulling.comp" />
     <None Include="Shaders\AMD\AMDFXAA.comp" />
     <None Include="Shaders\AMD\AMDTonemapping.comp" />
+    <None Include="Shaders\ClusterAABB.comp" />
+    <None Include="Shaders\ClusterLightCulling.comp" />
     <None Include="Shaders\Depth.frag" />
     <None Include="Shaders\Depth.vert" />
+    <None Include="Shaders\ForwardClusteredFrag.frag" />
+    <None Include="Shaders\ForwardClusteredVert.vert" />
     <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\GeometryFragment.frag">
       <FileType>Document</FileType>

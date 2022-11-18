@@ -54,10 +54,9 @@ namespace en
 		void ReloadBackend();
 
 		void DepthPass();
-		void GeometryPass();
 		void SSAOPass();
 		void ShadowPass();
-		void LightingPass();
+		void ClusteredForwardPass();
 		void TonemappingPass();
 		void AntialiasPass();
 		void ImGuiPass();
@@ -278,22 +277,24 @@ namespace en
 		std::unique_ptr<Pipeline> m_ShadowPipeline;
 		std::unique_ptr<Pipeline> m_OmniShadowPipeline;
 
-		std::unique_ptr<Pipeline> m_GeometryPipeline;
+		std::unique_ptr<Pipeline> m_ForwardClusteredPipeline;
+
 		std::unique_ptr<Pipeline> m_SSAOPipeline;
-		std::unique_ptr<Pipeline> m_LightingPipeline;
 
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
 
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
+		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_ForwardClusteredDescriptor;
 
-		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_GBufferInputs;
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
 
 		std::unique_ptr<Image> m_HDROffscreen;
+		std::unique_ptr<Image> m_DepthBuffer;
+
+		VkSampler m_MainSampler;
 
 		std::unique_ptr<Image> m_SSAOTarget;
 		std::unique_ptr<MemoryBuffer> m_SSAOBuffer;
@@ -329,7 +330,7 @@ namespace en
 		void CreateLightsBuffer();
 		void CreateSSAOBuffer();
 
-		void CreateGBuffer();
+		void CreateDepthBuffer();
 		void CreateHDROffscreen();
 		void CreateSSAOTarget();
 
@@ -346,9 +347,8 @@ namespace en
 		void InitDepthPipeline();
 		void InitShadowPipeline();
 		void InitOmniShadowPipeline();
-		void InitGeometryPipeline();
+		void InitForwardClusteredPipeline();
 		void InitSSAOPipeline();
-		void InitLightingPipeline();
 		void InitTonemappingPipeline();
 		void InitAntialiasingPipeline();
 
