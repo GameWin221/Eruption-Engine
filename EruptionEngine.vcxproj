@@ -193,6 +193,7 @@
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\ComputeShader.cpp" />
     <ClCompile Include="Source\Renderer\Image.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
@@ -269,6 +270,7 @@
     <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\ComputeShader.hpp" />
     <ClInclude Include="Source\Renderer\Image.hpp" />
     <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />

@@ -16,7 +16,6 @@ namespace en
 		};
 
 		VkShaderModule shaderModule{};
-
 		if (vkCreateShaderModule(ctx.m_LogicalDevice, &shaderCreateInfo, nullptr, &shaderModule) != VK_SUCCESS)
 			EN_ERROR("ComputeShader::ComputeShader() - Failed to create the compute shader module!");
 
@@ -61,13 +60,13 @@ namespace en
 
 	void ComputeShader::Bind(VkCommandBuffer& cmd)
 	{
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_Pipeline);
+		m_BoundCommandBuffer = cmd;
+
+		vkCmdBindPipeline(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Pipeline);
 	}
 
-	void ComputeShader::Dispatch(VkCommandBuffer& cmd, const uint32_t& x, const uint32_t& y, const uint32_t& z)
+	void ComputeShader::Dispatch(const uint32_t x, const uint32_t y, const uint32_t z)
 	{
-		//vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_Pipeline);
-
-		vkCmdDispatch(cmd, x, y, z);
+		vkCmdDispatch(m_BoundCommandBuffer, x, y, z);
 	}
 }

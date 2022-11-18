@@ -22,14 +22,16 @@ namespace en
 
 		void Bind(VkCommandBuffer& cmd);
 
-		void Dispatch(VkCommandBuffer& cmd, const uint32_t& x = 1U, const uint32_t& y = 1U, const uint32_t& z = 1U);
+		void Dispatch(const uint32_t x = 1U, const uint32_t y = 1U, const uint32_t z = 1U);
 
 		const std::string m_SourcePath;
 
-		VkPipelineLayout m_PipelineLayout;
+		VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
 
 	private:
-		VkPipeline m_Pipeline;
+		VkPipeline m_Pipeline = VK_NULL_HANDLE;
+
+		VkCommandBuffer m_BoundCommandBuffer = VK_NULL_HANDLE;
 	};
 }
 #endif

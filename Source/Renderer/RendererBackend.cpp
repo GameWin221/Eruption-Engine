@@ -175,6 +175,7 @@ namespace en
 
 		m_CameraMatrices->m_Matrices[m_FrameIndex].proj = m_MainCamera->GetProjMatrix();
 		m_CameraMatrices->m_Matrices[m_FrameIndex].view = m_MainCamera->GetViewMatrix();
+		m_CameraMatrices->m_Matrices[m_FrameIndex].projView = m_MainCamera->GetProjMatrix() * m_MainCamera->GetViewMatrix();
 
 		m_Lights.LBO.viewPos = m_MainCamera->m_Position;
 		m_Lights.LBO.debugMode = m_DebugMode;
@@ -695,10 +696,6 @@ namespace en
 				.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 				.loadOp		 = VK_ATTACHMENT_LOAD_OP_LOAD,
 				.storeOp	 = VK_ATTACHMENT_STORE_OP_STORE,
-
-				.clearValue {
-					.depthStencil = { 1.0f, 0U}
-				}
 			},
 			 
 			.extent = m_Swapchain->GetExtent()
