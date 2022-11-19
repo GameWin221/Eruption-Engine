@@ -37,6 +37,10 @@ namespace en
 
 		EN_SUCCESS("Created lights buffer!");
 
+			CreateClusterSSBOs();
+
+		EN_SUCCESS("Created cluster rendering SSBOs!")
+
 			CreateSSAOBuffer();
 
 		EN_SUCCESS("Created SSAO buffer!");
@@ -76,6 +80,10 @@ namespace en
 			CreateCommandBuffer();
 
 		EN_SUCCESS("Created command buffer!")
+
+			CreateClusterComputePipelines();
+
+		EN_SUCCESS("Created cluster rendering compute pipelines!")
 
 			InitDepthPipeline();
 
@@ -121,6 +129,10 @@ namespace en
 
 		EN_SUCCESS("Created camera matrices buffer!")
 
+			UpdateClusterAABBs();
+
+		EN_SUCCESS("Updated cluster AABBs")
+
 		EN_SUCCESS("Created the renderer Vulkan backend");
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
@@ -161,6 +173,12 @@ namespace en
 	{
 		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
 
+		m_Lights.LBO.tileSizes = glm::vec4(m_ClusterSSBOs.clusterCount, 0.0);
+		m_Lights.LBO.screenDimensions = glm::uvec4(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, 0.0, 0.0);
+
+		m_Lights.LBO.scale = (float)m_ClusterSSBOs.clusterCount.z / std::log2f(m_MainCamera->m_FarPlane / m_MainCamera->m_NearPlane);
+		m_Lights.LBO.bias = -((float)m_ClusterSSBOs.clusterCount.z * std::log2f(m_MainCamera->m_NearPlane) / std::log2f(m_MainCamera->m_FarPlane / m_MainCamera->m_NearPlane));
+
 		auto& pointLights = m_Scene->m_PointLights;
 		auto& spotLights = m_Scene->m_SpotLights;
 		auto& dirLights = m_Scene->m_DirectionalLights;
@@ -171,11 +189,14 @@ namespace en
 
 		m_CameraMatrices->m_Matrices[m_FrameIndex].proj = m_MainCamera->GetProjMatrix();
 		m_CameraMatrices->m_Matrices[m_FrameIndex].view = m_MainCamera->GetViewMatrix();
-		m_CameraMatrices->m_Matrices[m_FrameIndex].projView = m_MainCamera->GetProjMatrix() * m_MainCamera->GetViewMatrix();
+		m_CameraMatrices->m_Matrices[m_FrameIndex].invView = glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].view);
+		m_CameraMatrices->m_Matrices[m_FrameIndex].projView = m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view;
+		m_CameraMatrices->m_Matrices[m_FrameIndex].zNear = m_MainCamera->m_NearPlane;
+		m_CameraMatrices->m_Matrices[m_FrameIndex].zFar = m_MainCamera->m_FarPlane;
 
 		m_Lights.LBO.viewPos = m_MainCamera->m_Position;
 		m_Lights.LBO.debugMode = m_DebugMode;
-		m_Lights.LBO.viewMat = m_CameraMatrices->m_Matrices[m_FrameIndex].view;
+		//m_Lights.LBO.viewMat = m_CameraMatrices->m_Matrices[m_FrameIndex].view;
 
 		for (auto& l : pointLights)
 			l.m_ShadowmapIndex = -1;
@@ -678,6 +699,16 @@ namespace en
 		if (m_SkipFrame || !m_Scene)
 			return;
 
+		m_ClusterLightCullingCompute->Bind(m_CommandBuffers[m_FrameIndex]);
+
+		m_ClusterLightCullingCompute->BindDescriptorSet(m_ClusterSSBOs.clusterLightCullingDescriptors[m_FrameIndex].get());
+
+		glm::mat4 view = m_CameraMatrices->m_Matrices[m_FrameIndex].view;
+
+		m_ClusterLightCullingCompute->PushConstants(&view, sizeof(glm::mat4), 0U);
+
+		m_ClusterLightCullingCompute->Dispatch(1, 1, 6);
+
 		m_HDROffscreen->ChangeLayout(
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -959,6 +990,7 @@ namespace en
 		}
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
+
 		m_Swapchain.reset();
 		m_Swapchain = std::make_unique<Swapchain>(m_VSync);
 
@@ -966,10 +998,23 @@ namespace en
 		CreateHDROffscreen();
 		CreateSSAOTarget();
 
+		UpdateClusterAABBs();
+
 		UpdateGBufferInput();
 		UpdateSwapchainInputs();
 		UpdateHDRInput();
 		UpdateSSAOInput();
+
+		for (auto& fence : m_SubmitFences)
+			vkDestroyFence(m_Ctx->m_LogicalDevice, fence, nullptr);
+
+		for (auto& semaphore : m_MainSemaphores)
+			vkDestroySemaphore(m_Ctx->m_LogicalDevice, semaphore, nullptr);
+
+		for (auto& semaphore : m_PresentSemaphores)
+			vkDestroySemaphore(m_Ctx->m_LogicalDevice, semaphore, nullptr);
+
+		CreateSyncObjects();
 
 		m_Swapchain->CreateSwapchainFramebuffers(m_ImGui.renderPass);
 
@@ -1034,6 +1079,7 @@ namespace en
 		CreateHDROffscreen();
 		CreateSSAOTarget();
 		CreateSSAOBuffer();
+		CreateClusterSSBOs();
 
 		InitShadows();
 
@@ -1042,6 +1088,9 @@ namespace en
 		UpdateHDRInput();
 		UpdateSSAOInput();
 
+		UpdateClusterAABBs();
+
+		CreateClusterComputePipelines();
 		InitDepthPipeline();
 		InitShadowPipeline();
 		InitOmniShadowPipeline();
@@ -1171,6 +1220,154 @@ namespace en
 
 		stagingBuffer.CopyTo(m_SSAOBuffer.get());
 	}
+	
+	struct ScreenToViewPushConstant {
+		glm::mat4 inverseProj;
+
+		glm::uvec4 tileSizes;
+		glm::uvec2 screenSize;
+
+		float zNear;
+		float zFar;
+	};
+	
+	void RendererBackend::CreateClusterSSBOs()
+	{
+		auto& gridSize = m_ClusterSSBOs.clusterCount;
+		uint32_t clusterCount = gridSize.x * gridSize.y * gridSize.z;
+
+		m_ClusterSSBOs.aabbClusters = std::make_unique<MemoryBuffer>(
+			sizeof(glm::vec4) * 2 * clusterCount,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
+
+		m_ClusterSSBOs.pointLightGrid = std::make_unique<MemoryBuffer>(
+			sizeof(uint32_t) * 20 /*20 lights per tile*/ * clusterCount,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
+
+		m_ClusterSSBOs.pointLightIndices = std::make_unique<MemoryBuffer>(
+			sizeof(uint32_t) * clusterCount,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
+	}
+
+	void RendererBackend::CreateClusterComputePipelines()
+	{
+		DescriptorSet::BufferInfo aabbBufferInfo{
+			.buffer = m_ClusterSSBOs.aabbClusters->m_Handle,
+			.size = m_ClusterSSBOs.aabbClusters->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		m_ClusterSSBOs.aabbClustersDescriptor = std::make_unique<DescriptorSet>(
+			std::vector<DescriptorSet::ImageInfo>{},
+			std::vector<DescriptorSet::BufferInfo>{aabbBufferInfo}
+		);
+
+		DescriptorSet::BufferInfo pointLightGridBufferInfo{
+			.index = 1U,
+			.buffer = m_ClusterSSBOs.pointLightGrid->m_Handle,
+			.size = m_ClusterSSBOs.pointLightGrid->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+
+		DescriptorSet::BufferInfo pointLightIndicesBufferInfo{
+			.index = 2U,
+			.buffer = m_ClusterSSBOs.pointLightIndices->m_Handle,
+			.size = m_ClusterSSBOs.pointLightIndices->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		for (uint32_t i = 0U; i < FRAMES_IN_FLIGHT; i++)
+		{
+			DescriptorSet::BufferInfo lightBuffer{
+				.index = 3U,
+				.buffer = m_Lights.buffers[i]->m_Handle,
+				.size = m_Lights.buffers[i]->m_BufferSize,
+				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.stage = VK_SHADER_STAGE_COMPUTE_BIT
+			};
+
+			m_ClusterSSBOs.clusterLightCullingDescriptors[i] = std::make_unique<DescriptorSet>(
+				std::vector<DescriptorSet::ImageInfo>{},
+				std::vector<DescriptorSet::BufferInfo>{
+				aabbBufferInfo,
+					pointLightGridBufferInfo,
+					pointLightIndicesBufferInfo,
+					lightBuffer,
+			});
+		}
+
+		constexpr VkPushConstantRange stvPushConstant{
+			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+			.offset = 0U,
+			.size = sizeof(ScreenToViewPushConstant)
+		};
+
+		ComputeShader::CreateInfo aabbInfo{
+			.sourcePath = "Shaders/ClusterAABB.spv",
+			.descriptorLayouts = { m_ClusterSSBOs.aabbClustersDescriptor->m_DescriptorLayout },
+			.pushConstantRanges = { stvPushConstant },
+		};
+
+		m_ClusterAABBCompute = std::make_unique<ComputeShader>(aabbInfo);
+
+		constexpr VkPushConstantRange cameraPushConstant{
+			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+			.offset = 0U,
+			.size = sizeof(glm::mat4)
+		};
+
+		ComputeShader::CreateInfo lightCullInfo{
+			.sourcePath = "Shaders/ClusterLightCulling.spv",
+			.descriptorLayouts = { m_ClusterSSBOs.clusterLightCullingDescriptors[0]->m_DescriptorLayout},
+			.pushConstantRanges = { cameraPushConstant },
+		};
+
+		m_ClusterLightCullingCompute = std::make_unique<ComputeShader>(lightCullInfo);
+	}
+
+	void RendererBackend::UpdateClusterAABBs()
+	{
+		glm::mat4 inverseProj(glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj));
+
+		uint32_t clusterPxWidth = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / m_ClusterSSBOs.clusterCount.x);
+
+		glm::uvec4 tileSizes(m_ClusterSSBOs.clusterCount.x, m_ClusterSSBOs.clusterCount.y, m_ClusterSSBOs.clusterCount.z, clusterPxWidth);
+		glm::uvec2 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height);
+
+		float zNear = m_MainCamera->m_NearPlane;
+		float zFar = m_MainCamera->m_FarPlane;
+
+		ScreenToViewPushConstant pc{
+			inverseProj,
+			tileSizes,
+			screenSize,
+
+			zNear,
+			zFar
+		};
+
+		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
+
+		m_ClusterAABBCompute->Bind(cmd);
+
+		m_ClusterAABBCompute->PushConstants(&pc, sizeof(ScreenToViewPushConstant), 0U);
+
+		m_ClusterAABBCompute->BindDescriptorSet(m_ClusterSSBOs.aabbClustersDescriptor.get());
+
+		m_ClusterAABBCompute->Dispatch(m_ClusterSSBOs.clusterCount.x, m_ClusterSSBOs.clusterCount.y, m_ClusterSSBOs.clusterCount.z);
+
+		Helpers::EndSingleTimeGraphicsCommands(cmd);
+	}
+
 	void RendererBackend::CreateDepthBuffer()
 	{
 		m_DepthBuffer = std::make_unique<Image>(
@@ -1222,18 +1419,33 @@ namespace en
 				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
 			};
 
-			const DescriptorSet::BufferInfo buffer{
+			const DescriptorSet::BufferInfo lightBuffer{
 				.index = 3U,
 				.buffer = m_Lights.buffers[i]->m_Handle,
-				.size = sizeof(m_Lights.LBO)
+				.size = sizeof(m_Lights.LBO),
+			};
+
+			const DescriptorSet::BufferInfo indexBuffer{
+				.index = 4U,
+				.buffer = m_ClusterSSBOs.pointLightIndices->m_Handle,
+				.size = m_ClusterSSBOs.pointLightIndices->m_BufferSize,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+			};
+
+			const DescriptorSet::BufferInfo gridBuffer{
+				.index = 5U,
+				.buffer = m_ClusterSSBOs.pointLightGrid->m_Handle,
+				.size = m_ClusterSSBOs.pointLightGrid->m_BufferSize,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
 			};
 
 			auto imageInfos = { pointShadowmaps, spotShadowmaps, dirShadowmaps };
+			auto bufferInfos = { lightBuffer, indexBuffer, gridBuffer };
 
 			if (!m_ForwardClusteredDescriptor[i])
-				m_ForwardClusteredDescriptor[i] = std::make_unique<DescriptorSet>(imageInfos, buffer);
+				m_ForwardClusteredDescriptor[i] = std::make_unique<DescriptorSet>(imageInfos, bufferInfos);
 			else
-				m_ForwardClusteredDescriptor[i]->Update(imageInfos, buffer);
+				m_ForwardClusteredDescriptor[i]->Update(imageInfos, bufferInfos);
 		}
 	}
 	void RendererBackend::UpdateHDRInput()
@@ -1247,9 +1459,9 @@ namespace en
 		auto imageInfos = { HDRColorBuffer};
 
 		if (!m_HDRInput)
-			m_HDRInput = std::make_unique<DescriptorSet>(imageInfos);
+			m_HDRInput = std::make_unique<DescriptorSet>(imageInfos, std::vector<DescriptorSet::BufferInfo>{});
 		else
-			m_HDRInput->Update(imageInfos);
+			m_HDRInput->Update(imageInfos, std::vector<DescriptorSet::BufferInfo>{});
 	}
 	void RendererBackend::UpdateSwapchainInputs()
 	{
@@ -1267,9 +1479,9 @@ namespace en
 			auto imageInfo = { image };
 
 			if (!m_SwapchainInputs[i])
-				m_SwapchainInputs[i] = std::make_unique<DescriptorSet>(imageInfo);
+				m_SwapchainInputs[i] = std::make_unique<DescriptorSet>(imageInfo, std::vector<DescriptorSet::BufferInfo>{});
 			else
-				m_SwapchainInputs[i]->Update(imageInfo);
+				m_SwapchainInputs[i]->Update(imageInfo, std::vector<DescriptorSet::BufferInfo>{});
 		}
 	}
 	void RendererBackend::UpdateSSAOInput()
@@ -1421,13 +1633,13 @@ namespace en
 	}
 	void RendererBackend::InitShadowPipeline()
 	{
-		constexpr VkPushConstantRange depthPushConstant{
+		constexpr VkPushConstantRange depthPushConstant {
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset = 0U,
 			.size = sizeof(DepthStageInfo)
 		};
 
-		const Pipeline::CreateInfo pipelineInfo{
+		const Pipeline::CreateInfo pipelineInfo {
 			.depthFormat = m_Shadows.shadowFormat,
 			.vShader = "Shaders/Depth.spv",
 			.pushConstantRanges = { depthPushConstant },
@@ -1567,11 +1779,11 @@ namespace en
 		for(auto& fence : m_SubmitFences)
 			if (vkCreateFence(m_Ctx->m_LogicalDevice, &fenceInfo, nullptr, &fence) != VK_SUCCESS)
 				EN_ERROR("RendererBackend::CreateSyncObjects() - Failed to create submit fences!");
-
+		
 		constexpr VkSemaphoreCreateInfo semaphoreInfo{
 			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
 		};
-
+		
 		for (auto& semaphore : m_MainSemaphores)
 			if (vkCreateSemaphore(m_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS)
 				EN_ERROR("Pipeline::CreateSyncSemaphore - Failed to create main semaphores!");

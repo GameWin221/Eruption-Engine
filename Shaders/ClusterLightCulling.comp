@@ -1,5 +1,7 @@
 #version 450
-layout(local_size_x = 16, local_size_y = 9, local_size_y = 8) in;
+layout(local_size_x = 16, local_size_y = 9, local_size_z = 4) in;
+
+#include "../EruptionEngine.ini"
 
 struct ClusterAABB {
     vec4 min;
@@ -12,19 +14,46 @@ struct LightGrid
     uint count;
 };
 
-struct PointLight 
+struct PointLight
 {
-    vec4 position;
-    vec4 color;
-    uint enabled;
-    float intensity;
+    vec3 position;
+    float radius;
+    vec3 color;
+	int shadowmapIndex;
+	float shadowSoftness;
+    int pcfSampleRate; 
+    float bias;
+};
+struct SpotLight
+{
+    vec3 position;
+    float innerCutoff;
+    vec3 direction;
+    float outerCutoff;
+    vec3 color;
     float range;
+    mat4 projView;
+    int shadowmapIndex;
+    float shadowSoftness;
+    int pcfSampleRate; 
+    float bias;
+};
+struct DirLight
+{
+    vec3 direction;
+    int shadowmapIndex;
+    vec3 color;
+    float shadowSoftness;
+    int pcfSampleRate;
+    float bias;
+    
+    mat4 projView[SHADOW_CASCADES];
 };
 
 layout (std430, binding = 0) buffer AABBClustersBuffer
 {
     ClusterAABB clusters[];
-} aabbBuffer;
+};
 
 layout (std430, binding = 1) buffer LightGrids 
 {
@@ -35,9 +64,32 @@ layout (std430, binding = 2) buffer lightIndexSSBO{
     uint globalLightIndexList[];
 };
 
-layout (std430, binding = 3) buffer LightsBuffer
+layout(binding = 3) uniform UBO 
 {
-    PointLight pointLights[];
+    PointLight pLights[MAX_POINT_LIGHTS];
+    SpotLight  sLights[MAX_SPOT_LIGHTS];
+    DirLight   dLights[MAX_DIR_LIGHTS];
+
+    uint activePointLights;
+    uint activeSpotLights;
+    uint activeDirLights;
+    float dummy0;
+
+    vec3 ambient;
+    float dummy1;
+
+    vec4 cascadeSplitDistances[SHADOW_CASCADES];
+
+    vec4 cascadeRatios[SHADOW_CASCADES];
+
+    vec3 viewPos;
+    int debugMode;
+
+    uvec4 tileSizes;
+    uvec2 screenDimensions;
+    float scale;
+    float bias;
+
 } lightsBuffer;
 
 layout(push_constant) uniform CameraPushConstant
@@ -51,9 +103,9 @@ float SqDistPointAABB(vec3 point, uint tile)
 {
     float sqDist = 0.0;
 
-    aabbBuffer.clusters[tile].max[3] = tile;
+    clusters[tile].max[3] = tile;
 
-    ClusterAABB currentCell = aabbBuffer.clusters[tile];
+    ClusterAABB currentCell = clusters[tile];
 
     for(int i = 0; i < 3; ++i)
     {
@@ -71,9 +123,9 @@ float SqDistPointAABB(vec3 point, uint tile)
 
 bool SphereAABBIntersection(uint light, uint tile) 
 {
-    float radius = sharedPointLights[light].range;
+    float radius = sharedPointLights[light].radius;
 
-    vec3 center = vec3(camera.view * sharedPointLights[light].position);
+    vec3 center = vec3(camera.view * vec4(sharedPointLights[light].position, 1.0));
 
     float sqDistance = SqDistPointAABB(center, tile);
 
@@ -86,10 +138,11 @@ void main()
 {
     globalIndexCount = 0;
     uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
-    uint lightCount  = lightsBuffer.pointLights.length();
+    uint lightCount  = MAX_POINT_LIGHTS;
     uint numBatches  = (lightCount + threadCount - 1) / threadCount;
 
-    uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
+    uint tileIndex = gl_LocalInvocationIndex + 
+                     gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
     
     uint visibleLightCount = 0;
     uint visibleLightIndices[100];
@@ -101,12 +154,13 @@ void main()
         lightIndex = min(lightIndex, lightCount);
 
         //Populating shared light array
-        sharedPointLights[gl_LocalInvocationIndex] = lightsBuffer.pointLights[lightIndex];
+        sharedPointLights[gl_LocalInvocationIndex] = lightsBuffer.pLights[lightIndex];
         barrier();
 
         //Iterating within the current batch of lights
-        for(uint light = 0; light < threadCount; ++light){
-            if(sharedPointLights[light].enabled == 1)
+        for(uint light = 0; light < threadCount; ++light)
+        {
+            if(sharedPointLights[light].color != vec3(0.0))
             {
                 if(SphereAABBIntersection(light, tileIndex))
                 {

@@ -4,6 +4,7 @@
 #define EN_COMPUTESHADER_HPP
 
 #include <Renderer/Shader.hpp>
+#include <Renderer/DescriptorSet.hpp>
 
 namespace en
 {
@@ -21,6 +22,11 @@ namespace en
 		~ComputeShader();
 
 		void Bind(VkCommandBuffer& cmd);
+
+		void PushConstants(const void* data, uint32_t size, uint32_t offset);
+
+		void BindDescriptorSet(DescriptorSet* descriptor, uint32_t index = 0U);
+		void BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index = 0U);
 
 		void Dispatch(const uint32_t x = 1U, const uint32_t y = 1U, const uint32_t z = 1U);
 

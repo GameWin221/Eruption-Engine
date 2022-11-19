@@ -2,7 +2,7 @@
 
 #include "../EruptionEngine.ini"
 
-layout(location = 0) in vec3 fPosition;
+layout(location = 0) in vec4 fPosition;
 layout(location = 1) in vec3 fNormal;
 layout(location = 2) in vec2 fTexcoord;
 layout(location = 3) in mat3 fTBN;
@@ -84,9 +84,25 @@ layout(set = 2, binding = 3) uniform UBO
     vec3 viewPos;
     int debugMode;
 
-    mat4 cameraView;
+    uvec4 tileSizes;
+    uvec2 screenDimensions;
+    float scale;
+    float bias;
 
 } lightsBuffer;
+
+struct LightGrid
+{
+    uint offset;
+    uint count;
+};
+
+layout (std430, set = 2, binding = 4) buffer lightIndexSSBO {
+    uint globalLightIndexList[];
+};
+layout (std430, set = 2, binding = 5) buffer lightGridSSBO {
+    LightGrid lightGrid[];
+};
 
 #define PI 3.14159265359
 
@@ -306,6 +322,7 @@ float RadiansBetweenDirs(vec3 a, vec3 b)
 //    return result / 16.0;
 //}
 
+
 vec3 NormalMapping()
 {
     vec3 normalMap = texture(normalTexture, fTexcoord).xyz;
@@ -320,15 +337,16 @@ void main()
 {
     vec4 albedoAlpha = texture(albedoTexture, fTexcoord);
 
-    vec3 albedo = albedoAlpha.rgb;
+    vec3 albedo    = albedoAlpha.rgb;
     vec3 normal    = NormalMapping();
-    vec3 position  = fPosition;
+    vec3 position  = fPosition.xyz;
+    float linearDepth    = fPosition.w;
 
     float roughness = texture(roughnessTexture, fTexcoord).r * mbo.roughnessVal;
     float metalness = texture(metalnessTexture, fTexcoord).r * mbo.metalnessVal;
 
     float alpha = albedoAlpha.a;
-
+    /*
     float depth = length(lightsBuffer.viewPos-position);
 
     vec4 viewPos = lightsBuffer.cameraView * vec4(position, 1.0f);
@@ -338,7 +356,7 @@ void main()
     for(int i = 0; i < SHADOW_CASCADES-1; i++)
         if (-viewPos.z > lightsBuffer.cascadeSplitDistances[i].x)
 		    cascade = i+1;
-
+    */
     vec3 ambient = albedo * lightsBuffer.ambient;
     vec3 lighting = vec3(0.0);
 
@@ -347,18 +365,29 @@ void main()
     vec3 viewDir = normalize(lightsBuffer.viewPos - position);
     float viewDist = length(lightsBuffer.viewPos - position);
 
-    for(int i = 0; i < lightsBuffer.activePointLights; i++)
+    uint  zTile     = uint(max(log2(linearDepth) * lightsBuffer.scale + lightsBuffer.bias, 0.0));
+    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / lightsBuffer.tileSizes[3] ), zTile);
+    uint  tileIndex = tiles.x +
+                      lightsBuffer.tileSizes.x * tiles.y +
+                      lightsBuffer.tileSizes.x * lightsBuffer.tileSizes.y * tiles.z;  
+
+    uint lightCount       = lightGrid[tileIndex].count;
+    uint lightIndexOffset = lightGrid[tileIndex].offset;
+
+    for(int i = 0; i < lightCount; i++)
     {
-        vec3 diff = position - lightsBuffer.pLights[i].position;
-        float dist = length(diff);
-        
         float shadow = 0.0;
-        if(lightsBuffer.pLights[i].shadowmapIndex != -1)
-            shadow = CalculateOmniShadows(diff, viewDist, lightsBuffer.pLights[i].radius, lightsBuffer.pLights[i].shadowmapIndex, lightsBuffer.pLights[i].pcfSampleRate, lightsBuffer.pLights[i].bias, lightsBuffer.pLights[i].shadowSoftness);
+        //if(lightsBuffer.pLights[i].shadowmapIndex != -1)
+            //shadow = CalculateOmniShadows(diff, viewDist, lightsBuffer.pLights[i].radius, lightsBuffer.pLights[i].shadowmapIndex, lightsBuffer.pLights[i].pcfSampleRate, lightsBuffer.pLights[i].bias, lightsBuffer.pLights[i].shadowSoftness);
         
-        if(dist < lightsBuffer.pLights[i].radius)
-            lighting += CalculatePointLight(lightsBuffer.pLights[i], albedo, roughness, metalness, F0, viewDir, position, normal, dist) * (1.0-shadow);
+        uint lightId = globalLightIndexList[lightIndexOffset + i];
+
+        float dist = distance(position, lightsBuffer.pLights[lightId].position);
+        
+        //if(dist < lightsBuffer.pLights[i].radius)
+        lighting += CalculatePointLight(lightsBuffer.pLights[lightId], albedo, roughness, metalness, F0, viewDir, position, normal, dist) * (1.0-shadow);
     }
+    /*
     for(int i = 0; i < lightsBuffer.activeSpotLights; i++)
     {
         vec3 lightToSurfaceDir = normalize(position - lightsBuffer.sLights[i].position);
@@ -391,7 +420,7 @@ void main()
         
         lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);
     }
-
+    */
     vec3 result = vec3(0.0f);
     
 
@@ -416,24 +445,24 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
-            result = vec3(alpha);
+            result = vec3(lightCount / 2.01, 0 ,0);
             break;
         case 7:
-            switch(cascade)
-            {
-                case 0:
-                    result = albedo + vec3(0.2, 0.0, 0.0);
-                    break;
-                case 1:
-                    result = albedo + vec3(0.0, 0.2, 0.0);
-                    break;
-                case 2:
-                    result = albedo + vec3(0.0, 0.0, 0.2);
-                    break;
-                default: 
-                    result = vec3(0.1);
-                    break;
-            }
+            //switch(cascade)
+            //{
+            //    case 0:
+            //        result = albedo + vec3(0.2, 0.0, 0.0);
+            //        break;
+            //    case 1:
+            //        result = albedo + vec3(0.0, 0.2, 0.0);
+            //        break;
+            //    case 2:
+            //        result = albedo + vec3(0.0, 0.0, 0.2);
+            //        break;
+            //    default: 
+            //        result = vec3(0.1);
+            //        break;
+            //}
             break;
     }
     

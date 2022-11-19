@@ -16,7 +16,7 @@
 #include <Renderer/Window.hpp>
 #include <Renderer/Context.hpp>
 #include <Renderer/Shader.hpp>
-//#include <Renderer/ComputeShader.hpp>
+#include <Renderer/ComputeShader.hpp>
 
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
@@ -163,7 +163,11 @@ namespace en
 				glm::vec3 viewPos = glm::vec3(0.0f);
 				int debugMode = 0;
 
-				glm::mat4 viewMat = glm::mat4(1.0f);
+				glm::uvec4 tileSizes;
+				glm::uvec4 screenDimensions;
+
+				float scale;
+				float bias;
 			} LBO;
 
 			std::unique_ptr<MemoryBuffer> stagingBuffer;
@@ -271,6 +275,22 @@ namespace en
 
 		} m_ImGui;
 
+		struct ClusterSSBOs
+		{
+			std::unique_ptr<MemoryBuffer> aabbClusters;
+			std::unique_ptr<DescriptorSet> aabbClustersDescriptor;
+
+			std::unique_ptr<MemoryBuffer> pointLightGrid;
+			std::unique_ptr<MemoryBuffer> pointLightIndices;
+
+			std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> clusterLightCullingDescriptors;
+
+			const glm::uvec3 clusterCount = glm::uvec3(16, 9, 24);
+		} m_ClusterSSBOs;
+
+		std::unique_ptr<ComputeShader> m_ClusterAABBCompute;
+		std::unique_ptr<ComputeShader> m_ClusterLightCullingCompute;
+
 		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
@@ -329,6 +349,10 @@ namespace en
 		void CreateCommandBuffer();
 		void CreateLightsBuffer();
 		void CreateSSAOBuffer();
+		void CreateClusterSSBOs();
+		void CreateClusterComputePipelines();
+
+		void UpdateClusterAABBs();
 
 		void CreateDepthBuffer();
 		void CreateHDROffscreen();

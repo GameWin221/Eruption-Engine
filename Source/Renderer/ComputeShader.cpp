@@ -65,6 +65,19 @@ namespace en
 		vkCmdBindPipeline(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_Pipeline);
 	}
 
+	void ComputeShader::PushConstants(const void* data, uint32_t size, uint32_t offset)
+	{
+		vkCmdPushConstants(m_BoundCommandBuffer, m_PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, offset, size, data);
+	}
+	void ComputeShader::BindDescriptorSet(DescriptorSet* descriptor, uint32_t index)
+	{
+		vkCmdBindDescriptorSets(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_PipelineLayout, index, 1U, &descriptor->m_DescriptorSet, 0U, nullptr);
+	}
+	void ComputeShader::BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index)
+	{
+		vkCmdBindDescriptorSets(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_PipelineLayout, index, 1U, &descriptor, 0U, nullptr);
+	}
+
 	void ComputeShader::Dispatch(const uint32_t x, const uint32_t y, const uint32_t z)
 	{
 		vkCmdDispatch(m_BoundCommandBuffer, x, y, z);

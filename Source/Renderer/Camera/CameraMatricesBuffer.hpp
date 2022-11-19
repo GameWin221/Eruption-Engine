@@ -26,8 +26,12 @@ namespace en
 		struct CameraMatricesBufferObject
 		{
 			glm::mat4 view = glm::mat4(1.0f);
+			glm::mat4 invView = glm::mat4(1.0f);
 			glm::mat4 proj = glm::mat4(1.0f);
 			glm::mat4 projView = glm::mat4(1.0f);
+
+			float zNear = 0.0f;
+			float zFar = 1.0f;
 		};
 
 		std::array<CameraMatricesBufferObject, FRAMES_IN_FLIGHT> m_Matrices;
