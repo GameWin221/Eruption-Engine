@@ -30,6 +30,8 @@ namespace en
 			glm::mat4 proj = glm::mat4(1.0f);
 			glm::mat4 projView = glm::mat4(1.0f);
 
+			glm::vec4 position = glm::vec4(0.0f);
+
 			float zNear = 0.0f;
 			float zFar = 1.0f;
 		};

@@ -3,17 +3,6 @@ layout(local_size_x = 16, local_size_y = 9, local_size_z = 4) in;
 
 #include "../EruptionEngine.ini"
 
-struct ClusterAABB {
-    vec4 min;
-    vec4 max;
-};
-
-struct LightGrid
-{
-    uint offset;
-    uint count;
-};
-
 struct PointLight
 {
     vec3 position;
@@ -50,21 +39,39 @@ struct DirLight
     mat4 projView[SHADOW_CASCADES];
 };
 
+struct AABB 
+{
+    vec4 min;
+    vec4 max;
+};
+
 layout (std430, binding = 0) buffer AABBClustersBuffer
 {
-    ClusterAABB clusters[];
+    AABB clusters[];
+};
+
+struct LightGrid
+{
+    uint offset;
+    uint count;
 };
 
 layout (std430, binding = 1) buffer LightGrids 
 {
-    LightGrid grids[];
-} lightGridBuffer;
+    LightGrid lightGrids[];
+};
 
-layout (std430, binding = 2) buffer lightIndexSSBO{
+layout (std430, binding = 2) buffer LightIndexSSBO
+{
     uint globalLightIndexList[];
 };
 
-layout(binding = 3) uniform UBO 
+layout (std430, binding = 3) buffer GlobalindexCountSSBO
+{
+    uint globalIndexCount;
+};
+
+layout(binding = 4) uniform UBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     SpotLight  sLights[MAX_SPOT_LIGHTS];
@@ -86,7 +93,7 @@ layout(binding = 3) uniform UBO
     int debugMode;
 
     uvec4 tileSizes;
-    uvec2 screenDimensions;
+
     float scale;
     float bias;
 
@@ -99,55 +106,57 @@ layout(push_constant) uniform CameraPushConstant
 
 shared PointLight sharedPointLights[16*9*4];
 
-float SqDistPointAABB(vec3 point, uint tile)
+float SqDistPointAABB(vec3 point, uint tileID)
 {
     float sqDist = 0.0;
 
-    clusters[tile].max[3] = tile;
-
-    ClusterAABB currentCell = clusters[tile];
+    AABB currentCell = clusters[tileID];
 
     for(int i = 0; i < 3; ++i)
     {
         float v = point[i];
 
-        if(v < currentCell.min[i])
-            sqDist += (currentCell.min[i] - v) * (currentCell.min[i] - v);
+        float min = currentCell.min[i];
+        float max = currentCell.max[i];
+
+        float sqDistMin = min - v;
+        float sqDistMax = v - max;
+
+        if(v < min)
+            sqDist += sqDistMin * sqDistMin;
         
-        if(v > currentCell.max[i])
-            sqDist += (v - currentCell.max[i]) * (v - currentCell.max[i]);
+        if(v > max)
+            sqDist += sqDistMax * sqDistMax;
     }
 
     return sqDist;
 }
 
-bool SphereAABBIntersection(uint light, uint tile) 
+bool SphereAABBIntersection(uint light, uint tileID) 
 {
     float radius = sharedPointLights[light].radius;
 
-    vec3 center = vec3(camera.view * vec4(sharedPointLights[light].position, 1.0));
+    vec3 viewSpacePos = vec3(camera.view * vec4(sharedPointLights[light].position, 1.0));
 
-    float sqDistance = SqDistPointAABB(center, tile);
+    float sqDistance = SqDistPointAABB(viewSpacePos, tileID);
 
     return sqDistance <= (radius * radius);
 }
-
-shared uint globalIndexCount;
 
 void main()
 {
     globalIndexCount = 0;
     uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
-    uint lightCount  = MAX_POINT_LIGHTS;
+    uint lightCount  = lightsBuffer.activePointLights;
     uint numBatches  = (lightCount + threadCount - 1) / threadCount;
 
-    uint tileIndex = gl_LocalInvocationIndex + 
-                     gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
+    uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
     
     uint visibleLightCount = 0;
     uint visibleLightIndices[100];
 
-    for(uint batch = 0; batch < numBatches; ++batch){
+    for(uint batch = 0; batch < numBatches; ++batch)
+    {
         uint lightIndex = batch * threadCount + gl_LocalInvocationIndex;
 
         //Prevent overflow by clamping to last light which is always null
@@ -160,7 +169,7 @@ void main()
         //Iterating within the current batch of lights
         for(uint light = 0; light < threadCount; ++light)
         {
-            if(sharedPointLights[light].color != vec3(0.0))
+            if(sharedPointLights[light].color != vec3(0.0) && sharedPointLights[light].radius > 0)
             {
                 if(SphereAABBIntersection(light, tileIndex))
                 {
@@ -179,6 +188,6 @@ void main()
     for(uint i = 0; i < visibleLightCount; ++i)
         globalLightIndexList[offset + i] = visibleLightIndices[i];
 
-    lightGridBuffer.grids[tileIndex].offset = offset;
-    lightGridBuffer.grids[tileIndex].count = visibleLightCount;
+    lightGrids[tileIndex].offset = offset;
+    lightGrids[tileIndex].count = visibleLightCount;
 }

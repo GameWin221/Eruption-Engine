@@ -85,7 +85,7 @@ layout(set = 2, binding = 3) uniform UBO
     int debugMode;
 
     uvec4 tileSizes;
-    uvec2 screenDimensions;
+
     float scale;
     float bias;
 
@@ -194,7 +194,7 @@ float CalculateShadow(vec4 fPosLightSpace, sampler2DArray shadowmaps, int shadow
     return shadow;
 }
 
-float CalculateOmniShadows(vec3 fragToLightDiff, float viewToFragDist, float farPlane, int shadowmapIndex, int sampleCount, float bias, float softness)
+float CalculateOmniShadows(PointLight light, vec3 fragToLightDiff, float viewToFragDist)
 {
     float shadow = 0.0;
     float currentDepth = length(fragToLightDiff);
@@ -202,15 +202,15 @@ float CalculateOmniShadows(vec3 fragToLightDiff, float viewToFragDist, float far
     #if SOFT_SHADOWS
         for(int i = 0; i < 20; ++i)
         {
-            for(int j = 1; j <= sampleCount; j++)
+            for(int j = 1; j <= light.pcfSampleRate; j++)
             {
-                float interpolator = float(j) / sampleCount;
-                float closestDepth = texture(pointShadowmaps, vec4(fragToLightDiff + pcfSampleOffsets[i] * softness * interpolator * 0.01, shadowmapIndex)).r * farPlane;
+                float interpolator = float(j) / light.pcfSampleRate;
+                float closestDepth = texture(pointShadowmaps, vec4(fragToLightDiff + pcfSampleOffsets[i] * light.shadowSoftness * interpolator * 0.01, light.shadowmapIndex)).r * light.radius;
 
-                shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
+                shadow += currentDepth - light.bias > closestDepth ? 1.0 : 0.0;
             }
         }
-        shadow /= 20.0 * sampleCount;  
+        shadow /= 20.0 * light.pcfSampleRate;  
     #else
         float closestDepth = texture(pointShadowmaps, vec4(fragToLightDiff, shadowmapIndex)).r * farPlane;
 
@@ -220,8 +220,10 @@ float CalculateOmniShadows(vec3 fragToLightDiff, float viewToFragDist, float far
     return shadow;
 }
 
-vec3 CalculatePointLight(PointLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, float dist)
+vec3 CalculatePointLight(PointLight light, vec3 albedo, float roughness, float metalness, vec3 F0, vec3 viewDir, vec3 position, vec3 normal, vec3 diff)
 {
+    float dist = length(diff);
+
     float attenuation = max(1.0 - dist*dist/(light.radius*light.radius), 0.0); 
     attenuation *= attenuation;
 
@@ -340,7 +342,8 @@ void main()
     vec3 albedo    = albedoAlpha.rgb;
     vec3 normal    = NormalMapping();
     vec3 position  = fPosition.xyz;
-    float linearDepth    = fPosition.w;
+
+    float linearDepth = fPosition.w;
 
     float roughness = texture(roughnessTexture, fTexcoord).r * mbo.roughnessVal;
     float metalness = texture(metalnessTexture, fTexcoord).r * mbo.metalnessVal;
@@ -364,9 +367,9 @@ void main()
 
     vec3 viewDir = normalize(lightsBuffer.viewPos - position);
     float viewDist = length(lightsBuffer.viewPos - position);
-
+    
     uint  zTile     = uint(max(log2(linearDepth) * lightsBuffer.scale + lightsBuffer.bias, 0.0));
-    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / lightsBuffer.tileSizes[3] ), zTile);
+    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / lightsBuffer.tileSizes[3]), zTile);
     uint  tileIndex = tiles.x +
                       lightsBuffer.tileSizes.x * tiles.y +
                       lightsBuffer.tileSizes.x * lightsBuffer.tileSizes.y * tiles.z;  
@@ -376,16 +379,17 @@ void main()
 
     for(int i = 0; i < lightCount; i++)
     {
-        float shadow = 0.0;
-        //if(lightsBuffer.pLights[i].shadowmapIndex != -1)
-            //shadow = CalculateOmniShadows(diff, viewDist, lightsBuffer.pLights[i].radius, lightsBuffer.pLights[i].shadowmapIndex, lightsBuffer.pLights[i].pcfSampleRate, lightsBuffer.pLights[i].bias, lightsBuffer.pLights[i].shadowSoftness);
-        
         uint lightId = globalLightIndexList[lightIndexOffset + i];
 
-        float dist = distance(position, lightsBuffer.pLights[lightId].position);
+        PointLight light = lightsBuffer.pLights[lightId];
+
+        vec3 diff = position - light.position;
+
+        float shadow = 0.0;
+        if(light.shadowmapIndex != -1)
+            shadow = CalculateOmniShadows(light, diff, viewDist);
         
-        //if(dist < lightsBuffer.pLights[i].radius)
-        lighting += CalculatePointLight(lightsBuffer.pLights[lightId], albedo, roughness, metalness, F0, viewDir, position, normal, dist) * (1.0-shadow);
+        lighting += CalculatePointLight(light, albedo, roughness, metalness, F0, viewDir, position, normal, diff) * (1.0-shadow);
     }
     /*
     for(int i = 0; i < lightsBuffer.activeSpotLights; i++)
@@ -422,7 +426,7 @@ void main()
     }
     */
     vec3 result = vec3(0.0f);
-    
+
 
     switch(lightsBuffer.debugMode)
     {
@@ -445,9 +449,15 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
-            result = vec3(lightCount / 2.01, 0 ,0);
+            result = lighting + ambient + vec3(float(lightCount) / MAX_POINT_LIGHTS, 0 ,0);
             break;
         case 7:
+            const vec3 colors[8] = vec3[](
+                vec3(0, 0, 0), vec3( 0, 0, 1), vec3(0, 1, 0), vec3(0, 1, 1),
+                vec3(1, 0, 0), vec3( 1, 0, 1), vec3(1, 1, 0), vec3(1, 1, 1)
+            );
+
+            result = vec3(colors[uint(zTile - (8.0 * floor(zTile/8.0)))]);
             //switch(cascade)
             //{
             //    case 0:

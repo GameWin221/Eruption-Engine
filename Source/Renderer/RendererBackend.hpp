@@ -164,14 +164,14 @@ namespace en
 				int debugMode = 0;
 
 				glm::uvec4 tileSizes;
-				glm::uvec4 screenDimensions;
 
 				float scale;
 				float bias;
+
 			} LBO;
 
-			std::unique_ptr<MemoryBuffer> stagingBuffer;
-			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> buffers;
+			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> stagingBuffers;
+			std::unique_ptr<MemoryBuffer> buffer;
 
 		} m_Lights;
 
@@ -283,7 +283,9 @@ namespace en
 			std::unique_ptr<MemoryBuffer> pointLightGrid;
 			std::unique_ptr<MemoryBuffer> pointLightIndices;
 
-			std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> clusterLightCullingDescriptors;
+			std::unique_ptr<MemoryBuffer> pointLightGlobalIndexOffset;
+
+			std::unique_ptr<DescriptorSet> clusterLightCullingDescriptor;
 
 			const glm::uvec3 clusterCount = glm::uvec3(16, 9, 24);
 		} m_ClusterSSBOs;
@@ -306,7 +308,7 @@ namespace en
 
 		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
 
-		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_ForwardClusteredDescriptor;
+		std::unique_ptr<DescriptorSet> m_ForwardClusteredDescriptor;
 
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
@@ -352,7 +354,7 @@ namespace en
 		void CreateClusterSSBOs();
 		void CreateClusterComputePipelines();
 
-		void UpdateClusterAABBs();
+		//void UpdateClusterAABBs();
 
 		void CreateDepthBuffer();
 		void CreateHDROffscreen();

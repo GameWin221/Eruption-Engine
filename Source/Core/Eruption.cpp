@@ -26,15 +26,19 @@ void Eruption::Init()
 	m_Editor = new en::EditorLayer;
 	m_Editor->AttachTo(m_Renderer, m_AssetManager, &m_DeltaTime);
 
-	const en::CameraInfo cameraInfo {
-		.fov = 70.0f,
-		.position = glm::vec3(3.333f, 2.762f, 0.897f),
+	const en::CameraInfo cameraInfo{
+		.fov = 60.0f,
+		.farPlane = 200.0f,
+		.nearPlane = 0.1f,
+		//.position = glm::vec3(3.333f, 2.762f, 0.897f),
+		.position = glm::vec3(0.0, 1.0, 0.0),
 		.dynamicallyScaled = true,
 	};
 
 	m_Camera = new en::Camera(cameraInfo);
-	m_Camera->m_Yaw = -161.6f;
-	m_Camera->m_Pitch = -30.3f;
+	//m_Camera->m_Yaw = -161.6f;
+	m_Camera->m_Yaw = 180.0f;
+	//m_Camera->m_Pitch = -30.3f;
 
 
 	m_Renderer->SetMainCamera(m_Camera);
@@ -108,7 +112,7 @@ void Eruption::Update()
 	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, std::fmin(30.0 * m_DeltaTime, 1.0));
 	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, std::fmin(30.0 * m_DeltaTime, 1.0));
 
-	UpdateExampleScene();
+	//UpdateExampleScene();
 
 	m_Input->UpdateInput();
 
@@ -169,6 +173,12 @@ void Eruption::CreateExampleScene()
 
 	m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
 	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
+
+	//m_ExampleScene->CreatePointLight(glm::vec3(-110.0, 14.0, -41.0), glm::vec3(1.0, 0.0, 0.0), 9.0, 65.0f);
+	//m_ExampleScene->CreatePointLight(glm::vec3(110.0, 14.0, -41.0), glm::vec3(0.0, 1.0, 0.0), 9.0f, 65.0f);
+	//m_ExampleScene->CreatePointLight(glm::vec3(110, 16.0, 41.0), glm::vec3(0.0, 0.0, 1.0), 9.0f, 65.0f);
+	//m_ExampleScene->CreatePointLight(glm::vec3(-110.0, 16.0, 41.0), glm::vec3(1.0, 0.0, 1.0), 9.0f, 65.0f);
+
 	auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
 	light->m_CastShadows = true;
 	light->m_ShadowBias = 0.00030;
