@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	const en::WindowInfo windowInfo {
-		.title = "Eruption Engine v0.7.2.5",
+		.title = "Eruption Engine v0.7.3",
 		.size = glm::ivec2(1920, 1080),
 		.fullscreen = false,
 		.resizable = true,

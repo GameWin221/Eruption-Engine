@@ -84,6 +84,8 @@ layout(set = 2, binding = 3) uniform UBO
     vec3 viewPos;
     int debugMode;
 
+    uvec4 tileCount;
+
     uvec4 tileSizes;
 
     float scale;
@@ -339,7 +341,9 @@ void main()
 {
     vec4 albedoAlpha = texture(albedoTexture, fTexcoord);
 
-    vec3 albedo    = albedoAlpha.rgb;
+    float alpha = albedoAlpha.a;
+
+    vec3 albedo    = albedoAlpha.rgb * mbo.color;
     vec3 normal    = NormalMapping();
     vec3 position  = fPosition.xyz;
 
@@ -347,19 +351,13 @@ void main()
 
     float roughness = texture(roughnessTexture, fTexcoord).r * mbo.roughnessVal;
     float metalness = texture(metalnessTexture, fTexcoord).r * mbo.metalnessVal;
-
-    float alpha = albedoAlpha.a;
-    /*
-    float depth = length(lightsBuffer.viewPos-position);
-
-    vec4 viewPos = lightsBuffer.cameraView * vec4(position, 1.0f);
-
+    
 	int cascade = 0;
 
     for(int i = 0; i < SHADOW_CASCADES-1; i++)
-        if (-viewPos.z > lightsBuffer.cascadeSplitDistances[i].x)
+        if (linearDepth > lightsBuffer.cascadeSplitDistances[i].x)
 		    cascade = i+1;
-    */
+    
     vec3 ambient = albedo * lightsBuffer.ambient;
     vec3 lighting = vec3(0.0);
 
@@ -369,10 +367,10 @@ void main()
     float viewDist = length(lightsBuffer.viewPos - position);
     
     uint  zTile     = uint(max(log2(linearDepth) * lightsBuffer.scale + lightsBuffer.bias, 0.0));
-    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / lightsBuffer.tileSizes[3]), zTile);
+    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / lightsBuffer.tileSizes.xy), zTile);
     uint  tileIndex = tiles.x +
-                      lightsBuffer.tileSizes.x * tiles.y +
-                      lightsBuffer.tileSizes.x * lightsBuffer.tileSizes.y * tiles.z;  
+                      lightsBuffer.tileCount.x * tiles.y +
+                      lightsBuffer.tileCount.x * lightsBuffer.tileCount.y * tiles.z;  
 
     uint lightCount       = lightGrid[tileIndex].count;
     uint lightIndexOffset = lightGrid[tileIndex].offset;
@@ -411,22 +409,23 @@ void main()
         
         lighting += CalculateSpotLight(lightsBuffer.sLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * intensity * (1.0 - shadow);
     }
+    */
     for(int i = 0; i < lightsBuffer.activeDirLights; i++)
     {
         float shadow = 0.0;
-        if(lightsBuffer.dLights[i].shadowmapIndex != -1)
-        {
-            vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView[cascade] * vec4(position, 1.0);
-            float softness = lightsBuffer.dLights[i].shadowSoftness / lightsBuffer.cascadeRatios[cascade].x;
 
-            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex+cascade, lightsBuffer.dLights[i].pcfSampleRate, lightsBuffer.dLights[i].bias, softness);
-        }
+        DirLight light = lightsBuffer.dLights[i];
+
+        vec4 fPosLightSpace = biasMat * light.projView[cascade] * vec4(position, 1.0);
+        float softness = light.shadowSoftness / lightsBuffer.cascadeRatios[cascade].x;
+
+        if(light.shadowmapIndex != -1)
+            shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, light.shadowmapIndex+cascade, light.pcfSampleRate, light.bias, softness);
         
-        lighting += CalculateDirLight(lightsBuffer.dLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);
+        lighting += CalculateDirLight(light, albedo, roughness, metalness, F0, viewDir, position, normal) * (1.0 - shadow);
     }
-    */
-    vec3 result = vec3(0.0f);
-
+    
+    vec3 result = vec3(0.0);
 
     switch(lightsBuffer.debugMode)
     {
@@ -452,27 +451,19 @@ void main()
             result = lighting + ambient + vec3(float(lightCount) / MAX_POINT_LIGHTS, 0 ,0);
             break;
         case 7:
-            const vec3 colors[8] = vec3[](
+            const vec3 depthSplitColors[8] = vec3[](
                 vec3(0, 0, 0), vec3( 0, 0, 1), vec3(0, 1, 0), vec3(0, 1, 1),
                 vec3(1, 0, 0), vec3( 1, 0, 1), vec3(1, 1, 0), vec3(1, 1, 1)
             );
 
-            result = vec3(colors[uint(zTile - (8.0 * floor(zTile/8.0)))]);
-            //switch(cascade)
-            //{
-            //    case 0:
-            //        result = albedo + vec3(0.2, 0.0, 0.0);
-            //        break;
-            //    case 1:
-            //        result = albedo + vec3(0.0, 0.2, 0.0);
-            //        break;
-            //    case 2:
-            //        result = albedo + vec3(0.0, 0.0, 0.2);
-            //        break;
-            //    default: 
-            //        result = vec3(0.1);
-            //        break;
-            //}
+            result = lighting + ambient + depthSplitColors[uint(zTile - (8.0 * floor(zTile/8.0)))] * 0.18;
+            break;
+        case 8:
+            const vec3 cascadeColors[4] = vec3[](
+                vec3(1, 0, 0), vec3( 0, 1, 0), vec3(0, 0, 1), vec3(0, 1, 1)
+            );
+
+            result = lighting + ambient + cascadeColors[uint(cascade - (4.0 * floor(cascade/4.0)))] * 0.18;
             break;
     }
     

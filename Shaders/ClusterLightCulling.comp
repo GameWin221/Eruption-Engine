@@ -1,7 +1,8 @@
 #version 450
-layout(local_size_x = 16, local_size_y = 9, local_size_z = 4) in;
 
 #include "../EruptionEngine.ini"
+
+layout(local_size_x = CLUSTERED_TILES_X, local_size_y = CLUSTERED_TILES_Y, local_size_z = CLUSTERED_TILES_Z / CLUSTERED_BATCHES) in;
 
 struct PointLight
 {
@@ -92,6 +93,8 @@ layout(binding = 4) uniform UBO
     vec3 viewPos;
     int debugMode;
 
+    uvec4 tileCount;
+
     uvec4 tileSizes;
 
     float scale;
@@ -159,14 +162,14 @@ void main()
     {
         uint lightIndex = batch * threadCount + gl_LocalInvocationIndex;
 
-        //Prevent overflow by clamping to last light which is always null
+        //Prevent overflow
         lightIndex = min(lightIndex, lightCount);
 
-        //Populating shared light array
+        // Populating shared light array
         sharedPointLights[gl_LocalInvocationIndex] = lightsBuffer.pLights[lightIndex];
         barrier();
 
-        //Iterating within the current batch of lights
+        // Iterating within the current batch of lights
         for(uint light = 0; light < threadCount; ++light)
         {
             if(sharedPointLights[light].color != vec3(0.0) && sharedPointLights[light].radius > 0)

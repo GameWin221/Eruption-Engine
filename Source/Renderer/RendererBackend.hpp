@@ -163,6 +163,8 @@ namespace en
 				glm::vec3 viewPos = glm::vec3(0.0f);
 				int debugMode = 0;
 
+				glm::uvec4 tileCount;
+
 				glm::uvec4 tileSizes;
 
 				float scale;
@@ -287,7 +289,7 @@ namespace en
 
 			std::unique_ptr<DescriptorSet> clusterLightCullingDescriptor;
 
-			const glm::uvec3 clusterCount = glm::uvec3(16, 9, 24);
+			const glm::uvec3 clusterCount = glm::uvec3(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z);
 		} m_ClusterSSBOs;
 
 		std::unique_ptr<ComputeShader> m_ClusterAABBCompute;

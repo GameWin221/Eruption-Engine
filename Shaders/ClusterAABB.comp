@@ -33,10 +33,10 @@ vec4 ScreenToView(vec4 screenPos)
 
     // Construct an inverse projection matrix out of the original rows
     mat4 inverseProj = mat4(
-        invProj0.x, invProj1.x, invProj2.x, invProj3.x,
-        invProj0.y, invProj1.y, invProj2.y, invProj3.y,
-        invProj0.z, invProj1.z, invProj2.z, invProj3.z,
-        invProj0.w, invProj1.w, invProj2.w, invProj3.w
+        invProj0,
+        invProj1,
+        invProj2,
+        invProj3
     );
 
     vec4 view = inverseProj * clip;
@@ -58,14 +58,14 @@ vec3 LineViewPlaneIntersection(vec3 P, float zDistance)
 
 void main()
 {
-    uint tileWidthPx = tileSizes[3];
+    uvec2 tileSizePx = screenSize.zw;
     uint tileIndex = gl_WorkGroupID.x +
                      gl_WorkGroupID.y * gl_NumWorkGroups.x +
                      gl_WorkGroupID.z * gl_NumWorkGroups.x * gl_NumWorkGroups.y;
 
     // Calculating the min and max point in screen space
-    vec4 maxPointScreen = vec4(vec2(gl_WorkGroupID.x + 1, gl_WorkGroupID.y + 1) * tileWidthPx, 0.0, 1.0); // Top right
-    vec4 minPointScreen = vec4(gl_WorkGroupID.xy * tileWidthPx, 0.0, 1.0); // Bottom left
+    vec4 maxPointScreen = vec4(vec2(gl_WorkGroupID.x + 1, gl_WorkGroupID.y + 1) * tileSizePx, 0.0, 1.0); // Top right
+    vec4 minPointScreen = vec4(gl_WorkGroupID.xy * tileSizePx, 0.0, 1.0); // Bottom left
 
     // Pass min and max to view space
     vec3 maxPointView = ScreenToView(maxPointScreen).xyz;

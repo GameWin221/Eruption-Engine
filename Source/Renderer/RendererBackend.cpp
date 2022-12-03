@@ -185,9 +185,11 @@ namespace en
 		m_CameraMatrices->m_Matrices[m_FrameIndex].zNear = m_MainCamera->m_NearPlane;
 		m_CameraMatrices->m_Matrices[m_FrameIndex].zFar = m_MainCamera->m_FarPlane;
 
-		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / m_ClusterSSBOs.clusterCount.x);
+		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width  / m_ClusterSSBOs.clusterCount.x);
+		uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / m_ClusterSSBOs.clusterCount.y);
 
-		m_Lights.LBO.tileSizes = glm::vec4(m_ClusterSSBOs.clusterCount, sizeX);
+		m_Lights.LBO.tileSizes = glm::uvec4(sizeX, sizeY, 0, 0);
+		m_Lights.LBO.tileCount = glm::vec4(m_ClusterSSBOs.clusterCount, 0.0);
 
 		m_Lights.LBO.scale = (float)m_ClusterSSBOs.clusterCount.z / std::log2f(m_MainCamera->m_FarPlane / m_MainCamera->m_NearPlane);
 		m_Lights.LBO.bias = -((float)m_ClusterSSBOs.clusterCount.z * std::log2f(m_MainCamera->m_NearPlane) / std::log2f(m_MainCamera->m_FarPlane / m_MainCamera->m_NearPlane));
@@ -370,30 +372,19 @@ namespace en
 			m_Lights.LBO.activeDirLights++;
 		}
 
-		// Reset unused lights
-		memset(m_Lights.LBO.pointLights + m_Lights.LBO.activePointLights, 0, MAX_POINT_LIGHTS - m_Lights.LBO.activePointLights);
-		memset(m_Lights.LBO.spotLights + m_Lights.LBO.activeSpotLights, 0, MAX_SPOT_LIGHTS - m_Lights.LBO.activeSpotLights);
-		memset(m_Lights.LBO.dirLights + m_Lights.LBO.activeDirLights, 0, MAX_DIR_LIGHTS - m_Lights.LBO.activeDirLights);
+		// Reset last (point/spot)lights for clustered rendering
+		m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights].color = glm::vec3(0.0f);
+		m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights].radius = 0.0f;
 
-		m_Lights.stagingBuffers[m_FrameIndex]->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffers[0]->m_BufferSize);
-		
-		VkCommandBuffer cmd = Helpers::BeginSingleTimeTransferCommands();
-		
-		m_Lights.stagingBuffers[m_FrameIndex]->CopyTo(m_Lights.buffer.get(), cmd);
-		
-		m_Lights.buffer->PipelineBarrier(
-			VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			cmd
-		);
-		
-		Helpers::EndSingleTimeTransferCommands(cmd);
+		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].color = glm::vec3(0.0f);
+		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].range = 0.0f;
 	}
 
 	void RendererBackend::BeginRender()
 	{
 		m_CameraMatrices->MapBuffer(m_FrameIndex);
-		
+		m_Lights.stagingBuffers[m_FrameIndex]->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffers[0]->m_BufferSize);
+
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_MainSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_SwapchainImageIndex);
 
 		m_SkipFrame = false;
@@ -423,6 +414,14 @@ namespace en
 
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
 			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
+
+		m_Lights.stagingBuffers[m_FrameIndex]->CopyTo(m_Lights.buffer.get(), m_CommandBuffers[m_FrameIndex]);
+
+		m_Lights.buffer->PipelineBarrier(
+			VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			m_CommandBuffers[m_FrameIndex]
+		);
 	}
 	void RendererBackend::DepthPass()
 	{
@@ -627,7 +626,7 @@ namespace en
 		for (int i = 0; i < m_Lights.LBO.activeDirLights; i++)
 		{
 			if (m_Lights.LBO.dirLights[i].shadowmapIndex == -1)
-				return;
+				continue;
 
 			for (int j = 0; j < SHADOW_CASCADES; j++)
 			{
@@ -708,10 +707,11 @@ namespace en
 
 		glm::mat4 inverseProj(glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj));
 		
-		uint32_t clusterPxWidth = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / m_ClusterSSBOs.clusterCount.x);
+		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / m_ClusterSSBOs.clusterCount.x);
+		uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / m_ClusterSSBOs.clusterCount.y);
 
-		glm::uvec4 tileSizes(m_ClusterSSBOs.clusterCount.x, m_ClusterSSBOs.clusterCount.y, m_ClusterSSBOs.clusterCount.z, clusterPxWidth);
-		glm::uvec4 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, 0U, 0U);
+		glm::uvec4 tileSizes(m_ClusterSSBOs.clusterCount.x, m_ClusterSSBOs.clusterCount.y, m_ClusterSSBOs.clusterCount.z, 0.0);
+		glm::uvec4 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, sizeX, sizeY);
 
 		float zNear = m_MainCamera->m_NearPlane;
 		float zFar = m_MainCamera->m_FarPlane;
@@ -740,15 +740,15 @@ namespace en
 		
 		m_ClusterLightCullingCompute->PushConstants(&m_CameraMatrices->m_Matrices[m_FrameIndex].view, sizeof(glm::mat4), 0U);
 		
-		m_ClusterLightCullingCompute->Dispatch(1, 1, 6);
-		
+		m_ClusterLightCullingCompute->Dispatch(1, 1, CLUSTERED_BATCHES);
+
 		m_HDROffscreen->ChangeLayout(
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			m_CommandBuffers[m_FrameIndex]
 		);
-		
+
 		const Pipeline::BindInfo info {
 			.colorAttachments {
 				{
@@ -782,9 +782,9 @@ namespace en
 		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
-
+		
 			m_ForwardClusteredPipeline->PushConstants(&object->GetModelMatrix(), sizeof(glm::mat4), 0U, VK_SHADER_STAGE_VERTEX_BIT);
-
+		
 			for (auto& subMesh : object->m_Mesh->m_SubMeshes)
 			{
 				if (!subMesh.m_Active) continue;
