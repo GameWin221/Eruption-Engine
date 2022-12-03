@@ -6,7 +6,7 @@ namespace en
 	VertexBuffer::VertexBuffer(const std::vector<Vertex>& vertices)
 		: m_VerticesCount(vertices.size())
 	{
-		VkDeviceSize bufferSize = vertices.size() * sizeof(vertices[0]);
+		VkDeviceSize bufferSize = vertices.size() * sizeof(Vertex);
 
 		MemoryBuffer stagingBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.MapMemory(vertices.data(), bufferSize);

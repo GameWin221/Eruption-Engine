@@ -740,7 +740,7 @@ namespace en
 		
 		m_ClusterLightCullingCompute->PushConstants(&m_CameraMatrices->m_Matrices[m_FrameIndex].view, sizeof(glm::mat4), 0U);
 		
-		m_ClusterLightCullingCompute->Dispatch(1, 1, CLUSTERED_BATCHES);
+		m_ClusterLightCullingCompute->Dispatch(1U, 1U, CLUSTERED_BATCHES);
 
 		m_HDROffscreen->ChangeLayout(
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,

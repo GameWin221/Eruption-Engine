@@ -448,7 +448,7 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
-            result = lighting + ambient + vec3(float(lightCount) / MAX_POINT_LIGHTS, 0 ,0);
+            result = lighting + ambient + vec3(float(lightCount) / lightsBuffer.activePointLights, 0 ,0);
             break;
         case 7:
             const vec3 depthSplitColors[8] = vec3[](

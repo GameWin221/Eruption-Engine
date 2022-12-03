@@ -58,7 +58,7 @@ namespace en
 		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_PipelineLayout, nullptr);
 	}
 
-	void ComputeShader::Bind(VkCommandBuffer& cmd)
+	void ComputeShader::Bind(const VkCommandBuffer cmd)
 	{
 		m_BoundCommandBuffer = cmd;
 

@@ -3,7 +3,8 @@
 
 namespace en
 {
-	// Camera
+	constexpr glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
+
 	Camera::Camera(const CameraInfo& cameraInfo)
 	{
 		m_FarPlane  = cameraInfo.farPlane;
@@ -22,7 +23,7 @@ namespace en
 		UpdateVectors();
 	}
 
-	void Camera::LookAt(glm::vec3 target)
+	void Camera::LookAt(const glm::vec3 target)
 	{
 		glm::vec3 diff = glm::normalize(target - m_Position);
 
@@ -60,9 +61,7 @@ namespace en
 
 	void Camera::UpdateVectors()
 	{
-		// Clamping Pitch
-		if		(m_Pitch >  89.999f) m_Pitch =  89.999f;
-		else if (m_Pitch < -89.999f) m_Pitch = -89.999f;
+		m_Pitch = glm::clamp(m_Pitch, -89.999f, 89.999f);
 
 		m_Front = glm::normalize(
 			glm::vec3(
@@ -72,7 +71,7 @@ namespace en
 			)
 		);
 
-		m_Right = glm::normalize(glm::cross(m_Front, m_GlobalUp));
+		m_Right = glm::normalize(glm::cross(m_Front, WORLD_UP));
 		m_Up = glm::normalize(glm::cross(m_Right, m_Front));
 	}
 }

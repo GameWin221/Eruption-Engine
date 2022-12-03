@@ -9,33 +9,36 @@ namespace en
         {
             UseContext();
 
-            VkCommandBufferAllocateInfo allocInfo{};
-            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocInfo.commandPool        = ctx.m_CommandPool;
-            allocInfo.commandBufferCount = 1U;
+            VkCommandBufferAllocateInfo allocInfo{
+                .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                .commandPool        = ctx.m_CommandPool,
+                .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                .commandBufferCount = 1U,
+            };
 
-            VkCommandBuffer commandBuffer;
+            VkCommandBuffer commandBuffer{};
             vkAllocateCommandBuffers(ctx.m_LogicalDevice, &allocInfo, &commandBuffer);
 
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            constexpr VkCommandBufferBeginInfo beginInfo{
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+            };
 
             vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
             return commandBuffer;
         }
-        void EndSingleTimeGraphicsCommands(VkCommandBuffer& commandBuffer)
+        void EndSingleTimeGraphicsCommands(const VkCommandBuffer commandBuffer)
         {
             UseContext();
 
             vkEndCommandBuffer(commandBuffer);
 
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1U;
-            submitInfo.pCommandBuffers    = &commandBuffer;
+            VkSubmitInfo submitInfo{
+                .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                .commandBufferCount = 1U,
+                .pCommandBuffers    = &commandBuffer,
+            };
 
             vkQueueSubmit(ctx.m_GraphicsQueue, 1U, &submitInfo, VK_NULL_HANDLE);
             vkQueueWaitIdle(ctx.m_GraphicsQueue);
@@ -47,34 +50,35 @@ namespace en
         {
             UseContext();
 
-            VkCommandBufferAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-            allocInfo.commandPool = ctx.m_TransferCommandPool;
-            allocInfo.commandBufferCount = 1U;
+            VkCommandBufferAllocateInfo allocInfo {
+                .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                .commandPool        = ctx.m_TransferCommandPool,
+                .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                .commandBufferCount = 1U
+            };
             
-            VkCommandBuffer commandBuffer;
+            VkCommandBuffer commandBuffer{};
             vkAllocateCommandBuffers(ctx.m_LogicalDevice, &allocInfo, &commandBuffer);
 
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            constexpr VkCommandBufferBeginInfo beginInfo{
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+            };
 
             vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
             return commandBuffer;
         }
-        void EndSingleTimeTransferCommands(VkCommandBuffer& commandBuffer)
+        void EndSingleTimeTransferCommands(const VkCommandBuffer commandBuffer)
         {
             UseContext();
 
             vkEndCommandBuffer(commandBuffer);
 
             VkSubmitInfo submitInfo {
-                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                 .commandBufferCount = 1U,
-                .pCommandBuffers = &commandBuffer,
+                .pCommandBuffers    = &commandBuffer,
             };
 
             vkQueueSubmit(ctx.m_TransferQueue, 1U, &submitInfo, VK_NULL_HANDLE);
@@ -83,51 +87,51 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D& size, const VkFormat& format, const VkImageTiling& tiling, const VkImageUsageFlags& usage, const VkMemoryPropertyFlags& properties, const uint32_t& layers, const uint32_t& mipLevels, const VkImageCreateFlags& flags)
+        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D size, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage, const VkMemoryPropertyFlags properties, const uint32_t layers, const uint32_t mipLevels, const VkImageCreateFlags flags)
         {
             UseContext();
 
-            const VkImageCreateInfo imageInfo{
-                .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-                .flags = flags,
+            VkImageCreateInfo imageInfo{
+                .sType     = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                .flags     = flags,
                 .imageType = VK_IMAGE_TYPE_2D,
-                .format = format,
+                .format    = format,
 
                 .extent {
-                    .width = size.width,
+                    .width  = size.width,
                     .height = size.height,
-                    .depth = 1U,
+                    .depth  = 1U,
                 },
 
-                .mipLevels = mipLevels,
-                .arrayLayers = layers,
-                .samples = VK_SAMPLE_COUNT_1_BIT,
-                .tiling = tiling,
-                .usage = usage,
-                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .mipLevels     = mipLevels,
+                .arrayLayers   = layers,
+                .samples       = VK_SAMPLE_COUNT_1_BIT,
+                .tiling        = tiling,
+                .usage         = usage,
+                .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             };
 
             if (vkCreateImage(ctx.m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS)
-                EN_ERROR("Failed to create image!");
+                EN_ERROR("Helpers::CreateImage() - Failed to create image!");
 
-            VkMemoryRequirements memRequirements;
+            VkMemoryRequirements memRequirements{};
             vkGetImageMemoryRequirements(ctx.m_LogicalDevice, image, &memRequirements);
 
-            const VkMemoryAllocateInfo allocInfo {
+            VkMemoryAllocateInfo allocInfo {
                 .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
                 .allocationSize  = memRequirements.size,
                 .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties)
             };
 
             if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-                EN_ERROR("Failed to allocate image memory!");
+                EN_ERROR("Helpers::CreateImage() - Failed to allocate image memory!");
 
             vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
         }
-        void CreateImageView(VkImage& image, VkImageView& imageView, const VkImageViewType& viewType, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const uint32_t& layer, const uint32_t& layerCount, const uint32_t& mipLevels)
+        void CreateImageView(const VkImage image, VkImageView& imageView, const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspectFlags, const uint32_t layer, const uint32_t layerCount, const uint32_t mipLevels)
         {
-            const VkImageViewCreateInfo viewInfo {
+            VkImageViewCreateInfo viewInfo {
                 .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                 .image    = image,
                 .viewType = viewType,
@@ -143,33 +147,39 @@ namespace en
             };
 
             if (vkCreateImageView(Context::Get().m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-                EN_ERROR("Failed to create texture image view!");
+                EN_ERROR("Helpers::CreateImageView() - Failed to create texture image view!");
         }
         
-        void SimpleTransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
+        void SimpleTransitionImageLayout(const VkImage image, const VkFormat format, const VkImageAspectFlags aspectFlags, const VkImageLayout oldLayout, const VkImageLayout newLayout, const uint32_t mipLevels, const VkCommandBuffer cmdBuffer)
         {
             UseContext();
 
-            VkCommandBuffer commandBuffer = cmdBuffer;
-
             bool usesTransferQueue = (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.oldLayout = oldLayout;
-            barrier.newLayout = newLayout;
-            barrier.image = image;
-            barrier.subresourceRange.aspectMask = aspectFlags;
-            barrier.subresourceRange.baseMipLevel = 0U;
-            barrier.subresourceRange.levelCount = mipLevels;
-            barrier.subresourceRange.baseArrayLayer = 0U;
-            barrier.subresourceRange.layerCount = 1U;
+            VkImageMemoryBarrier barrier{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                .oldLayout = oldLayout,
+                .newLayout = newLayout,
+
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+                .image = image,
+
+                .subresourceRange {
+                    .aspectMask = aspectFlags,
+                    .baseMipLevel = 0U,
+                    .levelCount = mipLevels,
+                    .baseArrayLayer = 0U,
+                    .layerCount = 1U,
+                },
+            };
 
             VkPipelineStageFlags sourceStage = 0U;
             VkPipelineStageFlags destinationStage = 0U;
+
+            VkCommandBuffer commandBuffer{};
 
             if (cmdBuffer == VK_NULL_HANDLE)
             {
@@ -178,6 +188,8 @@ namespace en
                 else
                     commandBuffer = BeginSingleTimeGraphicsCommands();
             }
+            else
+                commandBuffer = cmdBuffer;
 
             switch(oldLayout)
             {
@@ -272,11 +284,9 @@ namespace en
                     EndSingleTimeGraphicsCommands(commandBuffer);
             }
         }
-        void TransitionImageLayout(VkImage& image, const VkFormat& format, const VkImageAspectFlags& aspectFlags, const VkImageLayout& oldLayout, const VkImageLayout& newLayout, const VkAccessFlags& srcAccessMask, const VkAccessFlags& dstAccessMask, const VkPipelineStageFlags& srcStage, const VkPipelineStageFlags& dstStage, const uint32_t& layer, const uint32_t& layerCount, const uint32_t& mipLevels, const VkCommandBuffer& cmdBuffer)
+        void TransitionImageLayout(const VkImage image, const VkFormat format, const VkImageAspectFlags aspectFlags, const VkImageLayout oldLayout, const VkImageLayout newLayout, const VkAccessFlags srcAccessMask, const VkAccessFlags dstAccessMask, const VkPipelineStageFlags srcStage, const VkPipelineStageFlags dstStage, const uint32_t layer, const uint32_t layerCount, const uint32_t mipLevels, const VkCommandBuffer cmdBuffer)
         {
             UseContext();
-
-            VkCommandBuffer commandBuffer = cmdBuffer;
 
             bool usesTransferQueue = (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -303,6 +313,7 @@ namespace en
                 }
             };
 
+            VkCommandBuffer commandBuffer{};
             if (cmdBuffer == VK_NULL_HANDLE)
             {
                 if (usesTransferQueue)
@@ -310,6 +321,8 @@ namespace en
                 else
                     commandBuffer = BeginSingleTimeGraphicsCommands();
             }
+            else
+                commandBuffer = cmdBuffer;
 
             vkCmdPipelineBarrier(
                 commandBuffer,
@@ -329,7 +342,7 @@ namespace en
             }
         }
 
-        void BufferPipelineBarrier(VkBuffer buffer, VkDeviceSize size, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer)
+        void BufferPipelineBarrier(const VkBuffer buffer, const VkDeviceSize size, const VkAccessFlags srcAccessMask, const VkAccessFlags dstAccessMask, const VkPipelineStageFlags srcStage, const VkPipelineStageFlags dstStage, const VkCommandBuffer cmdBuffer)
         {
             VkBufferMemoryBarrier barrier{
                 .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -356,7 +369,7 @@ namespace en
             );
         }
 
-        void DestroyImage(VkImage& image, VkDeviceMemory& memory)
+        void DestroyImage(const VkImage image, const VkDeviceMemory memory)
         {
             UseContext();
 
@@ -364,71 +377,77 @@ namespace en
             vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
         }
 
-        void CreateSampler(VkSampler& sampler, const VkFilter& filtering, const uint32_t& anisotropy, const float& maxLod, const float& mipLodBias)
+        void CreateSampler(VkSampler& sampler, const VkFilter filtering, const uint32_t anisotropy, const float maxLod, const float mipLodBias)
         {
             UseContext();
 
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties(ctx.m_PhysicalDevice, &properties);
 
-            VkSamplerCreateInfo samplerInfo{};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            VkSamplerCreateInfo samplerInfo{
+                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 
-            samplerInfo.magFilter = filtering;
-            samplerInfo.minFilter = filtering;
+                .magFilter = filtering,
+                .minFilter = filtering,
 
-            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
 
-            samplerInfo.anisotropyEnable = (anisotropy > 0);
-            samplerInfo.maxAnisotropy = std::fminf(anisotropy, properties.limits.maxSamplerAnisotropy);
-            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+                .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
+                .mipLodBias = mipLodBias,
 
-            samplerInfo.compareEnable = VK_FALSE;
-            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+                .anisotropyEnable = (anisotropy > 0),
+                .maxAnisotropy = std::fminf(anisotropy, properties.limits.maxSamplerAnisotropy),
 
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            samplerInfo.mipLodBias = mipLodBias;
-            samplerInfo.minLod = 0.0f;
-            samplerInfo.maxLod = maxLod;
+                .compareEnable = VK_FALSE,
+                .compareOp = VK_COMPARE_OP_ALWAYS,
+
+                .minLod = 0.0f,
+                .maxLod = maxLod,
+
+                .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+                .unnormalizedCoordinates = VK_FALSE,
+            };
 
             if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
                 EN_ERROR("Helpers::CreateSampler() - Failed to create texture sampler!");
         }
 
-        void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags& commandPoolCreateFlags)
+        void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags commandPoolCreateFlags)
         {
             UseContext();
 
-            VkCommandPoolCreateInfo commandPoolCreateInfo = {};
-            commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-            commandPoolCreateInfo.queueFamilyIndex = ctx.m_QueueFamilies.graphics.value();
-            commandPoolCreateInfo.flags = commandPoolCreateFlags;
+            VkCommandPoolCreateInfo commandPoolCreateInfo{
+                .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags            = commandPoolCreateFlags,
+                .queueFamilyIndex = ctx.m_QueueFamilies.graphics.value(),
+            };
 
             if (vkCreateCommandPool(ctx.m_LogicalDevice, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS)
-                EN_ERROR("Context::VKCreateCommandPool() - Failed to create a command pool!");
+                EN_ERROR("Helpers::CreateCommandPool() - Failed to create a command pool!");
         }
 
-        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t& commandBufferCount, VkCommandPool& commandPool)
+        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t commandBufferCount, VkCommandPool commandPool)
         {
             UseContext();
 
-            VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
-            commandBufferAllocateInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            commandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            commandBufferAllocateInfo.commandPool        = commandPool;
-            commandBufferAllocateInfo.commandBufferCount = commandBufferCount;
+            VkCommandBufferAllocateInfo commandBufferAllocateInfo{
+                .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                .commandPool        = commandPool,
+                .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                .commandBufferCount = commandBufferCount,
+            };
+
             vkAllocateCommandBuffers(ctx.m_LogicalDevice, &commandBufferAllocateInfo, commandBuffers);
         }
         
-        uint32_t FindMemoryType(const uint32_t& typeFilter, const VkMemoryPropertyFlags& properties)
+        uint32_t FindMemoryType(const uint32_t typeFilter, const VkMemoryPropertyFlags properties)
         {
             UseContext();
 
-            VkPhysicalDeviceMemoryProperties memProperties;
+            VkPhysicalDeviceMemoryProperties memProperties{};
             vkGetPhysicalDeviceMemoryProperties(ctx.m_PhysicalDevice, &memProperties);
 
             for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
@@ -437,7 +456,7 @@ namespace en
                     return i;
             }
 
-            EN_ERROR("Failed to find suitable memory type!");
+            EN_ERROR("Helpers::FindMemoryType() - Failed to find suitable memory type!");
         }
     }
 }

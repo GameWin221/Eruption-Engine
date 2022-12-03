@@ -5,7 +5,7 @@
 
 namespace en
 {
-	std::array<unsigned char, 4> g_WhiteTexturePixels = { 255, 255, 255, 255 };
+	constexpr uint64_t WHITE_PIXEL = 0xffffffffffffffff; // UINT64_MAX;
 
 	Texture* g_SRGBWhiteTexture;
 	Texture* g_NSRGBTexture;
@@ -18,11 +18,11 @@ namespace en
 
 		int sizeX, sizeY, channels;
 
-		stbi_uc* pixels = stbi_load(m_FilePath.c_str(), &sizeX, &sizeY, &channels, 4);
+		uint8_t* pixels = stbi_load(m_FilePath.c_str(), &sizeX, &sizeY, &channels, 4);
 
 		if (!pixels)
 		{
-			pixels = g_WhiteTexturePixels.data();
+			pixels = (uint8_t*)&WHITE_PIXEL;
 
 			sizeX = 1;
 			sizeY = 1;
@@ -60,14 +60,14 @@ namespace en
 	Texture* Texture::GetWhiteSRGBTexture()
 	{
 		if (!g_SRGBWhiteTexture)
-			g_SRGBWhiteTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, VkExtent2D{ 1U, 1U }, false);
+			g_SRGBWhiteTexture = new Texture((uint8_t*)&WHITE_PIXEL, "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, VkExtent2D{ 1U, 1U }, false);
 
 		return g_SRGBWhiteTexture;
 	}
 	Texture* Texture::GetWhiteNonSRGBTexture()
 	{
 		if (!g_NSRGBTexture)
-			g_NSRGBTexture = new Texture(g_WhiteTexturePixels.data(), "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, VkExtent2D{ 1U, 1U }, false);
+			g_NSRGBTexture = new Texture((uint8_t*)&WHITE_PIXEL, "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, VkExtent2D{ 1U, 1U }, false);
 
 		return g_NSRGBTexture;
 	}

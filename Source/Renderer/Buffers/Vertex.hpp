@@ -15,8 +15,8 @@ namespace en
         static constexpr VkVertexInputBindingDescription GetBindingDescription()
         {
             return VkVertexInputBindingDescription{
-                .binding = 0U,
-                .stride = sizeof(Vertex),
+                .binding   = 0U,
+                .stride    = sizeof(Vertex),
                 .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
             };
         }

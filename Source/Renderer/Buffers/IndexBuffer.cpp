@@ -6,7 +6,7 @@ namespace en
 	IndexBuffer::IndexBuffer(const std::vector<uint32_t>& indices) 
 		: m_IndicesCount(indices.size())
 	{
-		VkDeviceSize bufferSize = m_IndicesCount * sizeof(indices[0]);
+		VkDeviceSize bufferSize = m_IndicesCount * sizeof(uint32_t);
 
 		MemoryBuffer stagingBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.MapMemory(indices.data(), bufferSize);

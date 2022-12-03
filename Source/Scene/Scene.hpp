@@ -15,21 +15,21 @@ namespace en
 		friend class RendererBackend;
 
 	public:
-		SceneObject* GetSceneObject(std::string name);
+		SceneObject* GetSceneObject(const std::string& name);
 
-		SceneObject* CreateSceneObject(std::string name, Mesh* mesh);
-		void DeleteSceneObject(std::string name);
+		SceneObject* CreateSceneObject(const std::string& name, Mesh* mesh);
+		void DeleteSceneObject(const std::string& name);
 
-		void RenameSceneObject(std::string oldName, std::string newName);
+		void RenameSceneObject(const std::string& oldName, const std::string& newName);
 
-		PointLight* CreatePointLight(glm::vec3 position, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, float radius = 10.0f, bool active = true);
-		void DeletePointLight(uint32_t index);
+		PointLight* CreatePointLight(const glm::vec3 position, const glm::vec3 color = glm::vec3(1.0f), const float intensity = 2.5f, const float radius = 10.0f, const bool active = true);
+		void DeletePointLight(const uint32_t index);
 
-		SpotLight* CreateSpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float innerCutoff = 0.2f, float outerCutoff = 0.4f, float range = 8.0f, float intensity = 2.5f, bool active = true);
-		void DeleteSpotLight(uint32_t index);
+		SpotLight* CreateSpotLight(const glm::vec3 position, const glm::vec3 direction, const glm::vec3 color = glm::vec3(1.0f), const float innerCutoff = 0.2f, const float outerCutoff = 0.4f, const float range = 8.0f, const float intensity = 2.5f, const bool active = true);
+		void DeleteSpotLight(const uint32_t index);
 
-		DirectionalLight* CreateDirectionalLight(glm::vec3 direction, glm::vec3 color = glm::vec3(1.0f), float intensity = 2.5f, bool active = true);
-		void DeleteDirectionalLight(uint32_t index);
+		DirectionalLight* CreateDirectionalLight(const glm::vec3 direction, const glm::vec3 color = glm::vec3(1.0f), const float intensity = 2.5f, const bool active = true);
+		void DeleteDirectionalLight(const uint32_t index);
 
 		glm::vec3 m_AmbientColor = glm::vec3(0.0f);
 

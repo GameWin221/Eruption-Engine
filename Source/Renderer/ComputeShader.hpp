@@ -21,7 +21,7 @@ namespace en
 		ComputeShader(const CreateInfo& createInfo);
 		~ComputeShader();
 
-		void Bind(VkCommandBuffer& cmd);
+		void Bind(const VkCommandBuffer cmd);
 
 		void PushConstants(const void* data, uint32_t size, uint32_t offset);
 

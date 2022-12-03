@@ -156,7 +156,7 @@ void main()
     uint tileIndex = gl_LocalInvocationIndex + gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z * gl_WorkGroupID.z;
     
     uint visibleLightCount = 0;
-    uint visibleLightIndices[100];
+    uint visibleLightIndices[MAX_POINT_LIGHTS];
 
     for(uint batch = 0; batch < numBatches; ++batch)
     {
