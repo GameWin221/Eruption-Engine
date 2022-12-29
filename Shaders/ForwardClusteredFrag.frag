@@ -99,12 +99,20 @@ struct LightGrid
     uint count;
 };
 
-layout (std430, set = 2, binding = 4) buffer lightIndexSSBO {
-    uint globalLightIndexList[];
+layout (std430, set = 2, binding = 4) buffer pointLightIndexSSBO {
+    uint globalPointLightIndexList[];
 };
-layout (std430, set = 2, binding = 5) buffer lightGridSSBO {
-    LightGrid lightGrid[];
+layout (std430, set = 2, binding = 5) buffer pointLightGridSSBO {
+    LightGrid pointLightGrid[];
 };
+
+layout (std430, set = 2, binding = 6) buffer spotLightIndexSSBO {
+    uint globalSpotLightIndexList[];
+};
+layout (std430, set = 2, binding = 7) buffer spotLightGridSSBO {
+    LightGrid spotLightGrid[];
+};
+
 
 #define PI 3.14159265359
 
@@ -372,12 +380,15 @@ void main()
                       lightsBuffer.tileCount.x * tiles.y +
                       lightsBuffer.tileCount.x * lightsBuffer.tileCount.y * tiles.z;  
 
-    uint lightCount       = lightGrid[tileIndex].count;
-    uint lightIndexOffset = lightGrid[tileIndex].offset;
+    uint pointLightCount       = pointLightGrid[tileIndex].count;
+    uint pointLightIndexOffset = pointLightGrid[tileIndex].offset;
 
-    for(int i = 0; i < lightCount; i++)
+    uint spotLightCount       = spotLightGrid[tileIndex].count;
+    uint spotLightIndexOffset = spotLightGrid[tileIndex].offset;
+
+    for(uint i = 0; i < pointLightCount; i++)
     {
-        uint lightId = globalLightIndexList[lightIndexOffset + i];
+        uint lightId = globalPointLightIndexList[pointLightIndexOffset + i];
 
         PointLight light = lightsBuffer.pLights[lightId];
 
@@ -389,28 +400,32 @@ void main()
         
         lighting += CalculatePointLight(light, albedo, roughness, metalness, F0, viewDir, position, normal, diff) * (1.0-shadow);
     }
-    /*
-    for(int i = 0; i < lightsBuffer.activeSpotLights; i++)
+
+    for(uint i = 0; i < spotLightCount; i++)
     {
-        vec3 lightToSurfaceDir = normalize(position - lightsBuffer.sLights[i].position);
+        uint lightId = globalSpotLightIndexList[spotLightIndexOffset + i];
 
-        float innerCutoff = lightsBuffer.sLights[i].innerCutoff / 2.0 * PI;
-        float outerCutoff = lightsBuffer.sLights[i].outerCutoff / 2.0 * PI;
-
-        float angleDiff = min(RadiansBetweenDirs(lightsBuffer.sLights[i].direction, lightToSurfaceDir), outerCutoff);
+        SpotLight light = lightsBuffer.sLights[lightId];
+        
+        vec3 lightToSurfaceDir = normalize(position - light.position);
+        
+        float innerCutoff = light.innerCutoff / 2.0 * PI;
+        float outerCutoff = light.outerCutoff / 2.0 * PI;
+        
+        float angleDiff = min(RadiansBetweenDirs(light.direction, lightToSurfaceDir), outerCutoff);
         float intensity = pow(min(1.0 - (angleDiff-innerCutoff) / (outerCutoff-innerCutoff), 1.0), 2.0);
-
+        
         float shadow = 0.0;
-        if(lightsBuffer.sLights[i].shadowmapIndex != -1)
+        if(light.shadowmapIndex != -1)
         {
-            vec4 fPosLightSpace = biasMat * lightsBuffer.sLights[i].projView * vec4(position, 1.0);
-            shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, lightsBuffer.sLights[i].shadowmapIndex, lightsBuffer.sLights[i].pcfSampleRate, lightsBuffer.sLights[i].bias, lightsBuffer.sLights[i].shadowSoftness);
+            vec4 fPosLightSpace = biasMat * light.projView * vec4(position, 1.0);
+            shadow = CalculateShadow(fPosLightSpace, spotShadowmaps, light.shadowmapIndex, light.pcfSampleRate, light.bias, light.shadowSoftness);
         }
         
-        lighting += CalculateSpotLight(lightsBuffer.sLights[i], albedo, roughness, metalness, F0, viewDir, position, normal) * intensity * (1.0 - shadow);
+        lighting += CalculateSpotLight(light, albedo, roughness, metalness, F0, viewDir, position, normal) * intensity * (1.0 - shadow);
     }
-    */
-    for(int i = 0; i < lightsBuffer.activeDirLights; i++)
+    
+    for(uint i = 0; i < lightsBuffer.activeDirLights; i++)
     {
         float shadow = 0.0;
 
@@ -448,7 +463,7 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
-            result = lighting + ambient + vec3(float(lightCount) / lightsBuffer.activePointLights, 0 ,0);
+            result = ambient + vec3(float(pointLightCount) / (lightsBuffer.activePointLights+1), float(spotLightCount) / (lightsBuffer.activeSpotLights+1), 0);
             break;
         case 7:
             const vec3 depthSplitColors[8] = vec3[](
@@ -467,5 +482,5 @@ void main()
             break;
     }
     
-    FragColor = vec4(result, alpha);
+    FragColor = vec4(result, 1.0);
 }

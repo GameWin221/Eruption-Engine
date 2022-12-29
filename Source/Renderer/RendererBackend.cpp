@@ -378,6 +378,8 @@ namespace en
 
 		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].color = glm::vec3(0.0f);
 		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].range = 0.0f;
+		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].direction = glm::vec3(0.0f);
+		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].outerCutoff = 0.0f;
 	}
 
 	void RendererBackend::BeginRender()
@@ -1289,6 +1291,25 @@ namespace en
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
+
+
+		m_ClusterSSBOs.spotLightIndices = std::make_unique<MemoryBuffer>(
+			sizeof(uint32_t) * clusterCount * MAX_SPOT_LIGHTS,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+			);
+
+		m_ClusterSSBOs.spotLightGrid = std::make_unique<MemoryBuffer>(
+			sizeof(uint32_t) * 2 * clusterCount,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+			);
+
+		m_ClusterSSBOs.spotLightGlobalIndexOffset = std::make_unique<MemoryBuffer>(
+			sizeof(uint32_t),
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+			);
 	}
 
 	void RendererBackend::CreateClusterComputePipelines()
@@ -1306,8 +1327,16 @@ namespace en
 			std::vector<DescriptorSet::BufferInfo>{aabbBufferInfo}
 		);
 
-		DescriptorSet::BufferInfo pointLightGridBufferInfo{
+		DescriptorSet::BufferInfo lightBuffer{
 			.index = 1U,
+			.buffer = m_Lights.buffer->m_Handle,
+			.size = m_Lights.buffer->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		DescriptorSet::BufferInfo pointLightGridBufferInfo{
+			.index = 2U,
 			.buffer = m_ClusterSSBOs.pointLightGrid->m_Handle,
 			.size = m_ClusterSSBOs.pointLightGrid->m_BufferSize,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -1315,37 +1344,56 @@ namespace en
 		};
 
 		DescriptorSet::BufferInfo pointLightIndicesBufferInfo{
-			.index = 2U,
+			.index = 3U,
 			.buffer = m_ClusterSSBOs.pointLightIndices->m_Handle,
 			.size = m_ClusterSSBOs.pointLightIndices->m_BufferSize,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT
 		};
 
-		const DescriptorSet::BufferInfo globalIndexOffsetBuffer{
-			.index = 3U,
+		const DescriptorSet::BufferInfo pointLightGlobalIndexOffsetBuffer{
+			.index = 4U,
 			.buffer = m_ClusterSSBOs.pointLightGlobalIndexOffset->m_Handle,
 			.size = m_ClusterSSBOs.pointLightGlobalIndexOffset->m_BufferSize,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT
 		};
 
-		DescriptorSet::BufferInfo lightBuffer{
-			.index = 4U,
-			.buffer = m_Lights.buffer->m_Handle,
-			.size = m_Lights.buffer->m_BufferSize,
-			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		DescriptorSet::BufferInfo spotLightGridBufferInfo{
+			.index = 5U,
+			.buffer = m_ClusterSSBOs.spotLightGrid->m_Handle,
+			.size = m_ClusterSSBOs.spotLightGrid->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+
+		DescriptorSet::BufferInfo spotLightIndicesBufferInfo{
+			.index = 6U,
+			.buffer = m_ClusterSSBOs.spotLightIndices->m_Handle,
+			.size = m_ClusterSSBOs.spotLightIndices->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		const DescriptorSet::BufferInfo spotLightGlobalIndexOffsetBuffer{
+			.index = 7U,
+			.buffer = m_ClusterSSBOs.spotLightGlobalIndexOffset->m_Handle,
+			.size = m_ClusterSSBOs.spotLightGlobalIndexOffset->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT
 		};
 
 		m_ClusterSSBOs.clusterLightCullingDescriptor = std::make_unique<DescriptorSet>(
 			std::vector<DescriptorSet::ImageInfo>{},
 			std::vector<DescriptorSet::BufferInfo>{
-				aabbBufferInfo,
-				pointLightGridBufferInfo,
-				pointLightIndicesBufferInfo,
-				globalIndexOffsetBuffer,
-				lightBuffer,
+			aabbBufferInfo,
+			lightBuffer,
+			pointLightGridBufferInfo,
+			pointLightIndicesBufferInfo,
+			pointLightGlobalIndexOffsetBuffer,
+			spotLightGridBufferInfo,
+			spotLightIndicesBufferInfo,
+			spotLightGlobalIndexOffsetBuffer,
 		});
 
 		constexpr VkPushConstantRange stvPushConstant{
@@ -1437,22 +1485,49 @@ namespace en
 			.size = sizeof(m_Lights.LBO),
 		};
 
-		const DescriptorSet::BufferInfo indexBuffer{
+		const DescriptorSet::BufferInfo pointLightIndexBuffer{
 			.index = 4U,
 			.buffer = m_ClusterSSBOs.pointLightIndices->m_Handle,
 			.size = m_ClusterSSBOs.pointLightIndices->m_BufferSize,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
 		};
 
-		const DescriptorSet::BufferInfo gridBuffer{
+		const DescriptorSet::BufferInfo pointLightGridBuffer{
 			.index = 5U,
 			.buffer = m_ClusterSSBOs.pointLightGrid->m_Handle,
 			.size = m_ClusterSSBOs.pointLightGrid->m_BufferSize,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
 		};
 
-		auto imageInfos = { pointShadowmaps, spotShadowmaps, dirShadowmaps };
-		auto bufferInfos = { lightBuffer, indexBuffer, gridBuffer };
+		const DescriptorSet::BufferInfo spotLightIndexBuffer{
+			.index = 6U,
+			.buffer = m_ClusterSSBOs.spotLightIndices->m_Handle,
+			.size = m_ClusterSSBOs.spotLightIndices->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+		};
+
+		const DescriptorSet::BufferInfo spotLightGridBuffer{
+			.index = 7U,
+			.buffer = m_ClusterSSBOs.spotLightGrid->m_Handle,
+			.size = m_ClusterSSBOs.spotLightGrid->m_BufferSize,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+		};
+
+		auto imageInfos = { 
+			pointShadowmaps, 
+			spotShadowmaps, 
+			dirShadowmaps 
+		};
+
+		auto bufferInfos = { 
+			lightBuffer, 
+
+			pointLightIndexBuffer, 
+			pointLightGridBuffer,
+
+			spotLightIndexBuffer,
+			spotLightGridBuffer
+		};
 
 		if (!m_ForwardClusteredDescriptor)
 			m_ForwardClusteredDescriptor = std::make_unique<DescriptorSet>(imageInfos, bufferInfos);

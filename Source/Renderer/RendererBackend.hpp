@@ -284,8 +284,11 @@ namespace en
 
 			std::unique_ptr<MemoryBuffer> pointLightGrid;
 			std::unique_ptr<MemoryBuffer> pointLightIndices;
-
 			std::unique_ptr<MemoryBuffer> pointLightGlobalIndexOffset;
+
+			std::unique_ptr<MemoryBuffer> spotLightGrid;
+			std::unique_ptr<MemoryBuffer> spotLightIndices;
+			std::unique_ptr<MemoryBuffer> spotLightGlobalIndexOffset;
 
 			std::unique_ptr<DescriptorSet> clusterLightCullingDescriptor;
 
