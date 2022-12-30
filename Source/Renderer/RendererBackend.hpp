@@ -21,9 +21,10 @@
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
 #include <Renderer/Lights/SpotLight.hpp>
+#include <Renderer/Lights/LightsBuffer.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
-#include <Renderer/Camera/CameraMatricesBuffer.hpp>
+#include <Renderer/Camera/CameraBuffer.hpp>
 
 #include <Renderer/Pipeline.hpp>
 #include <Renderer/DescriptorSet.hpp>
@@ -141,42 +142,6 @@ namespace en
 		} m_PostProcessParams;
 
 	private:
-		struct Lights
-		{
-			struct LightsBufferObject
-			{
-				PointLight::Buffer		 pointLights[MAX_POINT_LIGHTS];
-				SpotLight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
-				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
-
-				uint32_t activePointLights = 0U;
-				uint32_t activeSpotLights = 0U;
-				uint32_t activeDirLights = 0U;
-				float dummy0 = 0.0f;
-
-				glm::vec3 ambientLight = glm::vec3(0.0f);
-				float dummy1 = 0.0f;
-
-				glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
-				glm::vec4 frustumSizeRatios[SHADOW_CASCADES]{};
-
-				glm::vec3 viewPos = glm::vec3(0.0f);
-				int debugMode = 0;
-
-				glm::uvec4 tileCount;
-
-				glm::uvec4 tileSizes;
-
-				float scale;
-				float bias;
-
-			} LBO;
-
-			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> stagingBuffers;
-			std::unique_ptr<MemoryBuffer> buffer;
-
-		} m_Lights;
-
 		struct Shadows
 		{
 			VkSampler sampler;
@@ -291,8 +256,6 @@ namespace en
 			std::unique_ptr<MemoryBuffer> spotLightGlobalIndexOffset;
 
 			std::unique_ptr<DescriptorSet> clusterLightCullingDescriptor;
-
-			const glm::uvec3 clusterCount = glm::uvec3(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z);
 		} m_ClusterSSBOs;
 
 		std::unique_ptr<ComputeShader> m_ClusterAABBCompute;
@@ -311,8 +274,8 @@ namespace en
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
 
-		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
-
+		std::unique_ptr<CameraBuffer> m_CameraBuffer;
+		std::unique_ptr<LightsBuffer> m_LightsBuffer;
 		std::unique_ptr<DescriptorSet> m_ForwardClusteredDescriptor;
 
 		std::unique_ptr<DescriptorSet> m_HDRInput;
@@ -365,7 +328,7 @@ namespace en
 		void CreateHDROffscreen();
 		void CreateSSAOTarget();
 
-		void UpdateGBufferInput();
+		void UpdateForwardInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
 		void UpdateSSAOInput();

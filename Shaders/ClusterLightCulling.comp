@@ -52,7 +52,7 @@ layout (std430, binding = 0) buffer AABBClustersBuffer
 };
 
 
-layout(binding = 1) uniform UBO 
+layout(std430, set = 0, binding = 1) buffer LBO 
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     SpotLight  sLights[MAX_SPOT_LIGHTS];
@@ -66,21 +66,31 @@ layout(binding = 1) uniform UBO
     vec3 ambient;
     float dummy1;
 
-    vec4 cascadeSplitDistances[SHADOW_CASCADES];
-
-    vec4 cascadeRatios[SHADOW_CASCADES];
-
-    vec3 viewPos;
-    int debugMode;
-
-    uvec4 tileCount;
-
-    uvec4 tileSizes;
-
-    float scale;
-    float bias;
-
 } lightsBuffer;
+
+layout(set = 1, binding = 0) uniform CameraBufferObject
+{
+    mat4 view;
+	mat4 invView;
+	mat4 proj;
+	mat4 projView;
+
+	vec3 position;
+
+	int debugMode;
+
+	vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
+
+	uvec4 clusterTileCount;
+	uvec4 clusterTileSizes;
+
+	float clusterScale;
+	float clusterBias;
+
+    float zNear;
+	float zFar;
+} camera;
 
 struct LightGrid
 {
@@ -89,42 +99,37 @@ struct LightGrid
 };
 
 // Pointlights
-layout (std430, binding = 2) buffer PointLightGrids 
+layout (std430, set = 0, binding = 2) buffer PointLightGrids 
 {
     LightGrid pointLightGrids[];
 };
 
-layout (std430, binding = 3) buffer PointLightIndexSSBO
+layout (std430, set = 0, binding = 3) buffer PointLightIndexSSBO
 {
     uint globalPointLightIndexList[];
 };
 
-layout (std430, binding = 4) buffer PointGlobalIndexCountSSBO
+layout (std430, set = 0, binding = 4) buffer PointGlobalIndexCountSSBO
 {
     uint pointGlobalIndexCount;
 };
 
 
 // Spotlights
-layout (std430, binding = 5) buffer SpotLightGrids 
+layout (std430, set = 0, binding = 5) buffer SpotLightGrids 
 {
     LightGrid spotLightGrids[];
 };
 
-layout (std430, binding = 6) buffer SpotLightIndexSSBO
+layout (std430, set = 0, binding = 6) buffer SpotLightIndexSSBO
 {
     uint globalSpotLightIndexList[];
 };
 
-layout (std430, binding = 7) buffer SpotGlobalIndexCountSSBO
+layout (std430, set = 0, binding = 7) buffer SpotGlobalIndexCountSSBO
 {
     uint spotGlobalIndexCount;
 };
-
-layout(push_constant) uniform CameraPushConstant
-{
-    mat4 view;
-} camera;
 
 struct SharedPointLight
 {
@@ -201,7 +206,7 @@ bool ConeAABBIntersection(uint light, uint tileID)
 
     AABB cell = clusters[tileID];
 
-    float cutoff = 1.0 + pow(0.6 + outerCutoff, 7.0);//pow(outerCutoff*2.91, 2.5) + 1.08;
+    float cutoff = 1.0 + pow(0.6 + outerCutoff, 7.0);
 
     vec3 aabbCenter = vec3(cell.min.xyz + cell.max.xyz) / 2.0;
     vec3 aabbExtents = vec3(cell.max.xyz - cell.min.xyz) / 2.0;

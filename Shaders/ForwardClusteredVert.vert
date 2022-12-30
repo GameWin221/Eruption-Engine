@@ -1,5 +1,7 @@
 #version 450
 
+#include "../EruptionEngine.ini"
+
 layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec3 vNormal;
 layout(location = 2) in vec3 vTangent;
@@ -10,17 +12,28 @@ layout(location = 1) out vec3 fNormal;
 layout(location = 2) out vec2 fTexcoord;
 layout(location = 3) out mat3 fTBN;
 
-layout(set = 0, binding = 0) uniform CameraMatricesBufferObject
+layout(set = 0, binding = 0) uniform CameraBufferObject
 {
     mat4 view;
-    mat4 invView;
-    mat4 proj;
-    mat4 viewProj;
+	mat4 invView;
+	mat4 proj;
+	mat4 projView;
 
-    vec4 position;
+	vec3 position;
 
-    float near;
-    float far;
+	int debugMode;
+
+	vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
+
+	uvec4 clusterTileCount;
+	uvec4 clusterTileSizes;
+
+	float clusterScale;
+	float clusterBias;
+
+    float zNear;
+	float zFar;
 } camera;
 
 layout(push_constant) uniform PerObjectData
@@ -30,12 +43,12 @@ layout(push_constant) uniform PerObjectData
 
 float LinearDepth(float d)
 {
-    return camera.near * camera.far / (camera.far + d * (camera.near - camera.far));
+    return camera.zNear * camera.zFar / (camera.zFar + d * (camera.zNear - camera.zFar));
 }
 
 void main() 
 {
-    gl_Position = camera.viewProj * object.model * vec4(vPos, 1.0);
+    gl_Position = camera.projView * object.model * vec4(vPos, 1.0);
 
     // Transform vertex positions to world space
     fPosition = vec4(vec3(object.model * vec4(vPos, 1.0)), LinearDepth(gl_Position.z / gl_Position.w));

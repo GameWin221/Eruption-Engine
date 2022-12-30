@@ -27,6 +27,30 @@ layout(set = 2, binding = 0) uniform samplerCubeArray pointShadowmaps;
 layout(set = 2, binding = 1) uniform sampler2DArray spotShadowmaps;
 layout(set = 2, binding = 2) uniform sampler2DArray dirShadowmaps;
 
+layout(set = 0, binding = 0) uniform CameraBufferObject
+{
+    mat4 view;
+	mat4 invView;
+	mat4 proj;
+	mat4 projView;
+
+	vec3 position;
+
+	int debugMode;
+
+	vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
+
+	uvec4 clusterTileCount;
+	uvec4 clusterTileSizes;
+
+	float clusterScale;
+	float clusterBias;
+
+    float zNear;
+	float zFar;
+} camera;
+
 struct PointLight
 {
     vec3 position;
@@ -63,7 +87,7 @@ struct DirLight
     mat4 projView[SHADOW_CASCADES];
 };
 
-layout(set = 2, binding = 3) uniform UBO 
+layout(std430, set = 2, binding = 3) buffer LBO
 {
     PointLight pLights[MAX_POINT_LIGHTS];
     SpotLight  sLights[MAX_SPOT_LIGHTS];
@@ -76,21 +100,6 @@ layout(set = 2, binding = 3) uniform UBO
 
     vec3 ambient;
     float dummy1;
-
-    vec4 cascadeSplitDistances[SHADOW_CASCADES];
-
-    vec4 cascadeRatios[SHADOW_CASCADES];
-
-    vec3 viewPos;
-    int debugMode;
-
-    uvec4 tileCount;
-
-    uvec4 tileSizes;
-
-    float scale;
-    float bias;
-
 } lightsBuffer;
 
 struct LightGrid
@@ -363,7 +372,7 @@ void main()
 	int cascade = 0;
 
     for(int i = 0; i < SHADOW_CASCADES-1; i++)
-        if (linearDepth > lightsBuffer.cascadeSplitDistances[i].x)
+        if (linearDepth > camera.cascadeSplitDistances[i].x)
 		    cascade = i+1;
     
     vec3 ambient = albedo * lightsBuffer.ambient;
@@ -371,14 +380,14 @@ void main()
 
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
 
-    vec3 viewDir = normalize(lightsBuffer.viewPos - position);
-    float viewDist = length(lightsBuffer.viewPos - position);
+    vec3 viewDir = normalize(camera.position - position);
+    float viewDist = length(camera.position - position);
     
-    uint  zTile     = uint(max(log2(linearDepth) * lightsBuffer.scale + lightsBuffer.bias, 0.0));
-    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / lightsBuffer.tileSizes.xy), zTile);
+    uint  zTile     = uint(max(log2(linearDepth) * camera.clusterScale + camera.clusterBias, 0.0));
+    uvec3 tiles     = uvec3(uvec2(gl_FragCoord.xy / camera.clusterTileSizes.xy), zTile);
     uint  tileIndex = tiles.x +
-                      lightsBuffer.tileCount.x * tiles.y +
-                      lightsBuffer.tileCount.x * lightsBuffer.tileCount.y * tiles.z;  
+                      camera.clusterTileCount.x * tiles.y +
+                      camera.clusterTileCount.x * camera.clusterTileCount.y * tiles.z;  
 
     uint pointLightCount       = pointLightGrid[tileIndex].count;
     uint pointLightIndexOffset = pointLightGrid[tileIndex].offset;
@@ -432,7 +441,7 @@ void main()
         DirLight light = lightsBuffer.dLights[i];
 
         vec4 fPosLightSpace = biasMat * light.projView[cascade] * vec4(position, 1.0);
-        float softness = light.shadowSoftness / lightsBuffer.cascadeRatios[cascade].x;
+        float softness = light.shadowSoftness / camera.cascadeFrustumSizeRatios[cascade].x;
 
         if(light.shadowmapIndex != -1)
             shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, light.shadowmapIndex+cascade, light.pcfSampleRate, light.bias, softness);
@@ -442,7 +451,7 @@ void main()
     
     vec3 result = vec3(0.0);
 
-    switch(lightsBuffer.debugMode)
+    switch(camera.debugMode)
     {
         case 0:
             result = lighting + ambient;

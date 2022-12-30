@@ -43,9 +43,13 @@ namespace en
 
 		EN_SUCCESS("Created swapchain!")
 
-			CreateLightsBuffer();
+			m_LightsBuffer = std::make_unique<LightsBuffer>();
 
 		EN_SUCCESS("Created lights buffer!");
+
+			m_CameraBuffer = std::make_unique<CameraBuffer>();
+
+		EN_SUCCESS("Created the camera buffer!")
 
 			CreateClusterSSBOs();
 
@@ -71,7 +75,7 @@ namespace en
 
 		EN_SUCCESS("Initialized the shadows!")
 
-			UpdateGBufferInput();
+			UpdateForwardInput();
 
 		EN_SUCCESS("Created GBuffer descriptor set!")
 
@@ -135,10 +139,6 @@ namespace en
 
 		EN_SUCCESS("Created sync objects!")
 
-			m_CameraMatrices = std::make_unique<CameraMatricesBuffer>();
-
-		EN_SUCCESS("Created camera matrices buffer!")
-
 		EN_SUCCESS("Created the renderer Vulkan backend");
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
@@ -177,34 +177,17 @@ namespace en
 
 	void RendererBackend::UpdateLights()
 	{
-		m_CameraMatrices->m_Matrices[m_FrameIndex].position = glm::vec4(m_MainCamera->m_Position, 0.0f);
-		m_CameraMatrices->m_Matrices[m_FrameIndex].proj = m_MainCamera->GetProjMatrix();
-		m_CameraMatrices->m_Matrices[m_FrameIndex].view = m_MainCamera->GetViewMatrix();
-		m_CameraMatrices->m_Matrices[m_FrameIndex].invView = glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].view);
-		m_CameraMatrices->m_Matrices[m_FrameIndex].projView = m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view;
-		m_CameraMatrices->m_Matrices[m_FrameIndex].zNear = m_MainCamera->m_NearPlane;
-		m_CameraMatrices->m_Matrices[m_FrameIndex].zFar = m_MainCamera->m_FarPlane;
-
-		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width  / m_ClusterSSBOs.clusterCount.x);
-		uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / m_ClusterSSBOs.clusterCount.y);
-
-		m_Lights.LBO.tileSizes = glm::uvec4(sizeX, sizeY, 0, 0);
-		m_Lights.LBO.tileCount = glm::vec4(m_ClusterSSBOs.clusterCount, 0.0);
-
-		m_Lights.LBO.scale = (float)m_ClusterSSBOs.clusterCount.z / std::log2f(m_MainCamera->m_FarPlane / m_MainCamera->m_NearPlane);
-		m_Lights.LBO.bias = -((float)m_ClusterSSBOs.clusterCount.z * std::log2f(m_MainCamera->m_NearPlane) / std::log2f(m_MainCamera->m_FarPlane / m_MainCamera->m_NearPlane));
+		m_CameraBuffer->UpdateBuffer(m_FrameIndex, m_MainCamera, m_Swapchain->GetExtent(), m_DebugMode);
 
 		auto& pointLights = m_Scene->m_PointLights;
 		auto& spotLights = m_Scene->m_SpotLights;
 		auto& dirLights = m_Scene->m_DirectionalLights;
 
-		m_Lights.LBO.activePointLights = 0U;
-		m_Lights.LBO.activeSpotLights = 0U;
-		m_Lights.LBO.activeDirLights = 0U;
+		m_LightsBuffer->LBO.activePointLights = 0U;
+		m_LightsBuffer->LBO.activeSpotLights = 0U;
+		m_LightsBuffer->LBO.activeDirLights = 0U;
 
-		m_Lights.LBO.viewPos = m_MainCamera->m_Position;
-		m_Lights.LBO.debugMode = m_DebugMode;
-		m_Lights.LBO.ambientLight = m_Scene->m_AmbientColor;
+		m_LightsBuffer->LBO.ambientLight = m_Scene->m_AmbientColor;
 
 		for (auto& l : pointLights)
 			l.m_ShadowmapIndex = -1;
@@ -286,7 +269,7 @@ namespace en
 
 		for (const auto& light : pointLights)
 		{
-			PointLight::Buffer& buffer = m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights];
+			PointLight::Buffer& buffer = m_LightsBuffer->LBO.pointLights[m_LightsBuffer->LBO.activePointLights];
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 			float     lightRad = light.m_Radius * (float)light.m_Active;
@@ -319,11 +302,11 @@ namespace en
 			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
 				continue;
 
-			m_Lights.LBO.activePointLights++;
+			m_LightsBuffer->LBO.activePointLights++;
 		}
 		for (const auto& light : spotLights)
 		{
-			SpotLight::Buffer& buffer = m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights];
+			SpotLight::Buffer& buffer = m_LightsBuffer->LBO.spotLights[m_LightsBuffer->LBO.activeSpotLights];
 
 			glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
@@ -348,11 +331,11 @@ namespace en
 			if (light.m_Range == 0.0f || lightColor == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
 				continue;
 
-			m_Lights.LBO.activeSpotLights++;
+			m_LightsBuffer->LBO.activeSpotLights++;
 		}
 		for (const auto& light : dirLights)
 		{
-			DirectionalLight::Buffer& buffer = m_Lights.LBO.dirLights[m_Lights.LBO.activeDirLights];
+			DirectionalLight::Buffer& buffer = m_LightsBuffer->LBO.dirLights[m_LightsBuffer->LBO.activeDirLights];
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
@@ -369,23 +352,23 @@ namespace en
 			if (lightCol == glm::vec3(0.0))
 				continue;
 
-			m_Lights.LBO.activeDirLights++;
+			m_LightsBuffer->LBO.activeDirLights++;
 		}
 
 		// Reset last (point/spot)lights for clustered rendering
-		m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights].color = glm::vec3(0.0f);
-		m_Lights.LBO.pointLights[m_Lights.LBO.activePointLights].radius = 0.0f;
+		m_LightsBuffer->LBO.pointLights[m_LightsBuffer->LBO.activePointLights].color = glm::vec3(0.0f);
+		m_LightsBuffer->LBO.pointLights[m_LightsBuffer->LBO.activePointLights].radius = 0.0f;
 
-		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].color = glm::vec3(0.0f);
-		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].range = 0.0f;
-		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].direction = glm::vec3(0.0f);
-		m_Lights.LBO.spotLights[m_Lights.LBO.activeSpotLights].outerCutoff = 0.0f;
+		m_LightsBuffer->LBO.spotLights[m_LightsBuffer->LBO.activeSpotLights].color = glm::vec3(0.0f);
+		m_LightsBuffer->LBO.spotLights[m_LightsBuffer->LBO.activeSpotLights].range = 0.0f;
+		m_LightsBuffer->LBO.spotLights[m_LightsBuffer->LBO.activeSpotLights].direction = glm::vec3(0.0f);
+		m_LightsBuffer->LBO.spotLights[m_LightsBuffer->LBO.activeSpotLights].outerCutoff = 0.0f;
 	}
 
 	void RendererBackend::BeginRender()
 	{
-		m_CameraMatrices->MapBuffer(m_FrameIndex);
-		m_Lights.stagingBuffers[m_FrameIndex]->MapMemory(&m_Lights.LBO, m_Lights.stagingBuffers[0]->m_BufferSize);
+		m_CameraBuffer->MapBuffer(m_FrameIndex);
+		m_LightsBuffer->MapStagingMemory(m_FrameIndex);
 
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_MainSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_SwapchainImageIndex);
 
@@ -417,13 +400,7 @@ namespace en
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
 			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
 
-		m_Lights.stagingBuffers[m_FrameIndex]->CopyTo(m_Lights.buffer.get(), m_CommandBuffers[m_FrameIndex]);
-
-		m_Lights.buffer->PipelineBarrier(
-			VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			m_CommandBuffers[m_FrameIndex]
-		);
+		m_LightsBuffer->CopyStagingToDevice(m_FrameIndex, m_CommandBuffers[m_FrameIndex]);
 	}
 	void RendererBackend::DepthPass()
 	{
@@ -446,7 +423,7 @@ namespace en
 
 		m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
-		glm::mat4 cameraMatrix = m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view;
+		glm::mat4 cameraMatrix = m_CameraBuffer->m_CBOs[m_FrameIndex].proj * m_CameraBuffer->m_CBOs[m_FrameIndex].view;
 
 		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
@@ -504,9 +481,9 @@ namespace en
 			m_CommandBuffers[m_FrameIndex]
 		);
 
-		for (int i = 0; i < m_Lights.LBO.activePointLights; i++)
+		for (int i = 0; i < m_LightsBuffer->LBO.activePointLights; i++)
 		{
-			if (m_Lights.LBO.pointLights[i].shadowmapIndex == -1)
+			if (m_LightsBuffer->LBO.pointLights[i].shadowmapIndex == -1)
 				continue;
 
 			for (int j = 0; j < 6; j++)
@@ -514,7 +491,7 @@ namespace en
 				const Pipeline::BindInfo info{
 					.colorAttachments {
 						{
-							.imageView = m_Shadows.point.singleViews[m_Lights.LBO.pointLights[i].shadowmapIndex][j],
+							.imageView = m_Shadows.point.singleViews[m_LightsBuffer->LBO.pointLights[i].shadowmapIndex][j],
 							.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 
 							.clearValue = { 0.0f, 0.0f, 0.0f, 0.0f },
@@ -545,8 +522,8 @@ namespace en
 
 					glm::mat4 model = object->GetModelMatrix();
 
-					auto& pos = m_Shadows.point.lightPositions[m_Lights.LBO.pointLights[i].shadowmapIndex];
-					auto& farPlane = m_Shadows.point.farPlanes[m_Lights.LBO.pointLights[i].shadowmapIndex];
+					auto& pos = m_Shadows.point.lightPositions[m_LightsBuffer->LBO.pointLights[i].shadowmapIndex];
+					auto& farPlane = m_Shadows.point.farPlanes[m_LightsBuffer->LBO.pointLights[i].shadowmapIndex];
 
 					// Store light position and far plane in the last row
 					model[0][3] = pos.x;
@@ -555,7 +532,7 @@ namespace en
 					model[3][3] = farPlane;
 
 					const Shadows::Point::OmniShadowPushConstant pushConstant {
-						.viewProj = m_Shadows.point.shadowMatrices[m_Lights.LBO.pointLights[i].shadowmapIndex][j],
+						.viewProj = m_Shadows.point.shadowMatrices[m_LightsBuffer->LBO.pointLights[i].shadowmapIndex][j],
 						.model = model,
 					};
 
@@ -575,14 +552,14 @@ namespace en
 
 			}
 		}
-		for (int i = 0; i < m_Lights.LBO.activeSpotLights; i++)
+		for (int i = 0; i < m_LightsBuffer->LBO.activeSpotLights; i++)
 		{
-			if (m_Lights.LBO.spotLights[i].shadowmapIndex == -1)
+			if (m_LightsBuffer->LBO.spotLights[i].shadowmapIndex == -1)
 				continue;
 
 			const Pipeline::BindInfo info{
 				.depthAttachment {
-					.imageView = m_Shadows.spot.singleViews[m_Lights.LBO.spotLights[i].shadowmapIndex],
+					.imageView = m_Shadows.spot.singleViews[m_LightsBuffer->LBO.spotLights[i].shadowmapIndex],
 
 					.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 
@@ -608,7 +585,7 @@ namespace en
 
 				const DepthStageInfo cameraInfo{
 					.modelMatrix = object->GetModelMatrix(),
-					.viewProjMatrix = m_Lights.LBO.spotLights[i].lightMat,
+					.viewProjMatrix = m_LightsBuffer->LBO.spotLights[i].lightMat,
 				};
 
 				m_ShadowPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
@@ -625,16 +602,16 @@ namespace en
 
 			m_ShadowPipeline->EndRendering();
 		}
-		for (int i = 0; i < m_Lights.LBO.activeDirLights; i++)
+		for (int i = 0; i < m_LightsBuffer->LBO.activeDirLights; i++)
 		{
-			if (m_Lights.LBO.dirLights[i].shadowmapIndex == -1)
+			if (m_LightsBuffer->LBO.dirLights[i].shadowmapIndex == -1)
 				continue;
 
 			for (int j = 0; j < SHADOW_CASCADES; j++)
 			{
 				const Pipeline::BindInfo info{
 					.depthAttachment {
-						.imageView = m_Shadows.dir.singleViews[m_Lights.LBO.dirLights[i].shadowmapIndex + j],
+						.imageView = m_Shadows.dir.singleViews[m_LightsBuffer->LBO.dirLights[i].shadowmapIndex + j],
 
 						.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 
@@ -660,7 +637,7 @@ namespace en
 
 					const DepthStageInfo cameraInfo{
 						.modelMatrix = object->GetModelMatrix(),
-						.viewProjMatrix = m_Lights.LBO.dirLights[i].lightMat[j],
+						.viewProjMatrix = m_LightsBuffer->LBO.dirLights[i].lightMat[j],
 					};
 
 					m_ShadowPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
@@ -707,12 +684,12 @@ namespace en
 		if (m_SkipFrame || !m_Scene)
 			return;
 
-		glm::mat4 inverseProj(glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj));
+		glm::mat4 inverseProj(glm::inverse(m_CameraBuffer->m_CBOs[m_FrameIndex].proj));
 		
-		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / m_ClusterSSBOs.clusterCount.x);
-		uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / m_ClusterSSBOs.clusterCount.y);
+		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / CLUSTERED_TILES_X);
+		uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / CLUSTERED_TILES_Y);
 
-		glm::uvec4 tileSizes(m_ClusterSSBOs.clusterCount.x, m_ClusterSSBOs.clusterCount.y, m_ClusterSSBOs.clusterCount.z, 0.0);
+		glm::uvec4 tileSizes(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z, 0.0);
 		glm::uvec4 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, sizeX, sizeY);
 
 		float zNear = m_MainCamera->m_NearPlane;
@@ -733,14 +710,14 @@ namespace en
 		
 		m_ClusterAABBCompute->BindDescriptorSet(m_ClusterSSBOs.aabbClustersDescriptor.get());
 		
-		m_ClusterAABBCompute->Dispatch(m_ClusterSSBOs.clusterCount.x, m_ClusterSSBOs.clusterCount.y, m_ClusterSSBOs.clusterCount.z);
+		m_ClusterAABBCompute->Dispatch(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z);
 		
 		
 		m_ClusterLightCullingCompute->Bind(m_CommandBuffers[m_FrameIndex]);
 		
 		m_ClusterLightCullingCompute->BindDescriptorSet(m_ClusterSSBOs.clusterLightCullingDescriptor.get());
 		
-		m_ClusterLightCullingCompute->PushConstants(&m_CameraMatrices->m_Matrices[m_FrameIndex].view, sizeof(glm::mat4), 0U);
+		m_ClusterLightCullingCompute->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U);
 		
 		m_ClusterLightCullingCompute->Dispatch(1U, 1U, CLUSTERED_BATCHES);
 
@@ -776,11 +753,11 @@ namespace en
 		};
 
 		m_ForwardClusteredPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
+		
+		m_ForwardClusteredPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
 
 		m_ForwardClusteredPipeline->BindDescriptorSet(m_ForwardClusteredDescriptor->m_DescriptorSet, 2U);
 
-		m_CameraMatrices->Bind(m_CommandBuffers[m_FrameIndex], m_ForwardClusteredPipeline->m_Layout, m_FrameIndex);
-		
 		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
@@ -799,7 +776,7 @@ namespace en
 				m_ForwardClusteredPipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
 			}
 		}
-
+		
 		m_ForwardClusteredPipeline->EndRendering();
 	}
 	void RendererBackend::SSAOPass()
@@ -1035,7 +1012,7 @@ namespace en
 
 		//UpdateClusterAABBs();
 
-		UpdateGBufferInput();
+		UpdateForwardInput();
 		UpdateSwapchainInputs();
 		UpdateHDRInput();
 		UpdateSSAOInput();
@@ -1085,7 +1062,6 @@ namespace en
 		m_TonemappingPipeline.reset();
 		m_AntialiasingPipeline.reset();
 
-		m_CameraMatrices.reset();
 		m_SSAOBuffer.reset();
 
 		DestroyShadows();
@@ -1120,7 +1096,7 @@ namespace en
 
 		InitShadows();
 
-		UpdateGBufferInput();
+		UpdateForwardInput();
 		UpdateSwapchainInputs();
 		UpdateHDRInput();
 		UpdateSSAOInput();
@@ -1137,8 +1113,6 @@ namespace en
 		InitAntialiasingPipeline();
 
 		CreateSyncObjects();
-
-		m_CameraMatrices = std::make_unique<CameraMatricesBuffer>();
 
 		m_Swapchain->CreateSwapchainFramebuffers(m_ImGui.renderPass);
 
@@ -1204,20 +1178,13 @@ namespace en
 		UpdateShadowFrustums();
 	}
 
-	void RendererBackend::CreateLightsBuffer()
-	{
-		m_Lights.buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		
-		for (auto& buffer : m_Lights.stagingBuffers)
-			buffer = std::make_unique<MemoryBuffer>(sizeof(m_Lights.LBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	}
 	void RendererBackend::CreateSSAOBuffer()
 	{
 		std::uniform_real_distribution<float> dist(0.0, 1.0);
 		std::default_random_engine gen;
 
-		std::array<glm::vec4, 64> kernels;
-		std::array<glm::vec4, 16> noise;
+		std::array<glm::vec4, 64> kernels{};
+		std::array<glm::vec4, 16> noise{};
 
 		for (int i = 0; i < kernels.size(); ++i)
 		{
@@ -1247,7 +1214,7 @@ namespace en
 			);
 		}
 
-		std::array<glm::vec4, kernels.size() + noise.size()> data;
+		std::array<glm::vec4, kernels.size() + noise.size()> data{};
 
 		std::move(kernels.begin(), kernels.end(), data.begin());
 		std::move(noise.begin(), noise.end(), data.begin() + kernels.size());
@@ -1265,11 +1232,10 @@ namespace en
 	
 	void RendererBackend::CreateClusterSSBOs()
 	{
-		auto& gridSize = m_ClusterSSBOs.clusterCount;
-		uint32_t clusterCount = gridSize.x * gridSize.y * gridSize.z;
+		uint32_t clusterCount = CLUSTERED_TILES_X * CLUSTERED_TILES_Y * CLUSTERED_TILES_Z;
 
 		m_ClusterSSBOs.aabbClusters = std::make_unique<MemoryBuffer>(
-			sizeof(glm::vec4) * 2 * clusterCount,
+			sizeof(glm::vec4) * 2U * clusterCount,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
@@ -1281,7 +1247,7 @@ namespace en
 		);
 
 		m_ClusterSSBOs.pointLightGrid = std::make_unique<MemoryBuffer>(
-			sizeof(uint32_t) * 2 * clusterCount,
+			sizeof(uint32_t) * 2U * clusterCount,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
@@ -1300,7 +1266,7 @@ namespace en
 			);
 
 		m_ClusterSSBOs.spotLightGrid = std::make_unique<MemoryBuffer>(
-			sizeof(uint32_t) * 2 * clusterCount,
+			sizeof(uint32_t) * 2U * clusterCount,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 			);
@@ -1329,9 +1295,9 @@ namespace en
 
 		DescriptorSet::BufferInfo lightBuffer{
 			.index = 1U,
-			.buffer = m_Lights.buffer->m_Handle,
-			.size = m_Lights.buffer->m_BufferSize,
-			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.buffer = m_LightsBuffer->GetHandle(),
+			.size = m_LightsBuffer->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT
 		};
 
@@ -1410,25 +1376,14 @@ namespace en
 
 		m_ClusterAABBCompute = std::make_unique<ComputeShader>(aabbInfo);
 
-		constexpr VkPushConstantRange cameraPushConstant{
-			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-			.offset = 0U,
-			.size = sizeof(glm::mat4)
-		};
-
 		ComputeShader::CreateInfo lightCullInfo{
 			.sourcePath = "Shaders/ClusterLightCulling.spv",
-			.descriptorLayouts = { m_ClusterSSBOs.clusterLightCullingDescriptor->m_DescriptorLayout},
-			.pushConstantRanges = { cameraPushConstant },
+			.descriptorLayouts = { m_ClusterSSBOs.clusterLightCullingDescriptor->m_DescriptorLayout, m_CameraBuffer->GetLayout()},
 		};
 
 		m_ClusterLightCullingCompute = std::make_unique<ComputeShader>(lightCullInfo);
 	}
 
-	//void RendererBackend::UpdateClusterAABBs()
-	//{
-	//	
-	//}
 
 	void RendererBackend::CreateDepthBuffer()
 	{
@@ -1456,7 +1411,7 @@ namespace en
 		);
 	}
 
-	void RendererBackend::UpdateGBufferInput()
+	void RendererBackend::UpdateForwardInput()
 	{
 		const DescriptorSet::ImageInfo pointShadowmaps{
 			.index = 0U,
@@ -1481,8 +1436,9 @@ namespace en
 
 		const DescriptorSet::BufferInfo lightBuffer{
 			.index = 3U,
-			.buffer = m_Lights.buffer->m_Handle,
-			.size = sizeof(m_Lights.LBO),
+			.buffer = m_LightsBuffer->GetHandle(),
+			.size = m_LightsBuffer->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		};
 
 		const DescriptorSet::BufferInfo pointLightIndexBuffer{
@@ -1775,7 +1731,7 @@ namespace en
 			.depthFormat = m_DepthBuffer->m_Format,
 			.vShader = "Shaders/ForwardClusteredVert.spv",
 			.fShader = "Shaders/ForwardClusteredFrag.spv",
-			.descriptorLayouts = { CameraMatricesBuffer::GetLayout(), Material::GetLayout(), m_ForwardClusteredDescriptor->m_DescriptorLayout },
+			.descriptorLayouts = { m_CameraBuffer->GetLayout(), Material::GetLayout(), m_ForwardClusteredDescriptor->m_DescriptorLayout },
 			.pushConstantRanges = { objectPushConstant, materialPushConstant },
 			.useVertexBindings = true,
 			.enableDepthTest = true,
@@ -2031,8 +1987,9 @@ namespace en
 		
 		m_Shadows.frustums[SHADOW_CASCADES-1].split = m_Shadows.cascadeFarPlane;
 
+
 		for (int i = 0; i < SHADOW_CASCADES; i++)
-			m_Lights.LBO.cascadeSplitDistances[i].x = m_Shadows.frustums[i].split;
+			m_CameraBuffer->m_CBOs[m_FrameIndex].cascadeSplitDistances[i].x = m_Shadows.frustums[i].split;
 
 		glm::vec4 frustumClipSpace[8]
 		{
@@ -2046,7 +2003,7 @@ namespace en
 			{ 1.0f,  1.0f,  1.0f, 1.0f},
 		};
 
-		glm::mat4 invViewProj = glm::inverse(m_CameraMatrices->m_Matrices[m_FrameIndex].proj * m_CameraMatrices->m_Matrices[m_FrameIndex].view);
+		glm::mat4 invViewProj = glm::inverse(m_CameraBuffer->m_CBOs[m_FrameIndex].proj * m_CameraBuffer->m_CBOs[m_FrameIndex].view);
 
 		for (auto& vert : frustumClipSpace)
 		{
@@ -2079,6 +2036,6 @@ namespace en
 			m_Shadows.frustums[i].ratio = m_Shadows.frustums[i].radius / m_Shadows.frustums[0].radius;
 
 		for (int i = 0; i < SHADOW_CASCADES; i++)
-			m_Lights.LBO.frustumSizeRatios[i].x = m_Shadows.frustums[i].ratio;
+			m_CameraBuffer->m_CBOs[m_FrameIndex].cascadeFrustumSizeRatios[i].x = m_Shadows.frustums[i].ratio;
 	}
 }
