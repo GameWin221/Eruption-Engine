@@ -6,6 +6,7 @@
 namespace en
 {
 	constexpr std::array<const char*, 2> g_AntialiasingModeNames = { "FXAA", "None" };
+	constexpr std::array<const char*, 2> g_AmbientOcclusionModeNames = { "SSAO", "None" };
 
 	void SettingsPanel::Render()
 	{
@@ -50,6 +51,37 @@ namespace en
 				break;
 			}
 	
+		}
+
+		if (ImGui::CollapsingHeader("Ambient Occlusion"))
+		{
+			if (ImGui::Combo("Ambient Occlusion Mode", (int*)&postProcessing.ambientOcclusionMode, g_AmbientOcclusionModeNames.data(), g_AmbientOcclusionModeNames.size()))
+				m_Renderer->ReloadRenderer();
+
+			switch (postProcessing.ambientOcclusionMode)
+			{
+			case RendererBackend::AmbientOcclusionMode::SSAO:
+				ImGui::Spacing();
+
+				if (ImGui::Button("Restore Defaults"))
+					postProcessing.ambientOcclusion = RendererBackend::PostProcessingParams::AmbientOcclusion{};
+
+				ImGui::Spacing();
+
+				ImGui::DragFloat("SSAO Bias", &postProcessing.ambientOcclusion.bias, 0.05f, 0.0f, 1.0f), "%.2f", ImGuiSliderFlags_AlwaysClamp;
+				ImGui::DragFloat("SSAO Radius", &postProcessing.ambientOcclusion.radius, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("SSAO Multiplier", &postProcessing.ambientOcclusion.multiplier, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				break;
+
+			case RendererBackend::AmbientOcclusionMode::None:
+				ImGui::Text("Ambient occlusion is disabled.");
+				break;
+
+			default:
+				EN_ERROR("void SettingsPanel::Render() - postProcessing.ambientOcclusionMode was an unknown value!");
+				break;
+			}
+
 		}
 
 		if (ImGui::CollapsingHeader("Lights and Shadows"))

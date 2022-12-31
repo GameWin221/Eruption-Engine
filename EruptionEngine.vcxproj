@@ -190,9 +190,13 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Lights\LightsBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\ComputeShader.cpp" />
     <ClCompile Include="Source\Renderer\Image.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
@@ -202,7 +206,6 @@
     <ClCompile Include="Source\Renderer\DescriptorSet.cpp" />
     <ClCompile Include="Source\Renderer\Pipeline.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
-    <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp" />
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -266,9 +269,13 @@
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\LightsBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\ComputeShader.hpp" />
     <ClInclude Include="Source\Renderer\Image.hpp" />
     <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
@@ -289,7 +296,6 @@
     <ClInclude Include="External\ImGui\imstb_rectpack.h" />
     <ClInclude Include="External\ImGui\imstb_textedit.h" />
     <ClInclude Include="External\ImGui\imstb_truetype.h" />
-    <ClInclude Include="Source\Renderer\Camera\CameraMatricesBuffer.hpp" />
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
@@ -320,10 +326,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
+    <None Include="Shaders\ActiveClusterCulling.comp" />
     <None Include="Shaders\AMD\AMDFXAA.comp" />
     <None Include="Shaders\AMD\AMDTonemapping.comp" />
+    <None Include="Shaders\ClusterAABB.comp" />
+    <None Include="Shaders\ClusterLightCulling.comp" />
     <None Include="Shaders\Depth.frag" />
     <None Include="Shaders\Depth.vert" />
+    <None Include="Shaders\ForwardClusteredFrag.frag" />
+    <None Include="Shaders\ForwardClusteredVert.vert" />
     <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\GeometryFragment.frag">
       <FileType>Document</FileType>
@@ -343,6 +354,7 @@
     <None Include="Shaders\OmniDepthFrag.frag" />
     <None Include="Shaders\OmniDepthVert.vert" />
     <None Include="Shaders\SMAA.frag" />
+    <None Include="Shaders\SSAO.frag" />
     <None Include="Shaders\TonemapComp.comp" />
     <None Include="Shaders\Tonemapping.frag" />
   </ItemGroup>

@@ -29,7 +29,7 @@ namespace en
 	public:
 		Camera(const CameraInfo& cameraInfo);
 
-		void LookAt(glm::vec3 target);
+		void LookAt(const glm::vec3 target);
 
 		float m_FarPlane;
 		float m_NearPlane;
@@ -49,20 +49,17 @@ namespace en
 		const glm::mat4& GetProjMatrix() { UpdateProjMatrix(); return m_Proj; };
 		const glm::mat4& GetViewMatrix() { UpdateViewMatrix(); return m_View; };
 
-		const glm::vec3 GetFront() const { return m_Front; };
-		const glm::vec3 GetUp()    const { return m_Up;    };
-		const glm::vec3 GetRight() const { return m_Right; };
+		const glm::vec3& GetFront() const { return m_Front; };
+		const glm::vec3& GetUp()    const { return m_Up;    };
+		const glm::vec3& GetRight() const { return m_Right; };
 
 	private:
-		// Camera
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 
 		glm::vec3 m_Front;
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;
-
-		const glm::vec3 m_GlobalUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 		void UpdateProjMatrix();
 		void UpdateViewMatrix();

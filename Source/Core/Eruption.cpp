@@ -6,7 +6,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	const en::WindowInfo windowInfo {
-		.title = "Eruption Engine v0.7.2",
+		.title = "Eruption Engine v0.7.3",
 		.size = glm::ivec2(1920, 1080),
 		.fullscreen = false,
 		.resizable = true,
@@ -26,8 +26,10 @@ void Eruption::Init()
 	m_Editor = new en::EditorLayer;
 	m_Editor->AttachTo(m_Renderer, m_AssetManager, &m_DeltaTime);
 
-	const en::CameraInfo cameraInfo {
-		.fov = 70.0f,
+	const en::CameraInfo cameraInfo{
+		.fov = 60.0f,
+		.farPlane = 200.0f,
+		.nearPlane = 0.1f,
 		.position = glm::vec3(3.333f, 2.762f, 0.897f),
 		.dynamicallyScaled = true,
 	};
@@ -108,8 +110,6 @@ void Eruption::Update()
 	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, std::fmin(30.0 * m_DeltaTime, 1.0));
 	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, std::fmin(30.0 * m_DeltaTime, 1.0));
 
-	UpdateExampleScene();
-
 	m_Input->UpdateInput();
 
 	m_Renderer->Update();
@@ -121,27 +121,6 @@ void Eruption::Update()
 void Eruption::Render()
 {
 	m_Renderer->Render();
-}
-
-void Eruption::UpdateExampleScene()
-{
-	constexpr glm::vec3 pLight0A(  8.1f, 2.1f, -4.1f);
-	constexpr glm::vec3 pLight0B(-10.7f, 2.1f, -4.1f);
-		 
-	constexpr glm::vec3 dLight0A( 0.5f, 1.0f,  0.1f);
-	constexpr glm::vec3 dLight0B(-0.1f, 1.0f, -0.3f);
-
-	static double i = 0.0;
-
-	double cycle0 = sin(i) * 0.5 + 0.5;
-	double cycle2 = cos(i) * 0.5 + 0.5;
-	if(!m_ExampleScene->m_PointLights.empty())
-		m_ExampleScene->m_PointLights[0].m_Position = glm::mix(pLight0A, pLight0B, cycle0);
-
-	if (!m_ExampleScene->m_DirectionalLights.empty())
-		m_ExampleScene->m_DirectionalLights[0].m_Direction = glm::mix(dLight0A, dLight0B, cycle2);
-
-	i += m_DeltaTime / 4.0;
 }
 
 void Eruption::CreateExampleScene()
@@ -167,11 +146,66 @@ void Eruption::CreateExampleScene()
 	en::SceneObject* m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->m_Scale = glm::vec3(1.2f);
 
-	m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
-	m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
-	auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
-	light->m_CastShadows = true;
-	light->m_ShadowBias = 0.00030;
+	//m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
+	//m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
+	
+	/*
+	for (uint32_t i = 0; i < MAX_POINT_LIGHTS-1; i++)
+	{
+		glm::vec3 spawnPoint(
+			float(rand() % 2400 - 1200) / 100.0f,
+			0.2f + float(rand() % 1200) / 100.0f,
+			float(rand() % 1100 - 550 ) / 100.0f
+		);
+
+		float intensity = 2.0f + float(rand() % 30) / 2.0f;
+
+		float radius = 1.0f + float(rand() % 100) / 33.33f;
+
+		glm::vec3 color(
+			float(rand() % 1000) / 1000.0f,
+			float(rand() % 1000) / 1000.0f,
+			float(rand() % 1000) / 1000.0f
+		);
+
+		m_ExampleScene->CreatePointLight(spawnPoint, color, intensity, radius);
+	}
+	*/
+
+	/*
+	for (uint32_t i = 0; i < MAX_SPOT_LIGHTS - 1; i++)
+	{
+		glm::vec3 spawnPoint(
+			float(rand() % 2400 - 1200) / 100.0f,
+			0.2f + float(rand() % 1200) / 100.0f,
+			float(rand() % 1100 - 550) / 100.0f
+		);
+
+		glm::vec3 direction(
+			(float)(rand() % 1000 - 500) / 500.0f,
+			(float)(rand() % 1000 - 500) / 500.0f,
+			(float)(rand() % 1000 - 500) / 500.0f
+		);
+
+		direction = glm::normalize(direction);
+
+		float intensity = 2.0f + float(rand() % 10) / 2.0f;
+
+		float radius = 2.0f + float(rand() % 100) / 20.0f;
+
+		glm::vec3 color(
+			float(rand() % 1000) / 1000.0f,
+			float(rand() % 1000) / 1000.0f,
+			float(rand() % 1000) / 1000.0f
+		);
+
+		m_ExampleScene->CreateSpotLight(spawnPoint, direction, color, 0.45f, 0.75f, 2.0f, intensity);
+	}
+	*/
+
+	//auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
+	//light->m_CastShadows = true;
+	//light->m_ShadowBias = 0.00030;
 
 	m_ExampleScene->m_AmbientColor = glm::vec3(0.060f, 0.067f, 0.137f);
 

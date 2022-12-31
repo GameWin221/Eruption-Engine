@@ -10,7 +10,7 @@ namespace en
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(const std::string& name, const glm::vec3& color, const float& metalnessVal, const float& roughnessVal, const float& normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
+	Material::Material(const std::string& name, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
 		: m_Name(name), m_Color(color), m_MetalnessVal(metalnessVal), m_RoughnessVal(roughnessVal), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Metalness(metalnessTexture), m_Normal(normalTexture), Asset{ AssetType::Material }
 	{
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
@@ -81,63 +81,81 @@ namespace en
 		
 		UseContext();
 
-		VkDescriptorImageInfo albedoImageInfo{};
-		albedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		albedoImageInfo.imageView = m_Albedo->m_Image->m_ImageView;
-		albedoImageInfo.sampler = m_Albedo->m_ImageSampler;
+		VkDescriptorImageInfo albedoImageInfo {
+			.sampler	 = m_Albedo->m_ImageSampler,
+			.imageView   = m_Albedo->m_Image->m_ImageView,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
 
-		VkDescriptorImageInfo specularImageInfo{};
-		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		specularImageInfo.imageView = m_Roughness->m_Image->m_ImageView;
-		specularImageInfo.sampler = m_Roughness->m_ImageSampler;
+		VkDescriptorImageInfo specularImageInfo{
+			.sampler	 = m_Roughness->m_ImageSampler,
+			.imageView   = m_Roughness->m_Image->m_ImageView,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
 
-		VkDescriptorImageInfo normalImageInfo{};
-		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		normalImageInfo.imageView = m_Normal->m_Image->m_ImageView;
-		normalImageInfo.sampler = m_Normal->m_ImageSampler;
+		VkDescriptorImageInfo normalImageInfo{
+			.sampler	 = m_Normal->m_ImageSampler,
+			.imageView	 = m_Normal->m_Image->m_ImageView,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
 
-		VkDescriptorImageInfo metalnessImageInfo{};
-		metalnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		metalnessImageInfo.imageView = m_Metalness->m_Image->m_ImageView;
-		metalnessImageInfo.sampler = m_Metalness->m_ImageSampler;
+		VkDescriptorImageInfo metalnessImageInfo{
+			.sampler	 = m_Metalness->m_ImageSampler,
+			.imageView   = m_Metalness->m_Image->m_ImageView,
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		};
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites{
+			VkWriteDescriptorSet {
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSet,
+				.dstBinding		 = 1U,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo		 = &albedoImageInfo
+			},
 
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = m_DescriptorSet;
-		descriptorWrites[0].dstBinding = 1;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pImageInfo = &albedoImageInfo;
+			VkWriteDescriptorSet {
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSet,
+				.dstBinding		 = 2U,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo		 = &specularImageInfo
+			},
 
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = m_DescriptorSet;
-		descriptorWrites[1].dstBinding = 2;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &specularImageInfo;
+			VkWriteDescriptorSet {
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSet,
+				.dstBinding		 = 3U,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo		 = &normalImageInfo
+			},
 
-		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[2].dstSet = m_DescriptorSet;
-		descriptorWrites[2].dstBinding = 3;
-		descriptorWrites[2].dstArrayElement = 0;
-		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[2].descriptorCount = 1;
-		descriptorWrites[2].pImageInfo = &normalImageInfo;
-
-		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[3].dstSet = m_DescriptorSet;
-		descriptorWrites[3].dstBinding = 4;
-		descriptorWrites[3].dstArrayElement = 0;
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[3].descriptorCount = 1;
-		descriptorWrites[3].pImageInfo = &metalnessImageInfo;
+			VkWriteDescriptorSet {
+				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet			 = m_DescriptorSet,
+				.dstBinding		 = 4U,
+				.dstArrayElement = 0U,
+				.descriptorCount = 1U,
+				.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo		 = &metalnessImageInfo
+			},
+		};
 
 		UpdateBuffer();
 
-		vkUpdateDescriptorSets(ctx.m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(
+			ctx.m_LogicalDevice, 
+			static_cast<uint32_t>(descriptorWrites.size()),
+			descriptorWrites.data(),
+			0U,
+			nullptr
+		);
 
 		m_UpdateQueued = false;
 	}
@@ -170,81 +188,95 @@ namespace en
 	{
 		UseContext();
 
-		VkDescriptorSetLayoutBinding albedoLayoutBinding{};
-		albedoLayoutBinding.binding = 1;
-		albedoLayoutBinding.descriptorCount = 1;
-		albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		albedoLayoutBinding.pImmutableSamplers = nullptr;
-		albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding albedoLayoutBinding {
+			.binding			= 1U,
+			.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount	= 1U,
+			.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT,
+			.pImmutableSamplers = nullptr,
+		};
 
-		VkDescriptorSetLayoutBinding specularLayoutBinding{};
-		specularLayoutBinding.binding = 2;
-		specularLayoutBinding.descriptorCount = 1;
-		specularLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		specularLayoutBinding.pImmutableSamplers = nullptr;
-		specularLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding specularLayoutBinding {
+			.binding			= 2U,
+			.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount	= 1U,
+			.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT,
+			.pImmutableSamplers = nullptr,
+		};
 
-		VkDescriptorSetLayoutBinding normalLayoutBinding{};
-		normalLayoutBinding.binding = 3;
-		normalLayoutBinding.descriptorCount = 1;
-		normalLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		normalLayoutBinding.pImmutableSamplers = nullptr;
-		normalLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding normalLayoutBinding {
+			.binding			= 3U,
+			.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount	= 1U,
+			.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT,
+			.pImmutableSamplers = nullptr,
+		};
 
-		VkDescriptorSetLayoutBinding metalnessLayoutBinding{};
-		metalnessLayoutBinding.binding = 4;
-		metalnessLayoutBinding.descriptorCount = 1;
-		metalnessLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		metalnessLayoutBinding.pImmutableSamplers = nullptr;
-		metalnessLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding metalnessLayoutBinding {
+			.binding			= 4U,
+			.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount	= 1U,
+			.stageFlags			= VK_SHADER_STAGE_FRAGMENT_BIT,
+			.pImmutableSamplers = nullptr,
+		};
 
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings =
-		{
+		std::array<VkDescriptorSetLayoutBinding, 4> bindings {
 			albedoLayoutBinding,
 			specularLayoutBinding,
 			normalLayoutBinding,
 			metalnessLayoutBinding
 		};
 
-		std::array<VkDescriptorBindingFlags, 4> flags = 
-		{ 
+		std::array<VkDescriptorBindingFlags, 4> flags { 
 			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT
 		};
 
-		VkDescriptorSetLayoutBindingFlagsCreateInfo flagsCreateInfo{};
-		flagsCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-		flagsCreateInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		flagsCreateInfo.pBindingFlags = flags.data();
+		VkDescriptorSetLayoutBindingFlagsCreateInfo flagsCreateInfo {
+			.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+			.bindingCount  = static_cast<uint32_t>(bindings.size()),
+			.pBindingFlags = flags.data(),
+		};
 
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
-		layoutInfo.pNext = &flagsCreateInfo;
+		VkDescriptorSetLayoutCreateInfo layoutInfo {
+			.sType		  = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.pNext		  = &flagsCreateInfo,
+			.bindingCount = static_cast<uint32_t>(bindings.size()),
+			.pBindings	  = bindings.data(),
+		};
 
 
 		if (vkCreateDescriptorSetLayout(ctx.m_LogicalDevice, &layoutInfo, nullptr, &g_MatDescriptorSetLayout) != VK_SUCCESS)
 			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor set layout!");
 
-		std::array<VkDescriptorPoolSize, 4> poolSizes{};
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
-		poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_MATERIALS);
+		constexpr std::array<VkDescriptorPoolSize, 4> poolSizes {
+			VkDescriptorPoolSize {
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = static_cast<uint32_t>(MAX_MATERIALS),
+			},
+			VkDescriptorPoolSize {
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = static_cast<uint32_t>(MAX_MATERIALS),
+			},
+			VkDescriptorPoolSize {
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = static_cast<uint32_t>(MAX_MATERIALS),
+			},
+			VkDescriptorPoolSize {
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = static_cast<uint32_t>(MAX_MATERIALS),
+			},
+		};
 
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes	   = poolSizes.data();
-		poolInfo.maxSets	   = static_cast<uint32_t>(MAX_MATERIALS);
-		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+		VkDescriptorPoolCreateInfo poolInfo {
+			.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.flags		    = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+			.maxSets		= static_cast<uint32_t>(MAX_MATERIALS),
+			.poolSizeCount  = static_cast<uint32_t>(poolSizes.size()),
+			.pPoolSizes		= poolSizes.data(),
+		};
 
 		if (vkCreateDescriptorPool(ctx.m_LogicalDevice, &poolInfo, nullptr, &g_MatDescriptorPool) != VK_SUCCESS)
 			EN_ERROR("Material.cpp::CreateMatDescriptorPool() - Failed to create descriptor pool!");
@@ -253,11 +285,12 @@ namespace en
 	{
 		UseContext();
 
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool	 = g_MatDescriptorPool;
-		allocInfo.descriptorSetCount = 1U;
-		allocInfo.pSetLayouts		 = &g_MatDescriptorSetLayout;
+		VkDescriptorSetAllocateInfo allocInfo {
+			.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool		= g_MatDescriptorPool,
+			.descriptorSetCount = 1U,
+			.pSetLayouts		= &g_MatDescriptorSetLayout,
+		};
 
 		if (vkAllocateDescriptorSets(ctx.m_LogicalDevice, &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			EN_ERROR("Material::CreateDescriptorSet() - Failed to allocate descriptor sets!");

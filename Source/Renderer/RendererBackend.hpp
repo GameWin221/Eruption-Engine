@@ -16,14 +16,16 @@
 #include <Renderer/Window.hpp>
 #include <Renderer/Context.hpp>
 #include <Renderer/Shader.hpp>
-//#include <Renderer/ComputeShader.hpp>
+#include <Renderer/ComputeShader.hpp>
 
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
 #include <Renderer/Lights/SpotLight.hpp>
+#include <Renderer/Lights/LightsBuffer.hpp>
+#include <Renderer/Lights/CSMBuffer.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
-#include <Renderer/Camera/CameraMatricesBuffer.hpp>
+#include <Renderer/Camera/CameraBuffer.hpp>
 
 #include <Renderer/Pipeline.hpp>
 #include <Renderer/DescriptorSet.hpp>
@@ -54,9 +56,9 @@ namespace en
 		void ReloadBackend();
 
 		void DepthPass();
-		void GeometryPass();
+		void SSAOPass();
 		void ShadowPass();
-		void LightingPass();
+		void ClusteredForwardPass();
 		void TonemappingPass();
 		void AntialiasPass();
 		void ImGuiPass();
@@ -97,7 +99,12 @@ namespace en
 		enum struct AntialiasingMode
 		{
 			FXAA = 0,
-			//SMAA = 1,
+			None = 1
+		};
+
+		enum struct AmbientOcclusionMode
+		{
+			SSAO = 0,
 			None = 1
 		};
 
@@ -109,6 +116,7 @@ namespace en
 			} exposure;
 
 			AntialiasingMode antialiasingMode = AntialiasingMode::FXAA;
+			AmbientOcclusionMode ambientOcclusionMode = AmbientOcclusionMode::None;
 
 			struct Antialiasing
 			{
@@ -122,39 +130,19 @@ namespace en
 				float texelSizeY = 1.0f / 1080.0f;
 			} antialiasing;
 
+			struct AmbientOcclusion
+			{
+				float screenWidth = 1920.0f;
+				float screenHeight = 1080.0f;
+				
+				float radius = 0.5f;
+				float bias = 0.025f;
+				float multiplier = 1.0f;
+			} ambientOcclusion;
+
 		} m_PostProcessParams;
 
 	private:
-		struct Lights
-		{
-			struct LightsBufferObject
-			{
-				PointLight::Buffer		 pointLights[MAX_POINT_LIGHTS];
-				SpotLight::Buffer		 spotLights[MAX_SPOT_LIGHTS];
-				DirectionalLight::Buffer dirLights[MAX_DIR_LIGHTS];
-
-				uint32_t activePointLights = 0U;
-				uint32_t activeSpotLights = 0U;
-				uint32_t activeDirLights = 0U;
-				float dummy0 = 0.0f;
-
-				glm::vec3 ambientLight = glm::vec3(0.0f);
-				float dummy1 = 0.0f;
-
-				glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
-				glm::vec4 frustumSizeRatios[SHADOW_CASCADES]{};
-
-				glm::vec3 viewPos = glm::vec3(0.0f);
-				int debugMode = 0;
-
-				glm::mat4 viewMat = glm::mat4(1.0f);
-			} LBO;
-
-			std::unique_ptr<MemoryBuffer> stagingBuffer;
-			std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> buffers;
-
-		} m_Lights;
-
 		struct Shadows
 		{
 			VkSampler sampler;
@@ -255,27 +243,55 @@ namespace en
 
 		} m_ImGui;
 
+		struct ClusterSSBOs
+		{
+			std::unique_ptr<MemoryBuffer> aabbClusters;
+			std::unique_ptr<DescriptorSet> aabbClustersDescriptor;
+
+			std::unique_ptr<MemoryBuffer> pointLightGrid;
+			std::unique_ptr<MemoryBuffer> pointLightIndices;
+			std::unique_ptr<MemoryBuffer> pointLightGlobalIndexOffset;
+
+			std::unique_ptr<MemoryBuffer> spotLightGrid;
+			std::unique_ptr<MemoryBuffer> spotLightIndices;
+			std::unique_ptr<MemoryBuffer> spotLightGlobalIndexOffset;
+
+			std::unique_ptr<DescriptorSet> clusterLightCullingDescriptor;
+		} m_ClusterSSBOs;
+
+		std::unique_ptr<ComputeShader> m_ClusterAABBCompute;
+		std::unique_ptr<ComputeShader> m_ClusterLightCullingCompute;
+
 		std::unique_ptr<Swapchain> m_Swapchain;
 
 		std::unique_ptr<Pipeline> m_DepthPipeline;
 		std::unique_ptr<Pipeline> m_ShadowPipeline;
 		std::unique_ptr<Pipeline> m_OmniShadowPipeline;
 
-		std::unique_ptr<Pipeline> m_GeometryPipeline;
-		std::unique_ptr<Pipeline> m_LightingPipeline;
+		std::unique_ptr<Pipeline> m_ForwardClusteredPipeline;
+
+		std::unique_ptr<Pipeline> m_SSAOPipeline;
 
 		std::unique_ptr<Pipeline> m_TonemappingPipeline;
 		std::unique_ptr<Pipeline> m_AntialiasingPipeline;
 
-		std::unique_ptr<CameraMatricesBuffer> m_CameraMatrices;
+		std::unique_ptr<CameraBuffer> m_CameraBuffer;
+		std::unique_ptr<LightsBuffer> m_LightsBuffer;
+		std::unique_ptr<CSMBuffer> m_CSMBuffer;
 
-		std::unique_ptr<DynamicFramebuffer> m_GBuffer;
+		std::unique_ptr<DescriptorSet> m_ForwardClusteredDescriptor;
 
-		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_GBufferInputs;
 		std::unique_ptr<DescriptorSet> m_HDRInput;
 		std::vector<std::unique_ptr<DescriptorSet>> m_SwapchainInputs;
 
 		std::unique_ptr<Image> m_HDROffscreen;
+		std::unique_ptr<Image> m_DepthBuffer;
+
+		VkSampler m_MainSampler;
+
+		std::unique_ptr<Image> m_SSAOTarget;
+		std::unique_ptr<MemoryBuffer> m_SSAOBuffer;
+		std::unique_ptr<DescriptorSet> m_SSAOInput;
 
 		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
@@ -294,6 +310,8 @@ namespace en
 		uint32_t m_SwapchainImageIndex = 0U; // Current swapchain index
 		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
 		
+		bool m_ClusterFrustumChanged = false;
+		bool m_LightsBufferChanged = false;
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
@@ -304,25 +322,31 @@ namespace en
 		void ReloadBackendImpl();
 
 		void CreateCommandBuffer();
-		void CreateLightsBuffer();
+		void CreateSSAOBuffer();
+		void CreateClusterSSBOs();
+		void CreateClusterComputePipelines();
 
-		void CreateGBuffer();
+		//void UpdateClusterAABBs();
+
+		void CreateDepthBuffer();
 		void CreateHDROffscreen();
+		void CreateSSAOTarget();
 
-		void UpdateGBufferInput();
+		void UpdateForwardInput();
 		void UpdateHDRInput();
 		void UpdateSwapchainInputs();
+		void UpdateSSAOInput();
 
 		void InitShadows();
-		void RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer);
+		void RecalculateShadowMatrices(const DirectionalLight& light, glm::mat4* lightMatrices);
 		void UpdateShadowFrustums();
 		void DestroyShadows();
 
 		void InitDepthPipeline();
 		void InitShadowPipeline();
 		void InitOmniShadowPipeline();
-		void InitGeometryPipeline();
-		void InitLightingPipeline();
+		void InitForwardClusteredPipeline();
+		void InitSSAOPipeline();
 		void InitTonemappingPipeline();
 		void InitAntialiasingPipeline();
 

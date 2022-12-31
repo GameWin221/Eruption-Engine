@@ -59,8 +59,6 @@ namespace en
 			float bias;
 			int dummy1;
 			int dummy2;
-
-			glm::mat4 lightMat[SHADOW_CASCADES]{};
 		};
 
 	private:

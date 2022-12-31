@@ -96,9 +96,6 @@
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Camera\CameraMatricesBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -139,6 +136,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\ComputeShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Lights\LightsBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -207,9 +216,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\Log.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\Camera\CameraMatricesBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="External\ImGui\imgui.h">
@@ -296,6 +302,18 @@
     <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\ComputeShader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Lights\LightsBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -316,5 +334,11 @@
     <None Include="Shaders\FXAA.frag" />
     <None Include="Shaders\OmniDepthVert.vert" />
     <None Include="Shaders\OmniDepthFrag.frag" />
+    <None Include="Shaders\SSAO.frag" />
+    <None Include="Shaders\ClusterAABB.comp" />
+    <None Include="Shaders\ActiveClusterCulling.comp" />
+    <None Include="Shaders\ClusterLightCulling.comp" />
+    <None Include="Shaders\ForwardClusteredVert.vert" />
+    <None Include="Shaders\ForwardClusteredFrag.frag" />
   </ItemGroup>
 </Project>

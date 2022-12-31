@@ -5,7 +5,7 @@ namespace en
 {
     SceneObject* g_EmptySceneObject;
 
-    SceneObject* Scene::CreateSceneObject(std::string name, Mesh* mesh)
+    SceneObject* Scene::CreateSceneObject(const std::string& name, Mesh* mesh)
     {
         if (m_SceneObjects.contains(name))
         {
@@ -20,7 +20,7 @@ namespace en
         return m_SceneObjects.at(name).get();
     }
 
-    void Scene::DeleteSceneObject(std::string name)
+    void Scene::DeleteSceneObject(const std::string& name)
     {
         if (!m_SceneObjects.contains(name))
         {
@@ -33,7 +33,7 @@ namespace en
         m_SceneObjects.erase(name);
     }
 
-    SceneObject* Scene::GetSceneObject(std::string name)
+    SceneObject* Scene::GetSceneObject(const std::string& name)
     {
         if (!m_SceneObjects.contains(name))
         {
@@ -45,7 +45,7 @@ namespace en
         return m_SceneObjects.at(name).get();
     }
 
-    void Scene::RenameSceneObject(std::string oldName, std::string newName)
+    void Scene::RenameSceneObject(const std::string& oldName, const std::string& newName)
     {
         if (m_SceneObjects.contains(newName))
             EN_WARN("Failed to rename " + oldName + " because a SceneObject with a name " + newName + " already exists!")
@@ -62,7 +62,7 @@ namespace en
         }
     }
 
-    PointLight* Scene::CreatePointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active)
+    PointLight* Scene::CreatePointLight(const glm::vec3 position, const glm::vec3 color, const float intensity, const float radius, const bool active)
     {
         if (m_PointLights.size() + 1 >= MAX_POINT_LIGHTS)
         {
@@ -74,12 +74,12 @@ namespace en
 
         return &m_PointLights.at(m_PointLights.size()-1);
     }
-    void Scene::DeletePointLight(uint32_t index)
+    void Scene::DeletePointLight(const uint32_t index)
     {
         m_PointLights.erase(m_PointLights.begin() + index);
     }
 
-    SpotLight* Scene::CreateSpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)
+    SpotLight* Scene::CreateSpotLight(const glm::vec3 position, const glm::vec3 direction, const glm::vec3 color, const float innerCutoff, const float outerCutoff, const float range, const float intensity, const bool active)
     {
         if (m_SpotLights.size() + 1 >= MAX_SPOT_LIGHTS)
         {
@@ -91,12 +91,12 @@ namespace en
 
         return &m_SpotLights.at(m_SpotLights.size()-1);
     }
-    void Scene::DeleteSpotLight(uint32_t index)
+    void Scene::DeleteSpotLight(const uint32_t index)
     {
         m_SpotLights.erase(m_SpotLights.begin() + index);
     }
 
-    DirectionalLight* Scene::CreateDirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity, bool active)
+    DirectionalLight* Scene::CreateDirectionalLight(const glm::vec3 direction, const glm::vec3 color, const float intensity, const bool active)
     {
         if (m_DirectionalLights.size() + 1 >= MAX_DIR_LIGHTS)
         {
@@ -108,7 +108,7 @@ namespace en
 
         return &m_DirectionalLights.back();
     }
-    void Scene::DeleteDirectionalLight(uint32_t index)
+    void Scene::DeleteDirectionalLight(const uint32_t index)
     {
         m_DirectionalLights.erase(m_DirectionalLights.begin() + index);
     }
@@ -117,7 +117,7 @@ namespace en
     {
         std::vector<SceneObject*> allSceneObjects(m_SceneObjects.size());
 
-        for (int i = 0; const auto& [name, sceneObject] : m_SceneObjects)
+        for (uint32_t i{}; const auto & [name, sceneObject] : m_SceneObjects)
             allSceneObjects[i++] = sceneObject.get();
 
         return allSceneObjects;

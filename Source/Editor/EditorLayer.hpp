@@ -36,7 +36,7 @@ namespace en
 		std::unique_ptr<SettingsPanel      > m_SettingsPanel;
 
 		bool m_ShowLightsMenu	= true;
-		bool m_ShowAssetMenu	= true;
+		bool m_ShowAssetMenu	= false;
 		bool m_ShowCameraMenu	= true;
 		bool m_ShowDebugMenu	= false;
 		bool m_ShowSceneMenu	= true;

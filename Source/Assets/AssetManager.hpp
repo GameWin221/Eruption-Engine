@@ -45,7 +45,7 @@ namespace en
 		void DeleteMesh   (const std::string& nameID);
 		void DeleteTexture(const std::string& nameID);
 
-		bool CreateMaterial(const std::string& nameID, const glm::vec3& color = glm::vec3(1.0f), const float& metalnessVal = 0.0f, const float& roughnessVal = 0.75f, const float& normalStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* roughnessTexture = Texture::GetWhiteNonSRGBTexture(), Texture* normalTexture = Texture::GetWhiteNonSRGBTexture(), Texture* metalnessTexture = Texture::GetWhiteNonSRGBTexture());
+		bool CreateMaterial(const std::string& nameID, const glm::vec3 color = glm::vec3(1.0f), const float metalnessVal = 0.0f, const float roughnessVal = 0.75f, const float normalStrength = 1.0f, Texture* albedoTexture = Texture::GetWhiteSRGBTexture(), Texture* roughnessTexture = Texture::GetWhiteNonSRGBTexture(), Texture* normalTexture = Texture::GetWhiteNonSRGBTexture(), Texture* metalnessTexture = Texture::GetWhiteNonSRGBTexture());
 		void DeleteMaterial(const std::string& nameID);
 
 		bool ContainsMesh    (const std::string& nameID) { return m_Meshes   .contains(nameID); };

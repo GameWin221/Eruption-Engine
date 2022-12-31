@@ -15,14 +15,12 @@
 #include <optional>
 #include <fstream>
 #include <set>
+#include <random>
 
 #define GLFW_INCLUDE_VULKAN
 #include <glfw3.h>
 
 #include <Core/Log.hpp>
-
-#define VULKAN_BACKEND 0
-#define DIXECTX_BACKEND 1
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

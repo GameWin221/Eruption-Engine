@@ -15,7 +15,7 @@ namespace en
 		friend class Scene;
 
 	public:
-		SceneObject(Mesh* mesh, std::string name) 
+		SceneObject(Mesh* mesh, const std::string& name) 
 			: m_Mesh(mesh), m_Name(name), SceneMember{ SceneMemberType::SceneObject }{};
 
 		glm::vec3 m_Position = glm::vec3(0.0);

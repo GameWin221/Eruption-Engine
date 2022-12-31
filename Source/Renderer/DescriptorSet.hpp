@@ -5,8 +5,6 @@
 
 namespace en
 { 
-	// It is possible that the buffer always has to be the last index
-
 	class DescriptorSet
 	{
 	public:
@@ -18,7 +16,7 @@ namespace en
 			VkImageLayout imageLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			VkDescriptorType	  type  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+			VkShaderStageFlags stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 			uint32_t count = 1U;
 		};
@@ -30,19 +28,19 @@ namespace en
 
 			VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
-			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+			VkShaderStageFlags stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		};
 
-		DescriptorSet(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
+		DescriptorSet(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos);
 		~DescriptorSet();
 
-		void Update(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo = BufferInfo{});
+		void Update(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos);
 
 		VkDescriptorSetLayout m_DescriptorLayout;
 		VkDescriptorSet m_DescriptorSet;
 
 	private:
-		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const BufferInfo& bufferInfo);
+		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos);
 		void CreateDescriptorSet();
 
 		VkDescriptorPool m_DescriptorPool;

@@ -68,7 +68,7 @@ namespace en
 			.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
 			.sampleShadingEnable = VK_FALSE
 		};
-
+		
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{
 			.blendEnable = pipeline.blendEnable,
 			.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
