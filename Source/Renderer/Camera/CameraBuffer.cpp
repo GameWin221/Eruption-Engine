@@ -45,6 +45,7 @@ namespace en
 		m_CBOs[frameIndex].position = camera->m_Position;
 
 		m_CBOs[frameIndex].proj = camera->GetProjMatrix();
+		m_CBOs[frameIndex].invProj = glm::inverse(m_CBOs[frameIndex].proj);
 		m_CBOs[frameIndex].view = camera->GetViewMatrix();
 		m_CBOs[frameIndex].invView = glm::inverse(m_CBOs[frameIndex].view);
 		m_CBOs[frameIndex].projView = m_CBOs[frameIndex].proj * m_CBOs[frameIndex].view;

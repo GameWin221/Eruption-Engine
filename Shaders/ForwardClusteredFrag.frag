@@ -32,6 +32,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
     mat4 view;
 	mat4 invView;
 	mat4 proj;
+    mat4 invProj;
 	mat4 projView;
 
 	vec3 position;

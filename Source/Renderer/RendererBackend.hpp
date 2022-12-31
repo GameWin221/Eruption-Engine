@@ -307,6 +307,8 @@ namespace en
 		uint32_t m_SwapchainImageIndex = 0U; // Current swapchain index
 		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
 		
+		bool m_ClusterFrustumChanged = false;
+		bool m_LightsBufferChanged = false;
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
@@ -317,7 +319,6 @@ namespace en
 		void ReloadBackendImpl();
 
 		void CreateCommandBuffer();
-		void CreateLightsBuffer();
 		void CreateSSAOBuffer();
 		void CreateClusterSSBOs();
 		void CreateClusterComputePipelines();

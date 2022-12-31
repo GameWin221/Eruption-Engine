@@ -1,4 +1,6 @@
 #version 450
+#include "../EruptionEngine.ini"
+
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 struct AABB {
@@ -6,23 +8,38 @@ struct AABB {
     vec4 max;
 };
 
-layout (std430, binding = 0) buffer AABBClustersBuffer {
+layout (set = 0, std430, binding = 0) buffer AABBClustersBuffer {
     AABB clusters[];
 };
 
-layout(push_constant) uniform ScreenToViewPushConstant 
+layout(set = 1, binding = 0) uniform CameraBufferObject
 {
-    // I have to send the inverse projection matrix in separate rows due to the push constant alignment
-    vec4 invProj0;
-    vec4 invProj1;
-    vec4 invProj2;
-    vec4 invProj3;
+    mat4 view;
+	mat4 invView;
+	mat4 proj;
+	mat4 invProj;
+	mat4 projView;
 
-    uvec4 tileSizes;
-    uvec4 screenSize;
+	vec3 position;
+
+	int debugMode;
+
+	vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
+
+	uvec4 clusterTileCount;
+	uvec4 clusterTileSizes;
+
+	float clusterScale;
+	float clusterBias;
 
     float zNear;
-    float zFar;
+	float zFar;
+} camera;
+
+layout(push_constant) uniform ScreenSizeConstant 
+{
+    uvec4 screenSize;
 };
 
 vec4 ScreenToView(vec4 screenPos)
@@ -32,14 +49,8 @@ vec4 ScreenToView(vec4 screenPos)
     vec4 clip = vec4(NDC, screenPos.z, screenPos.w);
 
     // Construct an inverse projection matrix out of the original rows
-    mat4 inverseProj = mat4(
-        invProj0,
-        invProj1,
-        invProj2,
-        invProj3
-    );
 
-    vec4 view = inverseProj * clip;
+    vec4 view = camera.invProj * clip;
 
     return view / view.w;
 }
@@ -72,8 +83,8 @@ void main()
     vec3 minPointView = ScreenToView(minPointScreen).xyz;
 
     // Near and far values of the cluster in view space
-    float tileNear = -zNear * pow(zFar / zNear, gl_WorkGroupID.z / float(gl_NumWorkGroups.z));
-    float tileFar  = -zNear * pow(zFar / zNear, (gl_WorkGroupID.z + 1) / float(gl_NumWorkGroups.z));
+    float tileNear = -camera.zNear * pow(camera.zFar / camera.zNear, gl_WorkGroupID.z / float(gl_NumWorkGroups.z));
+    float tileFar  = -camera.zNear * pow(camera.zFar / camera.zNear, (gl_WorkGroupID.z + 1) / float(gl_NumWorkGroups.z));
 
     // Finding the 4 intersection points made from each point to the cluster near/far plane
     vec3 minPointNear = LineViewPlaneIntersection(minPointView, tileNear);

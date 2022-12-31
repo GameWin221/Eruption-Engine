@@ -171,8 +171,9 @@ void Eruption::CreateExampleScene()
 		m_ExampleScene->CreatePointLight(spawnPoint, color, intensity, radius);
 	}
 	*/
+
 	/*
-	for (uint32_t i = 0; i < MAX_SPOT_LIGHTS / 16 - 1; i++)
+	for (uint32_t i = 0; i < MAX_SPOT_LIGHTS - 1; i++)
 	{
 		glm::vec3 spawnPoint(
 			float(rand() % 2400 - 1200) / 100.0f,
@@ -188,9 +189,9 @@ void Eruption::CreateExampleScene()
 
 		direction = glm::normalize(direction);
 
-		float intensity = 2.0f + float(rand() % 30) / 2.0f;
+		float intensity = 2.0f + float(rand() % 10) / 2.0f;
 
-		float radius = 1.0f + float(rand() % 100) / 33.33f;
+		float radius = 2.0f + float(rand() % 100) / 20.0f;
 
 		glm::vec3 color(
 			float(rand() % 1000) / 1000.0f,
@@ -198,9 +199,10 @@ void Eruption::CreateExampleScene()
 			float(rand() % 1000) / 1000.0f
 		);
 
-		m_ExampleScene->CreateSpotLight(spawnPoint, direction, color, intensity, radius);
+		m_ExampleScene->CreateSpotLight(spawnPoint, direction, color, 0.45f, 0.75f, 2.0f, intensity);
 	}
 	*/
+
 	//auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
 	//light->m_CastShadows = true;
 	//light->m_ShadowBias = 0.00030;

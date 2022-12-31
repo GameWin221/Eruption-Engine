@@ -73,6 +73,7 @@ layout(set = 1, binding = 0) uniform CameraBufferObject
     mat4 view;
 	mat4 invView;
 	mat4 proj;
+    mat4 invProj;
 	mat4 projView;
 
 	vec3 position;
@@ -198,7 +199,7 @@ bool ConePointIntersection(vec3 point, vec3 conePosition, vec3 coneNormal, float
 
 bool ConeAABBIntersection(uint light, uint tileID)
 {
-    float range = sharedSpotLights[light].range*1.05;
+    float range = 0.75 + sharedSpotLights[light].range * (0.6 + length(camera.position - sharedSpotLights[light].position) * 0.165);
     float outerCutoff = sharedSpotLights[light].outerCutoff;
 
     vec3 direction = vec3(camera.view * vec4(sharedSpotLights[light].direction, 0.0));
@@ -280,7 +281,7 @@ void main()
         // Iterating within the current batch of lights
         for(uint light = 0; light < threadCount; ++light)
         {
-            if(sharedPointLights[light].color != vec3(0.0) && sharedPointLights[light].radius > 0)
+            if(sharedPointLights[light].radius > 0)
             {
                 if(SphereAABBIntersection(light, tileIndex))
                 {
@@ -316,7 +317,7 @@ void main()
         // Iterating within the current batch of lights
         for(uint light = 0; light < threadCount; ++light)
         {
-            if(sharedSpotLights[light].color != vec3(0.0) && sharedSpotLights[light].range > 0)
+            if(sharedSpotLights[light].range > 0)
             {
                 if(ConeAABBIntersection(light, tileIndex))
                 {

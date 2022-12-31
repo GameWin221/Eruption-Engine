@@ -9,16 +9,6 @@ namespace en
 
 	RendererBackend* g_CurrentBackend;
 
-	struct ScreenToViewPushConstant {
-		glm::mat4 inverseProj;
-
-		glm::uvec4 tileSizes;
-		glm::uvec4 screenSize;
-
-		float zNear;
-		float zFar;
-	};
-
 	void RendererBackend::Init()
 	{
 		m_Ctx = &Context::Get();
@@ -177,15 +167,30 @@ namespace en
 
 	void RendererBackend::UpdateLights()
 	{
+		m_ClusterFrustumChanged = false;
+		m_LightsBufferChanged = false;
+
+		glm::mat4 oldInvProj = m_CameraBuffer->m_CBOs[m_FrameIndex].invProj;
+
 		m_CameraBuffer->UpdateBuffer(m_FrameIndex, m_MainCamera, m_Swapchain->GetExtent(), m_DebugMode);
+
+		if (oldInvProj != m_CameraBuffer->m_CBOs[m_FrameIndex].invProj)
+			m_ClusterFrustumChanged = true;
 
 		auto& pointLights = m_Scene->m_PointLights;
 		auto& spotLights = m_Scene->m_SpotLights;
 		auto& dirLights = m_Scene->m_DirectionalLights;
 
+		uint32_t oldActivePointLights = m_LightsBuffer->LBO.activePointLights;
+		uint32_t oldActiveSpotLights = m_LightsBuffer->LBO.activeSpotLights;
+		uint32_t oldActiveDirLights = m_LightsBuffer->LBO.activeDirLights;
+
 		m_LightsBuffer->LBO.activePointLights = 0U;
 		m_LightsBuffer->LBO.activeSpotLights = 0U;
 		m_LightsBuffer->LBO.activeDirLights = 0U;
+
+		if (m_LightsBuffer->LBO.ambientLight != m_Scene->m_AmbientColor)
+			m_LightsBufferChanged = true;
 
 		m_LightsBuffer->LBO.ambientLight = m_Scene->m_AmbientColor;
 
@@ -197,7 +202,7 @@ namespace en
 			l.m_ShadowmapIndex = -1;
 
 		// Sorting light casters by distance to use only the closest ones
-
+		
 		float maxShadowDist = std::numeric_limits<float>::max();
 
 		int shadowCount = 0;
@@ -264,7 +269,7 @@ namespace en
 		for (int i = 0, index = 0; i < dirLights.size() && index < MAX_DIR_LIGHT_SHADOWS; i++)
 			if(dirLights[i].m_CastShadows)
 				dirLights[i].m_ShadowmapIndex = index++ * SHADOW_CASCADES;
-
+		
 		UpdateShadowFrustums();
 
 		for (const auto& light : pointLights)
@@ -274,13 +279,25 @@ namespace en
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 			float     lightRad = light.m_Radius * (float)light.m_Active;
 
-			buffer.position = light.m_Position;
-			buffer.color = lightCol;
-			buffer.radius = lightRad;
+			if (lightCol == glm::vec3(0.0) || lightRad <= 0.0f)
+				continue;
+
+			if (buffer.position		  != light.m_Position		||
+				buffer.color		  != lightCol				||
+				buffer.radius		  != lightRad				||
+				buffer.shadowmapIndex != light.m_ShadowmapIndex ||
+				buffer.shadowSoftness != light.m_ShadowSoftness ||
+				buffer.pcfSampleRate  != light.m_PCFSampleRate	||
+				buffer.bias			  != light.m_ShadowBias
+			) m_LightsBufferChanged = true;
+
+			buffer.position		  = light.m_Position;
+			buffer.color		  = lightCol;
+			buffer.radius		  = lightRad;
 			buffer.shadowmapIndex = light.m_ShadowmapIndex;
 			buffer.shadowSoftness = light.m_ShadowSoftness;
-			buffer.pcfSampleRate = light.m_PCFSampleRate;
-			buffer.bias = light.m_ShadowBias;
+			buffer.pcfSampleRate  = light.m_PCFSampleRate;
+			buffer.bias			  = light.m_ShadowBias;
 
 			if (light.m_ShadowmapIndex != -1)
 			{
@@ -299,9 +316,6 @@ namespace en
 				m_Shadows.point.farPlanes[light.m_ShadowmapIndex] = light.m_Radius;
 			}
 
-			if (lightCol == glm::vec3(0.0) || lightRad == 0.0f)
-				continue;
-
 			m_LightsBuffer->LBO.activePointLights++;
 		}
 		for (const auto& light : spotLights)
@@ -310,16 +324,31 @@ namespace en
 
 			glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			buffer.color = lightColor;
-			buffer.range = light.m_Range;
-			buffer.outerCutoff = light.m_OuterCutoff;
-			buffer.position = light.m_Position;
-			buffer.innerCutoff = light.m_InnerCutoff;
-			buffer.direction = glm::normalize(light.m_Direction);
+			if (light.m_Range == 0.0f || lightColor == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
+				continue;
+
+			if (buffer.color		  != lightColor							 ||
+				buffer.range		  != light.m_Range						 ||
+				buffer.outerCutoff	  != light.m_OuterCutoff				 ||
+				buffer.position		  != light.m_Position					 ||
+				buffer.innerCutoff	  != light.m_InnerCutoff				 ||
+				buffer.direction	  != glm::normalize(light.m_Direction) ||
+				buffer.shadowmapIndex != light.m_ShadowmapIndex				 ||
+				buffer.shadowSoftness != light.m_ShadowSoftness				 ||
+				buffer.pcfSampleRate  != light.m_PCFSampleRate				 ||
+				buffer.bias			  != light.m_ShadowBias
+			) m_LightsBufferChanged = true;
+
+			buffer.color		  = lightColor;
+			buffer.range		  = light.m_Range;
+			buffer.outerCutoff	  = light.m_OuterCutoff;
+			buffer.position		  = light.m_Position;
+			buffer.innerCutoff	  = light.m_InnerCutoff;
+			buffer.direction	  = glm::normalize(light.m_Direction);
 			buffer.shadowmapIndex = light.m_ShadowmapIndex;
 			buffer.shadowSoftness = light.m_ShadowSoftness;
-			buffer.pcfSampleRate = light.m_PCFSampleRate;
-			buffer.bias = light.m_ShadowBias;
+			buffer.pcfSampleRate  = light.m_PCFSampleRate;
+			buffer.bias			  = light.m_ShadowBias;
 
 			if (light.m_ShadowmapIndex != -1)
 			{
@@ -327,9 +356,6 @@ namespace en
 				glm::mat4 proj = glm::perspective((light.m_OuterCutoff + 0.02f) * glm::pi<float>(), 1.0f, 0.01f, light.m_Range);
 				buffer.lightMat = proj * view;
 			}
-
-			if (light.m_Range == 0.0f || lightColor == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
-				continue;
 
 			m_LightsBuffer->LBO.activeSpotLights++;
 		}
@@ -339,21 +365,34 @@ namespace en
 
 			glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
 
-			buffer.color = lightCol;
+			if (lightCol == glm::vec3(0.0f))
+				continue;
+
+			if (buffer.color		  != lightCol							 ||
+				buffer.shadowmapIndex != light.m_ShadowmapIndex				 ||
+				buffer.direction	  != glm::normalize(light.m_Direction) ||
+				buffer.shadowSoftness != light.m_ShadowSoftness				 ||
+				buffer.pcfSampleRate  != light.m_PCFSampleRate				 ||
+				buffer.bias			  != light.m_ShadowBias
+			) m_LightsBufferChanged = true;
+
+			buffer.color	      = lightCol;
 			buffer.shadowmapIndex = light.m_ShadowmapIndex;
-			buffer.direction = glm::normalize(light.m_Direction);
+			buffer.direction	  = glm::normalize(light.m_Direction);
 			buffer.shadowSoftness = light.m_ShadowSoftness;
-			buffer.pcfSampleRate = light.m_PCFSampleRate;
-			buffer.bias = light.m_ShadowBias;
+			buffer.pcfSampleRate  = light.m_PCFSampleRate;
+			buffer.bias			  = light.m_ShadowBias;
 
 			if (light.m_ShadowmapIndex != -1)
 				RecalculateShadowMatrices(light, buffer);
 
-			if (lightCol == glm::vec3(0.0))
-				continue;
-
 			m_LightsBuffer->LBO.activeDirLights++;
 		}
+
+		if (oldActivePointLights != m_LightsBuffer->LBO.activePointLights ||
+			oldActiveSpotLights  != m_LightsBuffer->LBO.activeSpotLights  ||
+			oldActiveDirLights   != m_LightsBuffer->LBO.activeDirLights
+		) m_LightsBufferChanged = true;
 
 		// Reset last (point/spot)lights for clustered rendering
 		m_LightsBuffer->LBO.pointLights[m_LightsBuffer->LBO.activePointLights].color = glm::vec3(0.0f);
@@ -368,7 +407,9 @@ namespace en
 	void RendererBackend::BeginRender()
 	{
 		m_CameraBuffer->MapBuffer(m_FrameIndex);
-		m_LightsBuffer->MapStagingMemory(m_FrameIndex);
+
+		if(m_LightsBufferChanged)
+			m_LightsBuffer->MapStagingMemory(m_FrameIndex);
 
 		VkResult result = vkAcquireNextImageKHR(m_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_MainSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_SwapchainImageIndex);
 
@@ -400,7 +441,8 @@ namespace en
 		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
 			EN_ERROR("RendererBackend::BeginRender() - Failed to begin recording command buffer!");
 
-		m_LightsBuffer->CopyStagingToDevice(m_FrameIndex, m_CommandBuffers[m_FrameIndex]);
+		if (m_LightsBufferChanged)
+			m_LightsBuffer->CopyStagingToDevice(m_FrameIndex, m_CommandBuffers[m_FrameIndex]);
 	}
 	void RendererBackend::DepthPass()
 	{
@@ -684,34 +726,25 @@ namespace en
 		if (m_SkipFrame || !m_Scene)
 			return;
 
-		glm::mat4 inverseProj(glm::inverse(m_CameraBuffer->m_CBOs[m_FrameIndex].proj));
-		
-		uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / CLUSTERED_TILES_X);
-		uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / CLUSTERED_TILES_Y);
+		if (m_ClusterFrustumChanged)
+		{
+			uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / CLUSTERED_TILES_X);
+			uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / CLUSTERED_TILES_Y);
 
-		glm::uvec4 tileSizes(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z, 0.0);
-		glm::uvec4 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, sizeX, sizeY);
+			glm::uvec4 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, sizeX, sizeY);
 
-		float zNear = m_MainCamera->m_NearPlane;
-		float zFar = m_MainCamera->m_FarPlane;
+			m_ClusterAABBCompute->Bind(m_CommandBuffers[m_FrameIndex]);
 
-		ScreenToViewPushConstant pc{
-			inverseProj,
-			tileSizes,
-			screenSize,
+			m_ClusterAABBCompute->PushConstants(&screenSize, sizeof(glm::uvec4), 0U);
 
-			zNear,
-			zFar
-		};
+			m_ClusterAABBCompute->BindDescriptorSet(m_ClusterSSBOs.aabbClustersDescriptor.get());
 
-		m_ClusterAABBCompute->Bind(m_CommandBuffers[m_FrameIndex]);
-		
-		m_ClusterAABBCompute->PushConstants(&pc, sizeof(ScreenToViewPushConstant), 0U);
-		
-		m_ClusterAABBCompute->BindDescriptorSet(m_ClusterSSBOs.aabbClustersDescriptor.get());
-		
-		m_ClusterAABBCompute->Dispatch(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z);
-		
+			m_ClusterAABBCompute->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U);
+
+			m_ClusterAABBCompute->Dispatch(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z);
+
+			m_ClusterFrustumChanged = false;
+		}
 		
 		m_ClusterLightCullingCompute->Bind(m_CommandBuffers[m_FrameIndex]);
 		
@@ -1063,6 +1096,7 @@ namespace en
 		m_AntialiasingPipeline.reset();
 
 		m_SSAOBuffer.reset();
+		m_CameraBuffer.reset();
 
 		DestroyShadows();
 
@@ -1087,6 +1121,8 @@ namespace en
 		glfwSetFramebufferSizeCallback(Window::Get().m_GLFWWindow, RendererBackend::FramebufferResizeCallback);
 
 		m_Swapchain = std::make_unique<Swapchain>(m_VSync);
+
+		m_CameraBuffer = std::make_unique<CameraBuffer>();
 
 		CreateDepthBuffer();
 		CreateHDROffscreen();
@@ -1228,8 +1264,6 @@ namespace en
 
 		stagingBuffer.CopyTo(m_SSAOBuffer.get());
 	}
-
-	
 	void RendererBackend::CreateClusterSSBOs()
 	{
 		uint32_t clusterCount = CLUSTERED_TILES_X * CLUSTERED_TILES_Y * CLUSTERED_TILES_Z;
@@ -1365,12 +1399,12 @@ namespace en
 		constexpr VkPushConstantRange stvPushConstant{
 			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
 			.offset = 0U,
-			.size = sizeof(ScreenToViewPushConstant)
+			.size = sizeof(glm::uvec4)
 		};
 
 		ComputeShader::CreateInfo aabbInfo{
 			.sourcePath = "Shaders/ClusterAABB.spv",
-			.descriptorLayouts = { m_ClusterSSBOs.aabbClustersDescriptor->m_DescriptorLayout },
+			.descriptorLayouts = { m_ClusterSSBOs.aabbClustersDescriptor->m_DescriptorLayout, m_CameraBuffer->GetLayout() },
 			.pushConstantRanges = { stvPushConstant },
 		};
 
@@ -1383,7 +1417,6 @@ namespace en
 
 		m_ClusterLightCullingCompute = std::make_unique<ComputeShader>(lightCullInfo);
 	}
-
 
 	void RendererBackend::CreateDepthBuffer()
 	{

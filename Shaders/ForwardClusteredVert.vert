@@ -17,6 +17,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
     mat4 view;
 	mat4 invView;
 	mat4 proj;
+    mat4 invProj;
 	mat4 projView;
 
 	vec3 position;
@@ -55,7 +56,7 @@ void main()
 
     // Transform vertex normals and tangents to world space
     fNormal  = normalize(vec3(object.model * vec4(vNormal , 0.0)));
-    vec3 tangent = normalize(vec3(camera.view * object.model * vec4(vTangent, 0.0)));
+    vec3 tangent = normalize(vec3(/*camera.view * */object.model * vec4(vTangent, 0.0)));
 
     // Reorthogonalize vertex tangents relatively to normals
     tangent = normalize(tangent - dot(tangent, fNormal) * fNormal); 
