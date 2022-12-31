@@ -190,6 +190,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Lights\LightsBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
@@ -269,6 +270,7 @@
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\LightsBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />

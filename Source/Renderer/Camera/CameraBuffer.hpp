@@ -35,9 +35,6 @@ namespace en
 
 			int debugMode = 0;
 
-			glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
-			glm::vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES]{};
-
 			glm::uvec4 clusterTileCount;
 			glm::uvec4 clusterTileSizes;
 

@@ -39,9 +39,6 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
 
 	int debugMode;
 
-	vec4 cascadeSplitDistances[SHADOW_CASCADES];
-	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
-
 	uvec4 clusterTileCount;
 	uvec4 clusterTileSizes;
 
@@ -51,6 +48,14 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
     float zNear;
 	float zFar;
 } camera;
+
+layout(set = 3, binding = 0) uniform CSMBufferObject
+{
+	vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
+
+    mat4 cascadeLightMatrices[MAX_DIR_LIGHTS][SHADOW_CASCADES];
+} csm;
 
 struct PointLight
 {
@@ -84,8 +89,6 @@ struct DirLight
     float shadowSoftness;
     int pcfSampleRate;
     float bias;
-    
-    mat4 projView[SHADOW_CASCADES];
 };
 
 layout(std430, set = 2, binding = 3) buffer LBO
@@ -373,7 +376,7 @@ void main()
 	int cascade = 0;
 
     for(int i = 0; i < SHADOW_CASCADES-1; i++)
-        if (linearDepth > camera.cascadeSplitDistances[i].x)
+        if (linearDepth > csm.cascadeSplitDistances[i].x)
 		    cascade = i+1;
     
     vec3 ambient = albedo * lightsBuffer.ambient;
@@ -441,8 +444,8 @@ void main()
 
         DirLight light = lightsBuffer.dLights[i];
 
-        vec4 fPosLightSpace = biasMat * light.projView[cascade] * vec4(position, 1.0);
-        float softness = light.shadowSoftness / camera.cascadeFrustumSizeRatios[cascade].x;
+        vec4 fPosLightSpace = biasMat * csm.cascadeLightMatrices[i][cascade] * vec4(position, 1.0);
+        float softness = light.shadowSoftness / csm.cascadeFrustumSizeRatios[cascade].x;
 
         if(light.shadowmapIndex != -1)
             shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, light.shadowmapIndex+cascade, light.pcfSampleRate, light.bias, softness);

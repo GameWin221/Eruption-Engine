@@ -41,6 +41,10 @@ namespace en
 
 		EN_SUCCESS("Created the camera buffer!")
 
+			m_CSMBuffer = std::make_unique<CSMBuffer>();
+
+		EN_SUCCESS("Created the Cascaded Shadow Maps buffer!")
+
 			CreateClusterSSBOs();
 
 		EN_SUCCESS("Created cluster rendering SSBOs!")
@@ -359,7 +363,7 @@ namespace en
 
 			m_LightsBuffer->LBO.activeSpotLights++;
 		}
-		for (const auto& light : dirLights)
+		for (uint32_t i = 0U; const auto& light : dirLights)
 		{
 			DirectionalLight::Buffer& buffer = m_LightsBuffer->LBO.dirLights[m_LightsBuffer->LBO.activeDirLights];
 
@@ -384,7 +388,7 @@ namespace en
 			buffer.bias			  = light.m_ShadowBias;
 
 			if (light.m_ShadowmapIndex != -1)
-				RecalculateShadowMatrices(light, buffer);
+				RecalculateShadowMatrices(light, m_CSMBuffer->m_CSMBOs[m_FrameIndex].cascadeLightMatrices[i++]);
 
 			m_LightsBuffer->LBO.activeDirLights++;
 		}
@@ -407,6 +411,7 @@ namespace en
 	void RendererBackend::BeginRender()
 	{
 		m_CameraBuffer->MapBuffer(m_FrameIndex);
+		m_CSMBuffer->MapBuffer(m_FrameIndex);
 
 		if(m_LightsBufferChanged)
 			m_LightsBuffer->MapStagingMemory(m_FrameIndex);
@@ -679,7 +684,7 @@ namespace en
 
 					const DepthStageInfo cameraInfo{
 						.modelMatrix = object->GetModelMatrix(),
-						.viewProjMatrix = m_LightsBuffer->LBO.dirLights[i].lightMat[j],
+						.viewProjMatrix = m_CSMBuffer->m_CSMBOs[m_FrameIndex].cascadeLightMatrices[i][j],
 					};
 
 					m_ShadowPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
@@ -790,6 +795,8 @@ namespace en
 		m_ForwardClusteredPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
 
 		m_ForwardClusteredPipeline->BindDescriptorSet(m_ForwardClusteredDescriptor->m_DescriptorSet, 2U);
+
+		m_ForwardClusteredPipeline->BindDescriptorSet(m_CSMBuffer->GetDescriptorHandle(m_FrameIndex), 3U);
 
 		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
@@ -1123,6 +1130,7 @@ namespace en
 		m_Swapchain = std::make_unique<Swapchain>(m_VSync);
 
 		m_CameraBuffer = std::make_unique<CameraBuffer>();
+		m_CSMBuffer = std::make_unique<CSMBuffer>();
 
 		CreateDepthBuffer();
 		CreateHDROffscreen();
@@ -1764,7 +1772,12 @@ namespace en
 			.depthFormat = m_DepthBuffer->m_Format,
 			.vShader = "Shaders/ForwardClusteredVert.spv",
 			.fShader = "Shaders/ForwardClusteredFrag.spv",
-			.descriptorLayouts = { m_CameraBuffer->GetLayout(), Material::GetLayout(), m_ForwardClusteredDescriptor->m_DescriptorLayout },
+			.descriptorLayouts = { 
+				m_CameraBuffer->GetLayout(),
+				Material::GetLayout(),
+				m_ForwardClusteredDescriptor->m_DescriptorLayout,
+				m_CSMBuffer->GetLayout()
+			},
 			.pushConstantRanges = { objectPushConstant, materialPushConstant },
 			.useVertexBindings = true,
 			.enableDepthTest = true,
@@ -1978,7 +1991,7 @@ namespace en
 		ImGui_ImplVulkanH_SelectSurfaceFormat(m_Ctx->m_PhysicalDevice, m_Ctx->m_WindowSurface, &m_Swapchain->GetFormat(), 1, VK_COLORSPACE_SRGB_NONLINEAR_KHR);
 	}
 	
-	void RendererBackend::RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer)
+	void RendererBackend::RecalculateShadowMatrices(const DirectionalLight& light, glm::mat4* lightMatrices)
 	{
 		for (int i = 0; i < SHADOW_CASCADES; ++i)
 		{
@@ -1996,7 +2009,7 @@ namespace en
 			glm::mat4 shadowProj = lightProj;
 			shadowProj[3] += shadowOffset;
 
-			lightBuffer.lightMat[i] = shadowProj * lightView;
+			lightMatrices[i] = shadowProj * lightView;
 		}
 	}
 	void RendererBackend::UpdateShadowFrustums()
@@ -2022,7 +2035,7 @@ namespace en
 
 
 		for (int i = 0; i < SHADOW_CASCADES; i++)
-			m_CameraBuffer->m_CBOs[m_FrameIndex].cascadeSplitDistances[i].x = m_Shadows.frustums[i].split;
+			m_CSMBuffer->m_CSMBOs[m_FrameIndex].cascadeSplitDistances[i].x = m_Shadows.frustums[i].split;
 
 		glm::vec4 frustumClipSpace[8]
 		{
@@ -2069,6 +2082,6 @@ namespace en
 			m_Shadows.frustums[i].ratio = m_Shadows.frustums[i].radius / m_Shadows.frustums[0].radius;
 
 		for (int i = 0; i < SHADOW_CASCADES; i++)
-			m_CameraBuffer->m_CBOs[m_FrameIndex].cascadeFrustumSizeRatios[i].x = m_Shadows.frustums[i].ratio;
+			m_CSMBuffer->m_CSMBOs[m_FrameIndex].cascadeFrustumSizeRatios[i].x = m_Shadows.frustums[i].ratio;
 	}
 }

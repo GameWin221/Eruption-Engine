@@ -47,8 +47,6 @@ struct DirLight
     float shadowSoftness;
     int pcfSampleRate;
     float bias;
-    
-    mat4 projView[SHADOW_CASCADES];
 };
 
 layout(binding = 7) uniform UBO 
@@ -364,7 +362,7 @@ void main()
         float shadow = 0.0;
         if(lightsBuffer.dLights[i].shadowmapIndex != -1)
         {
-            vec4 fPosLightSpace = biasMat * lightsBuffer.dLights[i].projView[cascade] * vec4(position, 1.0);
+            vec4 fPosLightSpace = biasMat * csm.cascadeLightsMatrices[i][cascade] * vec4(position, 1.0);
             float softness = lightsBuffer.dLights[i].shadowSoftness / lightsBuffer.cascadeRatios[cascade].x;
 
             shadow = CalculateShadow(fPosLightSpace, dirShadowmaps, lightsBuffer.dLights[i].shadowmapIndex+cascade, lightsBuffer.dLights[i].pcfSampleRate, lightsBuffer.dLights[i].bias, softness);

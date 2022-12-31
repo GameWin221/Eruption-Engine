@@ -1,5 +1,4 @@
 #version 450
-#include "../EruptionEngine.ini"
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
@@ -23,9 +22,6 @@ layout(set = 1, binding = 0) uniform CameraBufferObject
 	vec3 position;
 
 	int debugMode;
-
-	vec4 cascadeSplitDistances[SHADOW_CASCADES];
-	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
 
 	uvec4 clusterTileCount;
 	uvec4 clusterTileSizes;

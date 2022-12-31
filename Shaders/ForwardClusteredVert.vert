@@ -24,9 +24,6 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
 
 	int debugMode;
 
-	vec4 cascadeSplitDistances[SHADOW_CASCADES];
-	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
-
 	uvec4 clusterTileCount;
 	uvec4 clusterTileSizes;
 

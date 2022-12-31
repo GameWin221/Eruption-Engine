@@ -36,8 +36,6 @@ struct DirLight
     float shadowSoftness;
     int pcfSampleRate;
     float bias;
-    
-    mat4 projView[SHADOW_CASCADES];
 };
 
 struct AABB 
@@ -79,9 +77,6 @@ layout(set = 1, binding = 0) uniform CameraBufferObject
 	vec3 position;
 
 	int debugMode;
-
-	vec4 cascadeSplitDistances[SHADOW_CASCADES];
-	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
 
 	uvec4 clusterTileCount;
 	uvec4 clusterTileSizes;

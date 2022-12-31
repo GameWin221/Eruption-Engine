@@ -22,6 +22,7 @@
 #include <Renderer/Lights/DirectionalLight.hpp>
 #include <Renderer/Lights/SpotLight.hpp>
 #include <Renderer/Lights/LightsBuffer.hpp>
+#include <Renderer/Lights/CSMBuffer.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
 #include <Renderer/Camera/CameraBuffer.hpp>
@@ -276,6 +277,8 @@ namespace en
 
 		std::unique_ptr<CameraBuffer> m_CameraBuffer;
 		std::unique_ptr<LightsBuffer> m_LightsBuffer;
+		std::unique_ptr<CSMBuffer> m_CSMBuffer;
+
 		std::unique_ptr<DescriptorSet> m_ForwardClusteredDescriptor;
 
 		std::unique_ptr<DescriptorSet> m_HDRInput;
@@ -335,7 +338,7 @@ namespace en
 		void UpdateSSAOInput();
 
 		void InitShadows();
-		void RecalculateShadowMatrices(const DirectionalLight& light, DirectionalLight::Buffer& lightBuffer);
+		void RecalculateShadowMatrices(const DirectionalLight& light, glm::mat4* lightMatrices);
 		void UpdateShadowFrustums();
 		void DestroyShadows();
 
