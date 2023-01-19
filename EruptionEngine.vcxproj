@@ -336,12 +336,6 @@
     <None Include="Shaders\ForwardClusteredFrag.frag" />
     <None Include="Shaders\ForwardClusteredVert.vert" />
     <None Include="Shaders\FXAA.frag" />
-    <None Include="Shaders\GeometryFragment.frag">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="Shaders\GeometryVertex.vert">
-      <FileType>Document</FileType>
-    </None>
     <None Include="Shaders\Lighting.frag">
       <FileType>Document</FileType>
     </None>

@@ -29,6 +29,7 @@ namespace en
 			glm::mat4 invView = glm::mat4(1.0f);
 			glm::mat4 proj = glm::mat4(1.0f);
 			glm::mat4 invProj = glm::mat4(1.0f);
+			glm::mat4 invProjView = glm::mat4(1.0f);
 			glm::mat4 projView = glm::mat4(1.0f);
 
 			glm::vec3 position = glm::vec3(0.0f);

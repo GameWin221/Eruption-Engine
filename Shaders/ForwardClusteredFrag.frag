@@ -6,6 +6,7 @@ layout(location = 0) in vec4 fPosition;
 layout(location = 1) in vec3 fNormal;
 layout(location = 2) in vec2 fTexcoord;
 layout(location = 3) in mat3 fTBN;
+layout(location = 6) noperspective in vec2 fUV;
 
 layout(location = 0) out vec4 FragColor;
 
@@ -27,12 +28,15 @@ layout(set = 2, binding = 0) uniform samplerCubeArray pointShadowmaps;
 layout(set = 2, binding = 1) uniform sampler2DArray spotShadowmaps;
 layout(set = 2, binding = 2) uniform sampler2DArray dirShadowmaps;
 
+layout(set = 2, binding = 8) uniform sampler2D SSAO;
+
 layout(set = 0, binding = 0) uniform CameraBufferObject
 {
     mat4 view;
 	mat4 invView;
 	mat4 proj;
     mat4 invProj;
+    mat4 invProjView;
 	mat4 projView;
 
 	vec3 position;
@@ -330,22 +334,22 @@ float RadiansBetweenDirs(vec3 a, vec3 b)
 	return angleRadians;
 }
 
-//float GetBlurredAO()
-//{
-//    vec2 texelSize = 1.0 / vec2(textureSize(SSAO, 0));
-//
-//    float result = 0.0;
-//    for (int x = -2; x < 2; ++x) 
-//    {
-//        for (int y = -2; y < 2; ++y) 
-//        {
-//            vec2 offset = vec2(float(x), float(y)) * texelSize;
-//            result += texture(SSAO, fTexcoord + offset).r;
-//        }
-//    }
-//
-//    return result / 16.0;
-//}
+float GetBlurredAO()
+{
+    vec2 texelSize = 1.0 / vec2(textureSize(SSAO, 0));
+
+    float result = 0.0;
+    for (int x = -2; x < 2; ++x) 
+    {
+        for (int y = -2; y < 2; ++y) 
+        {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            result += texture(SSAO, fUV + offset).r;
+        }
+    }
+
+    return result / 16.0;
+}
 
 
 vec3 NormalMapping()
@@ -368,6 +372,12 @@ void main()
     vec3 normal    = NormalMapping();
     vec3 position  = fPosition.xyz;
 
+    #if BLUR_SSAO
+    float ao = 1.0 - GetBlurredAO();
+    #else
+    float ao = 1.0 - texture(SSAO, fUV).r;
+    #endif
+
     float linearDepth = fPosition.w;
 
     float roughness = texture(roughnessTexture, fTexcoord).r * mbo.roughnessVal;
@@ -379,7 +389,7 @@ void main()
         if (linearDepth > csm.cascadeSplitDistances[i].x)
 		    cascade = i+1;
     
-    vec3 ambient = albedo * lightsBuffer.ambient;
+    vec3 ambient = albedo * lightsBuffer.ambient * ao;
     vec3 lighting = vec3(0.0);
 
     vec3 F0 = mix(vec3(0.04), albedo, metalness);

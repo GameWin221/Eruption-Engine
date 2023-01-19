@@ -49,6 +49,7 @@ namespace en
 		m_CBOs[frameIndex].view = camera->GetViewMatrix();
 		m_CBOs[frameIndex].invView = glm::inverse(m_CBOs[frameIndex].view);
 		m_CBOs[frameIndex].projView = m_CBOs[frameIndex].proj * m_CBOs[frameIndex].view;
+		m_CBOs[frameIndex].invProjView = glm::inverse(m_CBOs[frameIndex].projView);
 
 		m_CBOs[frameIndex].zNear = camera->m_NearPlane;
 		m_CBOs[frameIndex].zFar = camera->m_FarPlane;

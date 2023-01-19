@@ -11,6 +11,7 @@ layout(location = 0) out vec4 fPosition;
 layout(location = 1) out vec3 fNormal;
 layout(location = 2) out vec2 fTexcoord;
 layout(location = 3) out mat3 fTBN;
+layout(location = 6) noperspective out vec2 fUV;
 
 layout(set = 0, binding = 0) uniform CameraBufferObject
 {
@@ -18,6 +19,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
 	mat4 invView;
 	mat4 proj;
     mat4 invProj;
+    mat4 invProjView;
 	mat4 projView;
 
 	vec3 position;
@@ -46,10 +48,15 @@ float LinearDepth(float d)
 
 void main() 
 {
-    gl_Position = camera.projView * object.model * vec4(vPos, 1.0);
+    vec4 vWorldSpace = object.model * vec4(vPos, 1.0);
 
+    gl_Position = camera.projView * vWorldSpace;
+
+    // Screen UV
+    fUV = (gl_Position.xy / gl_Position.w) / 2.0 + 0.5;
+    
     // Transform vertex positions to world space
-    fPosition = vec4(vec3(object.model * vec4(vPos, 1.0)), LinearDepth(gl_Position.z / gl_Position.w));
+    fPosition = vec4(vWorldSpace.xyz, LinearDepth(gl_Position.z / gl_Position.w));
 
     // Transform vertex normals and tangents to world space
     fNormal  = normalize(vec3(object.model * vec4(vNormal , 0.0)));
