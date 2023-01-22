@@ -3,6 +3,9 @@
 #ifndef EN_IMAGE_HPP
 #define EN_IMAGE_HPP
 
+#include <Common/Helpers.hpp>
+#include <Core/Types.hpp>
+
 namespace en
 {
 	class Image
@@ -19,15 +22,15 @@ namespace en
 		*/
 		void ChangeLayout(VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
-		VkImage		m_Image		= VK_NULL_HANDLE;
-		VkImageView	m_ImageView = VK_NULL_HANDLE;
-
 		const VkExtent2D m_Size;
 
 		const VkImageUsageFlags  m_UsageFlags;
 		const VkImageAspectFlags m_AspectFlags;
 
 		const VkFormat m_Format;
+
+		const VkImage GetHandle() const { return m_Image; };
+		const VkImageView GetViewHandle() const { return m_ImageView; };
 
 		const VkImageLayout GetLayout()    const { return m_CurrentLayout; };
 		const uint32_t		GetMipLevels() const { return m_MipLevels;	   };
@@ -42,7 +45,9 @@ namespace en
 		VkImageLayout m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		const VkImageLayout m_InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		VkDeviceMemory m_Memory = VK_NULL_HANDLE;
+		VkImage		m_Image = VK_NULL_HANDLE;
+		VkImageView	m_ImageView = VK_NULL_HANDLE;
+		VmaAllocation m_Allocation = VK_NULL_HANDLE;
 	};
 }
 

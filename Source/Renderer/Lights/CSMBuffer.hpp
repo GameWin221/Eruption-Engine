@@ -19,7 +19,7 @@ namespace en
 
 		VkDescriptorSetLayout GetLayout();
 
-		DescriptorSet* GetDescriptorHandle(uint32_t frameIndex);
+		Handle<DescriptorSet> GetDescriptorHandle(uint32_t frameIndex);
 
 		struct CSMBufferObject
 		{
@@ -32,8 +32,8 @@ namespace en
 		std::array<CSMBufferObject, FRAMES_IN_FLIGHT> m_CSMBOs;
 
 	private:
-		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_DescriptorSets;
-		std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
+		std::array<Handle<DescriptorSet>, FRAMES_IN_FLIGHT> m_DescriptorSets;
+		std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
 	};
 }
 

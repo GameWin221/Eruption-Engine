@@ -1,18 +1,25 @@
-#include <Core/EnPch.hpp>
 #include "IndexBuffer.hpp"
 
 namespace en
 {
-	IndexBuffer::IndexBuffer(const std::vector<uint32_t>& indices) 
-		: m_IndicesCount(indices.size())
+	IndexBuffer::IndexBuffer(const std::vector<uint32_t>& indices) : m_IndicesCount(indices.size())
 	{
 		VkDeviceSize bufferSize = m_IndicesCount * sizeof(uint32_t);
 
-		MemoryBuffer stagingBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		MemoryBuffer stagingBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VMA_MEMORY_USAGE_GPU_TO_CPU
+		);
+
 		stagingBuffer.MapMemory(indices.data(), bufferSize);
 
-		m_Buffer = std::make_unique<MemoryBuffer>(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		m_Buffer = MakeHandle<MemoryBuffer>(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
 		
-		stagingBuffer.CopyTo(m_Buffer.get());
+		stagingBuffer.CopyTo(m_Buffer);
 	}
 }

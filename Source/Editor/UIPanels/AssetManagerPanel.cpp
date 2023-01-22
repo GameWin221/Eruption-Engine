@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "AssetManagerPanel.hpp"
 
 #include <portable-file-dialogs.h>
@@ -92,20 +91,20 @@ namespace en
 
 		ImGui::BeginChild("AssetPreviewer", assetPreviewerSize, true);
 
-		const std::vector<Mesh*>     meshes	 = m_AssetManager->GetAllMeshes();
-		const std::vector<Texture*>  textures  = m_AssetManager->GetAllTextures();
-		const std::vector<Material*> materials = m_AssetManager->GetAllMaterials();
+		const std::vector<Handle<Mesh>>     meshes	 = m_AssetManager->GetAllMeshes();
+		const std::vector<Handle<Texture>>  textures  = m_AssetManager->GetAllTextures();
+		const std::vector<Handle<Material>> materials = m_AssetManager->GetAllMaterials();
 
 		std::vector<Asset*> assets;
 
 		assets.reserve(meshes.size() + textures.size() + materials.size() + 1);
-
+		
 		if(showMesh)
 		for (const auto& mesh : meshes)
 		{
 			std::string name = mesh->GetName();
 
-			std::for_each(name.begin(), name.end(), [](char& c) {c = ::tolower(c);});
+			std::for_each(name.begin(), name.end(), [](char& c) {c = std::tolower(c);});
 
 			if (searchedName.size() == 0 || name.find(searchedName) != std::string::npos)
 				assets.emplace_back(mesh->CastTo<Asset>());
@@ -133,7 +132,7 @@ namespace en
 				assets.emplace_back(material->CastTo<Asset>());
 		}
 
-
+		
 		int sameLineAssets = static_cast<int>(ImGui::GetWindowSize().x / (assetSize.x + 20.0f));
 
 		if (sameLineAssets <= 0) sameLineAssets = 1;
@@ -197,7 +196,7 @@ namespace en
 					ImGui::SameLine();
 			}
 		}
-
+		
 		ImGui::EndChild();
 
 		ImGui::End();
@@ -375,7 +374,7 @@ namespace en
 
 			chosenMaterial->SetColor(col);
 
-			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
+			const std::vector<Handle<Texture>>& allTextures = m_AssetManager->GetAllTextures();
 
 			std::vector<const char*> textureNames(allTextures.size() + 1);
 			textureNames[0] = "No texture";
@@ -532,7 +531,7 @@ namespace en
 					SPACE();
 
 					ImGui::Text("Material: ");
-					const std::vector<Material*>& allMaterials = m_AssetManager->GetAllMaterials();
+					const std::vector<Handle<Material>>& allMaterials = m_AssetManager->GetAllMaterials();
 
 					std::vector<const char*> materialNames(allMaterials.size() + 1);
 
@@ -620,7 +619,7 @@ namespace en
 			col[1] = std::fmaxf(col[1], 0.0f);
 			col[2] = std::fmaxf(col[2], 0.0f);
 
-			const std::vector<Texture*>& allTextures = m_AssetManager->GetAllTextures();
+			const std::vector<Handle<Texture>>& allTextures = m_AssetManager->GetAllTextures();
 
 			std::vector<const char*> textureNames(allTextures.size() + 1);
 			textureNames[0] = "No texture";
@@ -686,10 +685,10 @@ namespace en
 					EN_WARN("Enter a valid material name!")
 				else
 				{
-					Texture* albedoTex    = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture()	 : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
-					Texture* roughnessTex = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
-					Texture* normalTex    = ((chosenNormalIndex    == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
-					Texture* metalnessTex = ((chosenMetalnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
+					Handle<Texture> albedoTex    = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture()	 : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
+					Handle<Texture> roughnessTex = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
+					Handle<Texture> normalTex    = ((chosenNormalIndex    == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
+					Handle<Texture> metalnessTex = ((chosenMetalnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 
 					if (roughnessTex != Texture::GetWhiteNonSRGBTexture())
 						roughness = 1.0f;

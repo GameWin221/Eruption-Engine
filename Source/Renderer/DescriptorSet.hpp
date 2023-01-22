@@ -3,6 +3,9 @@
 #ifndef EN_DESCRIPTORSET_HPP
 #define EN_DESCRIPTORSET_HPP
 
+#include <Renderer/Context.hpp>
+#include <vector>
+
 namespace en
 { 
 	class DescriptorSet
@@ -34,15 +37,18 @@ namespace en
 		DescriptorSet(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos);
 		~DescriptorSet();
 
+		const VkDescriptorSet GetHandle() const { return m_DescriptorSet; }
+
 		void Update(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos);
 
-		VkDescriptorSetLayout m_DescriptorLayout;
-		VkDescriptorSet m_DescriptorSet;
+		const VkDescriptorSetLayout GetLayout() const { return m_DescriptorLayout; }
 
 	private:
 		void CreateDescriptorPool(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos);
 		void CreateDescriptorSet();
 
+		VkDescriptorSetLayout m_DescriptorLayout;
+		VkDescriptorSet  m_DescriptorSet;
 		VkDescriptorPool m_DescriptorPool;
 	};
 }

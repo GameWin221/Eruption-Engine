@@ -1,4 +1,3 @@
-#include <Core/EnPch.hpp>
 #include "SceneObject.hpp"
 
 namespace en

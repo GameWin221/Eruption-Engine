@@ -9,7 +9,7 @@ namespace en
 {
 	class SpotLight : public SceneMember
 	{
-	friend class RendererBackend;
+	friend class Renderer;
 
 	public:
 		constexpr SpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)

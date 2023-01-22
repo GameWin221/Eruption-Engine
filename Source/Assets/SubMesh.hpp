@@ -15,12 +15,12 @@ namespace en
 	class SubMesh : public Asset
 	{
 	public:
-		SubMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, Material* material);
+		SubMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, Handle<Material> material);
 
-		Material* m_Material;
+		Handle<Material> m_Material;
 
-		std::unique_ptr<VertexBuffer> m_VertexBuffer;
-		std::unique_ptr<IndexBuffer>  m_IndexBuffer;
+		Handle<VertexBuffer> m_VertexBuffer;
+		Handle<IndexBuffer>  m_IndexBuffer;
 
 		bool m_Active = true;
 	};

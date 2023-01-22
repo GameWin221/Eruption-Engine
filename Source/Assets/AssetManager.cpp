@@ -1,11 +1,11 @@
-#include <Core/EnPch.hpp>
+
 #include "AssetManager.hpp"
 
 namespace en
 {
     uint32_t g_MatIndex = 0U;
 
-    AssetManager* g_AssetManagerInstance;
+    AssetManager* g_AssetManagerInstance = nullptr;
 
     AssetManager::AssetManager()
     {
@@ -19,9 +19,9 @@ namespace en
     {
         g_AssetManagerInstance = nullptr;
     }
-    AssetManager* AssetManager::Get()
+    AssetManager& AssetManager::Get()
     {
-        return g_AssetManagerInstance;
+        return *g_AssetManagerInstance;
     }
 
     bool AssetManager::LoadMesh(const std::string& nameID, const std::string& path, const MeshImportProperties& properties)
@@ -43,7 +43,7 @@ namespace en
             return false;
         }
 
-        m_Textures[nameID] = std::make_unique<Texture>(path, nameID, static_cast<VkFormat>(properties.format), properties.flipped);
+        m_Textures[nameID] = MakeHandle<Texture>(path, nameID, static_cast<VkFormat>(properties.format), properties.flipped);
         return true;
     }
 
@@ -56,7 +56,7 @@ namespace en
         EN_WARN("AssetManager::DeleteTexture() - This feature is disabled for now!");
     }
 
-    bool AssetManager::CreateMaterial(const std::string& nameID, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
+    bool AssetManager::CreateMaterial(const std::string& nameID, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Handle<Texture> albedoTexture, Handle<Texture> roughnessTexture, Handle<Texture> normalTexture, Handle<Texture> metalnessTexture)
     {
         if (m_Materials.contains(nameID))
         {
@@ -64,7 +64,7 @@ namespace en
             return false;
         }
 
-        m_Materials[nameID] = std::make_unique<Material>(nameID, color, metalnessVal, roughnessVal, normalStrength, albedoTexture, roughnessTexture, normalTexture, metalnessTexture);
+        m_Materials[nameID] = MakeHandle<Material>(nameID, color, metalnessVal, roughnessVal, normalStrength, albedoTexture, roughnessTexture, normalTexture, metalnessTexture);
 
         EN_LOG("Created a material (Name: \"" + nameID + "\", Color: "           + std::to_string(color.x) + ", " + std::to_string(color.y) + ", " + std::to_string(color.z) + 
                                                            ", MetalnessVal: "    + std::to_string(metalnessVal)      +
@@ -135,7 +135,7 @@ namespace en
         UpdateMaterials();
     }
 
-    Mesh* AssetManager::GetMesh(const std::string& nameID)
+    Handle<Mesh> AssetManager::GetMesh(const std::string& nameID)
     {
         // If there's no `nameID` model:
         if (!m_Meshes.contains(nameID))
@@ -145,9 +145,9 @@ namespace en
             return Mesh::GetEmptyMesh();
         }
 
-        return m_Meshes.at(nameID).get();
+        return m_Meshes.at(nameID);
     }
-    Texture* en::AssetManager::GetTexture(const std::string& nameID)
+    Handle<Texture> en::AssetManager::GetTexture(const std::string& nameID)
     {
         // If there's no `nameID` texture:
         if (!m_Textures.contains(nameID))
@@ -156,9 +156,9 @@ namespace en
             return Texture::GetWhiteNonSRGBTexture();
         }
 
-        return m_Textures.at(nameID).get();
+        return m_Textures.at(nameID);
     }
-    Material* AssetManager::GetMaterial(const std::string& nameID)
+    Handle<Material> AssetManager::GetMaterial(const std::string& nameID)
     {
         // If there's no `nameID` material:
         if (!m_Materials.contains(nameID))
@@ -167,33 +167,33 @@ namespace en
             return Material::GetDefaultMaterial();
         }
 
-        return m_Materials.at(nameID).get();
+        return m_Materials.at(nameID);
     }
 
-    std::vector<Mesh*> AssetManager::GetAllMeshes()
+    std::vector<Handle<Mesh>> AssetManager::GetAllMeshes()
     {
-        std::vector<Mesh*> meshes(m_Meshes.size());
+        std::vector<Handle<Mesh>> meshes(m_Meshes.size());
 
         for (int i = 0; const auto& [name, mesh] : m_Meshes)
-            meshes[i++] = mesh.get();
+            meshes[i++] = mesh;
         
         return meshes;
     }
-    std::vector<Texture*> AssetManager::GetAllTextures()
+    std::vector<Handle<Texture>> AssetManager::GetAllTextures()
     {
-        std::vector< Texture*> textures(m_Textures.size());
+        std::vector<Handle<Texture>> textures(m_Textures.size());
 
         for (int i = 0; const auto& [name, texture] : m_Textures)
-            textures[i++] = texture.get();
+            textures[i++] = texture;
 
         return textures;
     }
-    std::vector<Material*> AssetManager::GetAllMaterials()
+    std::vector<Handle<Material>> AssetManager::GetAllMaterials()
     {
-        std::vector<Material*> materials(m_Materials.size());
+        std::vector<Handle<Material>> materials(m_Materials.size());
 
         for (int i = 0; const auto & [name, material] : m_Materials)
-            materials[i++] = material.get();
+            materials[i++] = material;
 
         return materials;
     }
@@ -204,9 +204,9 @@ namespace en
             material->Update();
     }
 
-    std::unique_ptr<Mesh> AssetManager::LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties)
+    Handle<Mesh> AssetManager::LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties)
     {
-        std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
+        Handle<Mesh> mesh = MakeHandle<Mesh>();
         mesh->m_FilePath = filePath;
         mesh->m_Name = name;
         
@@ -229,7 +229,7 @@ namespace en
             EN_ERROR("AssetManager::LoadMeshFromFile() - " + std::string(importer.GetErrorString()));
 
         std::string directory = mesh->m_FilePath.substr(0, std::min(mesh->m_FilePath.find_last_of('\\'), mesh->m_FilePath.find_last_of('/'))+1);
-        std::vector<Material*> materials;
+        std::vector<Handle<Material>> materials;
 
         if(importProperties.importMaterials)
         for (int i = 0; i < scene->mNumMaterials; i++)
@@ -281,28 +281,28 @@ namespace en
             if(hasNormalTex   ) LoadTexture(std::string(normalPath   .C_Str()), directory + std::string(normalPath  .C_Str()) , { TextureFormat::NonColor });
             if(hasMetallicTex ) LoadTexture(std::string(metallicPath .C_Str()), directory + std::string(metallicPath.C_Str()) , { TextureFormat::NonColor });
 
-            Texture* diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : Texture::GetWhiteSRGBTexture();
-            Texture* roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteNonSRGBTexture();
-            Texture* normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : Texture::GetWhiteNonSRGBTexture();
-            Texture* metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : Texture::GetWhiteNonSRGBTexture();
+            Handle<Texture> diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : Texture::GetWhiteSRGBTexture();
+            Handle<Texture> roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteNonSRGBTexture();
+            Handle<Texture> normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : Texture::GetWhiteNonSRGBTexture();
+            Handle<Texture> metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : Texture::GetWhiteNonSRGBTexture();
 
             CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, roughness, 1.0f, diffuseTexture, roughnessTexture, normalTexture, metalnessTexture);
 
             materials.emplace_back(GetMaterial(name.C_Str()));
         }
 
-        ProcessNode(scene->mRootNode, scene, materials, mesh.get());
+        ProcessNode(scene->mRootNode, scene, materials, mesh);
         
         EN_SUCCESS("Succesfully loaded a mesh from \"" + filePath + "\"");
 
         return mesh;
     }
-    void AssetManager::ProcessNode(aiNode* node, const aiScene* scene, const std::vector<Material*>& materials, Mesh* mesh)
+    void AssetManager::ProcessNode(aiNode* node, const aiScene* scene, const std::vector<Handle<Material>>& materials, Handle<Mesh> mesh)
     {
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
         {
             aiMesh* assimpMesh = scene->mMeshes[node->mMeshes[i]];
-            Material* material;
+            Handle<Material> material;
 
             aiVector3D pos(0.0f);
             aiQuaternion rot;

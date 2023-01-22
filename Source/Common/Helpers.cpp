@@ -1,4 +1,3 @@
-#include <Core/EnPch.hpp>
 #include "Helpers.hpp"
 
 namespace en
@@ -11,7 +10,7 @@ namespace en
 
             VkCommandBufferAllocateInfo allocInfo{
                 .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                .commandPool        = ctx.m_CommandPool,
+                .commandPool        = ctx.m_GraphicsCommandPool,
                 .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                 .commandBufferCount = 1U,
             };
@@ -43,7 +42,7 @@ namespace en
             vkQueueSubmit(ctx.m_GraphicsQueue, 1U, &submitInfo, VK_NULL_HANDLE);
             vkQueueWaitIdle(ctx.m_GraphicsQueue);
 
-            vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_CommandPool, 1U, &commandBuffer);
+            vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_GraphicsCommandPool, 1U, &commandBuffer);
         }
 
         VkCommandBuffer BeginSingleTimeTransferCommands()
@@ -87,7 +86,7 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VkDeviceMemory& imageMemory, const VkExtent2D size, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage, const VkMemoryPropertyFlags properties, const uint32_t layers, const uint32_t mipLevels, const VkImageCreateFlags flags)
+        void CreateImage(VkImage& image, VmaAllocation& imageAllocation, const VkExtent2D size, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage, const VkMemoryPropertyFlags properties, const uint32_t layers, const uint32_t mipLevels, const VkImageCreateFlags flags)
         {
             UseContext();
 
@@ -112,22 +111,12 @@ namespace en
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             };
 
-            if (vkCreateImage(ctx.m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS)
-                EN_ERROR("Helpers::CreateImage() - Failed to create image!");
-
-            VkMemoryRequirements memRequirements{};
-            vkGetImageMemoryRequirements(ctx.m_LogicalDevice, image, &memRequirements);
-
-            VkMemoryAllocateInfo allocInfo {
-                .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-                .allocationSize  = memRequirements.size,
-                .memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties)
+            const VmaAllocationCreateInfo allocationInfo{
+                .usage = VMA_MEMORY_USAGE_GPU_ONLY
             };
 
-            if (vkAllocateMemory(ctx.m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-                EN_ERROR("Helpers::CreateImage() - Failed to allocate image memory!");
-
-            vkBindImageMemory(ctx.m_LogicalDevice, image, imageMemory, 0);
+            if (vmaCreateImage(ctx.m_Allocator, &imageInfo, &allocationInfo, &image, &imageAllocation, nullptr) != VK_SUCCESS)
+                EN_ERROR("Helpers::CreateImage() - Failed to create an image!")
         }
         void CreateImageView(const VkImage image, VkImageView& imageView, const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspectFlags, const uint32_t layer, const uint32_t layerCount, const uint32_t mipLevels)
         {
@@ -145,7 +134,7 @@ namespace en
                     .layerCount     = layerCount,
                 }
             };
-
+            
             if (vkCreateImageView(Context::Get().m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
                 EN_ERROR("Helpers::CreateImageView() - Failed to create texture image view!");
         }
@@ -369,12 +358,11 @@ namespace en
             );
         }
 
-        void DestroyImage(const VkImage image, const VkDeviceMemory memory)
+        void DestroyImage(const VkImage image, const VmaAllocation imageAllocation)
         {
             UseContext();
 
-            vkDestroyImage(ctx.m_LogicalDevice, image, nullptr);
-            vkFreeMemory(ctx.m_LogicalDevice, memory, nullptr);
+            vmaDestroyImage(ctx.m_Allocator, image, imageAllocation);
         }
 
         void CreateSampler(VkSampler& sampler, const VkFilter filtering, const uint32_t anisotropy, const float maxLod, const float mipLodBias)
@@ -424,7 +412,7 @@ namespace en
                 .flags            = commandPoolCreateFlags,
                 .queueFamilyIndex = ctx.m_QueueFamilies.graphics.value(),
             };
-
+            
             if (vkCreateCommandPool(ctx.m_LogicalDevice, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS)
                 EN_ERROR("Helpers::CreateCommandPool() - Failed to create a command pool!");
         }

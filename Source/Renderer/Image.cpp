@@ -1,7 +1,5 @@
-#include "Core/EnPch.hpp"
 #include "Image.hpp"
 
-#include <Common/Helpers.hpp>
 #include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
@@ -12,7 +10,7 @@ namespace en
 		if(genMipMaps)
 			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
 
-		Helpers::CreateImage(m_Image, m_Memory, m_Size, m_Format, VK_IMAGE_TILING_OPTIMAL, m_UsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1U, m_MipLevels);
+		Helpers::CreateImage(m_Image, m_Allocation, m_Size, m_Format, VK_IMAGE_TILING_OPTIMAL, m_UsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1U, m_MipLevels);
 		Helpers::CreateImageView(m_Image, m_ImageView, VK_IMAGE_VIEW_TYPE_2D, m_Format, m_AspectFlags, 0U, 1U, m_MipLevels);
 
 		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_MipLevels);
@@ -22,14 +20,11 @@ namespace en
 	{
 		UseContext();
 
-		if(m_Memory != VK_NULL_HANDLE)
-			vkFreeMemory(ctx.m_LogicalDevice, m_Memory, nullptr);
-
 		if (m_ImageView != VK_NULL_HANDLE)
 			vkDestroyImageView(ctx.m_LogicalDevice, m_ImageView, nullptr);
 
-		if (m_Image != VK_NULL_HANDLE)
-			vkDestroyImage(ctx.m_LogicalDevice, m_Image, nullptr);
+		if (m_Allocation != VK_NULL_HANDLE && m_Image != VK_NULL_HANDLE)
+			vmaDestroyImage(ctx.m_Allocator, m_Image, m_Allocation);
 	}
 
 	void Image::SetData(void* data)
@@ -38,7 +33,11 @@ namespace en
 
 		ChangeLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-		MemoryBuffer stagingBuffer(imageByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		MemoryBuffer stagingBuffer(
+			imageByteSize, 
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+			VMA_MEMORY_USAGE_CPU_TO_GPU
+		);
 		stagingBuffer.MapMemory(data, imageByteSize);
 		stagingBuffer.CopyTo(this);
 
@@ -249,7 +248,8 @@ namespace en
 			VK_PIPELINE_STAGE_TRANSFER_BIT, stageFlags, 0U,
 			0U, nullptr,
 			0U, nullptr,
-			1U, &barrier);
+			1U, &barrier
+		);
 
 		m_CurrentLayout = m_InitialLayout;
 

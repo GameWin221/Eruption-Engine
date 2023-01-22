@@ -42,18 +42,12 @@ namespace en
 
 		std::array<LightsBufferObject, FRAMES_IN_FLIGHT> m_LBOs;
 
-		inline const VkBuffer GetHandle() const
-		{
-			return m_Buffer->m_Handle;
-		}
-		inline const VkDeviceSize GetSize() const
-		{
-			return m_Buffer->m_BufferSize;
-		}
+		inline const VkBuffer     GetHandle() const { return m_Buffer->GetHandle();  }
+		inline const VkDeviceSize GetSize()   const { return m_Buffer->m_BufferSize; }
 
 	private:
-		std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> m_StagingBuffers;
-		std::unique_ptr<MemoryBuffer> m_Buffer;
+		std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_StagingBuffers;
+		Handle<MemoryBuffer> m_Buffer;
 	};
 }
 

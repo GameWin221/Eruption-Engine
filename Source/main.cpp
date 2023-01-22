@@ -1,4 +1,3 @@
-#include <Core/EnPch.hpp>
 #include <Core/Eruption.hpp>
 
 // If compiled in Debug mode or not on Windows, show console

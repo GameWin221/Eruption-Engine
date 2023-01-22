@@ -13,7 +13,7 @@ namespace en
     public:
         VertexBuffer(const std::vector<Vertex>& vertices);
 
-        std::unique_ptr<MemoryBuffer> m_Buffer;
+        Handle<MemoryBuffer> m_Buffer;
 
         const uint32_t m_VerticesCount;
     };

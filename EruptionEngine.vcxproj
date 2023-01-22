@@ -103,6 +103,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <PrecompiledHeaderFile />
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,6 +120,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <PrecompiledHeaderFile />
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,11 +137,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir)External\VMA;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>Core/EnPch.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -166,11 +169,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\Assimp\include;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir)External\VMA;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>Core/EnPch.hpp</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -190,22 +194,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Lights\LightsBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\ComputeShader.cpp" />
-    <ClCompile Include="Source\Renderer\Image.cpp" />
-    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
-    <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
-    <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
-    <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
-    <ClCompile Include="Source\Renderer\DynamicFramebuffer.cpp" />
-    <ClCompile Include="Source\Renderer\DescriptorSet.cpp" />
-    <ClCompile Include="Source\Renderer\Pipeline.cpp" />
-    <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -238,56 +226,46 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Scene\Scene.cpp" />
-    <ClCompile Include="Source\Scene\SceneObject.cpp" />
-    <ClCompile Include="Source\Assets\Material.cpp" />
-    <ClCompile Include="Source\Assets\AssetManager.cpp" />
     <ClCompile Include="External\STB\stb_image.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Assets\SubMesh.cpp" />
-    <ClCompile Include="Source\Core\Eruption.cpp" />
-    <ClCompile Include="Source\Core\EnPch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">EnPch.hpp</PrecompiledHeaderFile>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">EnPch.hpp</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Renderer\Camera\Camera.cpp" />
-    <ClCompile Include="Source\Renderer\Context.cpp" />
+    <ClCompile Include="External\VMA\VMA.cpp" />
+    <ClCompile Include="Source\Assets\AssetManager.cpp" />
+    <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Assets\Mesh.cpp" />
-    <ClCompile Include="Source\Renderer\Renderer.cpp" />
-    <ClCompile Include="Source\Renderer\Shader.cpp" />
+    <ClCompile Include="Source\Assets\SubMesh.cpp" />
     <ClCompile Include="Source\Assets\Texture.cpp" />
-    <ClCompile Include="Source\Renderer\Window.cpp" />
     <ClCompile Include="Source\Common\Helpers.cpp" />
-    <ClCompile Include="Source\Input\InputManager.cpp" />
-    <ClCompile Include="Source\Renderer\RendererBackend.cpp" />
+    <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
+    <ClCompile Include="Source\Input\InputManager.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\IndexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Buffers\VertexBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\DescriptorSet.cpp" />
+    <ClCompile Include="Source\Renderer\Image.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\Pipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Camera\Camera.cpp" />
+    <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\ComputePipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Context.cpp" />
+    <ClCompile Include="Source\Core\Eruption.cpp" />
+    <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Lights\LightsBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\GraphicsPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
+    <ClCompile Include="Source\Renderer\Window.cpp" />
+    <ClCompile Include="Source\Scene\Scene.cpp" />
+    <ClCompile Include="Source\Scene\SceneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Lights\LightsBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\ComputeShader.hpp" />
-    <ClInclude Include="Source\Renderer\Image.hpp" />
-    <ClInclude Include="Source\Assets\Asset.hpp" />
-    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
-    <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
-    <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
-    <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
-    <ClInclude Include="Source\Editor\EditorCommons.hpp" />
-    <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
-    <ClInclude Include="Source\Renderer\DynamicFramebuffer.hpp" />
-    <ClInclude Include="Source\Renderer\DescriptorSet.hpp" />
-    <ClInclude Include="Source\Renderer\Pipeline.hpp" />
-    <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
     <ClInclude Include="External\ImGui\imconfig.h" />
     <ClInclude Include="External\ImGui\imgui.h" />
     <ClInclude Include="External\ImGui\imgui_impl_glfw.h" />
@@ -299,30 +277,47 @@
     <ClInclude Include="Include\Utility\AssetManager.hpp" />
     <ClInclude Include="Include\Eruption.hpp" />
     <ClInclude Include="Include\EnPch.hpp" />
+    <ClInclude Include="Source\Assets\Asset.hpp" />
+    <ClInclude Include="Source\Assets\AssetManager.hpp" />
+    <ClInclude Include="Source\Assets\Material.hpp" />
+    <ClInclude Include="Source\Assets\Mesh.hpp" />
+    <ClInclude Include="Source\Assets\SubMesh.hpp" />
+    <ClInclude Include="Source\Assets\Texture.hpp" />
+    <ClInclude Include="Source\Common\Helpers.hpp" />
+    <ClInclude Include="Source\Editor\EditorCommons.hpp" />
+    <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
+    <ClInclude Include="Source\Editor\EditorLayer.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
+    <ClInclude Include="Source\Input\InputManager.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\IndexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\MemoryBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\Vertex.hpp" />
+    <ClInclude Include="Source\Renderer\Buffers\VertexBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\DescriptorSet.hpp" />
+    <ClInclude Include="Source\Renderer\Image.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\Pipeline.hpp" />
     <ClInclude Include="Source\Core\Log.hpp" />
+    <ClInclude Include="Source\Core\Types.hpp" />
+    <ClInclude Include="Source\Renderer\Camera\Camera.hpp" />
+    <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Context.hpp" />
+    <ClInclude Include="Source\Core\Eruption.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\LightsBuffer.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
+    <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\GraphicsPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Renderer.hpp" />
+    <ClInclude Include="Source\Renderer\Swapchain.hpp" />
+    <ClInclude Include="Source\Renderer\Window.hpp" />
     <ClInclude Include="Source\Scene\Scene.hpp" />
     <ClInclude Include="Source\Scene\SceneMember.hpp" />
     <ClInclude Include="Source\Scene\SceneObject.hpp" />
-    <ClInclude Include="Source\Assets\Material.hpp" />
-    <ClInclude Include="Source\Core\EnPch.hpp" />
-    <ClInclude Include="Source\Core\Eruption.hpp" />
-    <ClInclude Include="Source\Renderer\Camera\Camera.hpp" />
-    <ClInclude Include="Source\Renderer\Context.hpp" />
-    <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
-    <ClInclude Include="Source\Assets\SubMesh.hpp" />
-    <ClInclude Include="Source\Assets\Mesh.hpp" />
-    <ClInclude Include="Source\Renderer\Renderer.hpp" />
-    <ClInclude Include="Source\Renderer\Shader.hpp" />
-    <ClInclude Include="Source\Assets\Texture.hpp" />
-    <ClInclude Include="Source\Renderer\RendererBackend.hpp" />
-    <ClInclude Include="Source\Renderer\Window.hpp" />
-    <ClInclude Include="Source\Assets\AssetManager.hpp" />
-    <ClInclude Include="Source\Common\Helpers.hpp" />
-    <ClInclude Include="Source\Input\InputManager.hpp" />
-    <ClInclude Include="Source\Editor\EditorLayer.hpp" />
-    <ClInclude Include="Source\Renderer\Lights\SpotLight.hpp" />
-    <ClInclude Include="Source\Renderer\Swapchain.hpp" />
-    <ClInclude Include="Source\Renderer\Buffers\Vertex.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />

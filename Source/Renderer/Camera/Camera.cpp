@@ -1,25 +1,12 @@
-#include <Core/EnPch.hpp>
 #include "Camera.hpp"
 
 namespace en
 {
 	constexpr glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
 
-	Camera::Camera(const CameraInfo& cameraInfo)
+	Camera::Camera(float fov, float nearPlane, float farPlane, glm::vec3 position)
+		: m_Fov(fov), m_NearPlane(nearPlane), m_FarPlane(farPlane), m_Position(position)
 	{
-		m_FarPlane  = cameraInfo.farPlane;
-		m_NearPlane = cameraInfo.nearPlane;
-		m_Position  = cameraInfo.position;
-		m_Size      = cameraInfo.size;
-		m_Fov       = cameraInfo.fov;
-
-		m_Pitch = 0.0f;
-		m_Yaw   = 0.0f;
-
-		m_DynamicallyScaled = cameraInfo.dynamicallyScaled;
-
-		m_Exposure = cameraInfo.exposure;
-
 		UpdateVectors();
 	}
 
@@ -40,12 +27,11 @@ namespace en
 	{
 		if (m_DynamicallyScaled)
 		{
-			int wX, wY;
-			glfwGetWindowSize(en::Window::Get().m_GLFWWindow, &wX, &wY);
+			glm::ivec2 size = en::Window::Get().GetSize();
 
-			if (wX <= 0 || wY <= 0) return;
+			if (size.x <= 0 || size.y <= 0) return;
 
-			m_Size = glm::vec2(wX, wY);
+			m_Size = size;
 		}
 
 		m_Proj = glm::perspective(glm::radians(m_Fov), (float)m_Size.x / (float)m_Size.y, m_NearPlane, m_FarPlane);

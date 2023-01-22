@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "EditorImageAtlas.hpp"
 
 namespace en
@@ -33,7 +32,7 @@ namespace en
 	{
 		UseContext();
 
-		constexpr VkDescriptorSetLayoutBinding descriptorBinding{
+		VkDescriptorSetLayoutBinding descriptorBinding{
 			.binding		 = 0U,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.descriptorCount = 1U,
@@ -80,7 +79,7 @@ namespace en
 
 		const VkDescriptorImageInfo atlasImageInfo{
 			.sampler     = m_Texture->m_ImageSampler,
-			.imageView   = m_Texture->m_Image->m_ImageView,
+			.imageView   = m_Texture->m_Image->GetViewHandle(),
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 

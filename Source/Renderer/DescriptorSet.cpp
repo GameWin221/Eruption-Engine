@@ -1,13 +1,14 @@
-#include "Core/EnPch.hpp"
 #include "DescriptorSet.hpp"
 
 #include <Common/Helpers.hpp>
+
 namespace en
 {
 	DescriptorSet::DescriptorSet(const std::vector<ImageInfo>& imageInfos, const std::vector<BufferInfo>& bufferInfos)
 	{
 		CreateDescriptorPool(imageInfos, bufferInfos);
 		CreateDescriptorSet();
+
 		Update(imageInfos, bufferInfos);
 	}
 	DescriptorSet::~DescriptorSet()

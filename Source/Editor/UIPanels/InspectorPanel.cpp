@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "InspectorPanel.hpp"
 
 namespace en
@@ -83,7 +82,7 @@ namespace en
 
 			SPACE();
 
-			const std::vector<Mesh*>& allMeshes = m_AssetManager->GetAllMeshes();
+			const std::vector<Handle<Mesh>>& allMeshes = m_AssetManager->GetAllMeshes();
 
 			std::vector<const char*> meshNames(allMeshes.size() + 1);
 

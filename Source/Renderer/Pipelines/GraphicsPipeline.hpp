@@ -1,17 +1,17 @@
 #pragma once
 
-#ifndef EN_PIPELINE_HPP
-#define EN_PIPELINE_HPP
+#ifndef EN_GRAPHICS_PIPELINE_HPP
+#define EN_GRAPHICS_PIPELINE_HPP
 
-#include <Renderer/Shader.hpp>
+#include <Renderer/Pipelines/Pipeline.hpp>
+
 #include <Renderer/DescriptorSet.hpp>
 #include <Renderer/Buffers/VertexBuffer.hpp>
 #include <Renderer/Buffers/IndexBuffer.hpp>
-#include <Assets/Material.hpp>
 
 namespace en
 {
-	class Pipeline
+	class GraphicsPipeline : public Pipeline
 	{
 	public:
 		struct Attachment
@@ -53,29 +53,17 @@ namespace en
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
 
-		Pipeline(const CreateInfo& pipeline);
-		~Pipeline();
+		GraphicsPipeline(const CreateInfo& pipeline);
 
 		void BeginRendering(VkCommandBuffer commandBuffer, const BindInfo& info);
 
-		void PushConstants(const void* data, uint32_t size, uint32_t offset, VkShaderStageFlags shaderStage);
-
-		void BindDescriptorSet(DescriptorSet* descriptor, uint32_t index = 0U);
-		void BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index = 0U);
-		void BindVertexBuffer(VertexBuffer* buffer);
-		void BindIndexBuffer(IndexBuffer* buffer);
+		void BindVertexBuffer(Handle<VertexBuffer> buffer, VkDeviceSize offset = 0U);
+		void BindIndexBuffer(Handle<IndexBuffer> buffer);
 
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1U, uint32_t firstIndex = 0U, uint32_t firstInstance = 0U);
 		void Draw(uint32_t vertexCount, uint32_t instanceCount = 1U, uint32_t firstVertex = 0U, uint32_t firstInstance = 0U);
 
 		void EndRendering();
-
-		VkPipelineLayout m_Layout;
-		VkPipeline		 m_Pipeline;
-
-	private:
-		
-		VkCommandBuffer m_RenderingCommandBuffer;
 	};
 }
 

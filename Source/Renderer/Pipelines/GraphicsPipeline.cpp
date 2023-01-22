@@ -1,12 +1,10 @@
-#include <Core/EnPch.hpp>
-#include "Pipeline.hpp"
+#include "GraphicsPipeline.hpp"
 
-#include <Common/Helpers.hpp>
 #include <Renderer/Buffers/VertexBuffer.hpp>
 
 namespace en
 {
-	Pipeline::Pipeline(const CreateInfo& pipeline)
+	GraphicsPipeline::GraphicsPipeline(const CreateInfo& pipeline)
 	{
 		UseContext();
 
@@ -128,27 +126,27 @@ namespace en
 		};
 
 		if (vkCreatePipelineLayout(ctx.m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_Layout) != VK_SUCCESS)
-			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline layout!");
+			EN_ERROR("GraphicsPipeline::CreatePipeline() - Failed to create pipeline layout!");
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
-		std::unique_ptr<Shader> vShader;
-		std::unique_ptr<Shader> fShader;  
+		VkShaderModule vShaderModule{};
+		VkShaderModule fShaderModule{};
 
 		if (!pipeline.vShader.empty())
 		{
-			vShader = std::make_unique<Shader>(pipeline.vShader, ShaderType::Vertex);
-			shaderStages.emplace_back(vShader->m_ShaderInfo);
+			vShaderModule = CreateShaderModule(pipeline.vShader);
+			shaderStages.emplace_back(CreateShaderInfo(vShaderModule, VK_SHADER_STAGE_VERTEX_BIT));
 		}
 			
 		if (!pipeline.fShader.empty())
 		{
-			fShader = std::make_unique<Shader>(pipeline.fShader, ShaderType::Fragment);
-			shaderStages.emplace_back(fShader->m_ShaderInfo);
+			fShaderModule = CreateShaderModule(pipeline.fShader);
+			shaderStages.emplace_back(CreateShaderInfo(fShaderModule, VK_SHADER_STAGE_FRAGMENT_BIT));
 		}
 			
 		if (shaderStages.empty())
-			EN_ERROR("Pipeline::CreatePipeline() - No shaders stages specified!");
+			EN_ERROR("GraphicsPipeline::CreatePipeline() - No shaders stages specified!");
 
 		VkPipelineRenderingCreateInfoKHR pipelineKHRCreateInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
@@ -181,18 +179,14 @@ namespace en
 		};
 
 		if (vkCreateGraphicsPipelines(ctx.m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
-			EN_ERROR("Pipeline::CreatePipeline() - Failed to create pipeline!");
+			EN_ERROR("GraphicsPipeline::CreatePipeline() - Failed to create pipeline!");
+	
+		DestroyShaderModule(vShaderModule);
+		DestroyShaderModule(fShaderModule);
 	}
-	Pipeline::~Pipeline()
+	void GraphicsPipeline::BeginRendering(VkCommandBuffer commandBuffer, const BindInfo& info)
 	{
-		UseContext();
-
-		vkDestroyPipelineLayout(ctx.m_LogicalDevice, m_Layout, nullptr);
-		vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);
-	}
-	void Pipeline::BeginRendering(VkCommandBuffer commandBuffer, const BindInfo& info)
-	{
-		m_RenderingCommandBuffer = commandBuffer;
+		m_BoundCommandBuffer = commandBuffer;
 
 		std::vector<VkRenderingAttachmentInfoKHR> khrColorAttachments(info.colorAttachments.size());
 
@@ -228,7 +222,7 @@ namespace en
 			.pDepthAttachment = ((depthAttachment.imageView) ? &depthAttachment : nullptr)
 		};
 
-		vkCmdBeginRendering(m_RenderingCommandBuffer, &renderingInfo);
+		vkCmdBeginRendering(m_BoundCommandBuffer, &renderingInfo);
 
 		const VkViewport viewport {
 			.width  = static_cast<float>(info.extent.width),
@@ -239,44 +233,32 @@ namespace en
 			.extent = info.extent
 		};
 		
-		vkCmdSetCullMode(m_RenderingCommandBuffer, info.cullMode);
-		vkCmdSetViewport(m_RenderingCommandBuffer, 0U, 1U, &viewport);
-		vkCmdSetScissor(m_RenderingCommandBuffer, 0U, 1U, &scissor);
+		vkCmdSetCullMode(m_BoundCommandBuffer, info.cullMode);
+		vkCmdSetViewport(m_BoundCommandBuffer, 0U, 1U, &viewport);
+		vkCmdSetScissor(m_BoundCommandBuffer, 0U, 1U, &scissor);
 
-		vkCmdBindPipeline(m_RenderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+		vkCmdBindPipeline(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 	}
-	void Pipeline::PushConstants(const void* data, uint32_t size, uint32_t offset, VkShaderStageFlags shaderStage)
+	void GraphicsPipeline::BindVertexBuffer(Handle<VertexBuffer> buffer, VkDeviceSize offset)
 	{
-		vkCmdPushConstants(m_RenderingCommandBuffer, m_Layout, shaderStage, offset, size, data);
+		const VkBuffer vBuffer = buffer->m_Buffer->GetHandle();
+		vkCmdBindVertexBuffers(m_BoundCommandBuffer, 0U, 1U, &vBuffer, &offset);
 	}
-	void Pipeline::BindDescriptorSet(DescriptorSet* descriptor, uint32_t index)
+	void GraphicsPipeline::BindIndexBuffer(Handle<IndexBuffer> buffer)
 	{
-		vkCmdBindDescriptorSets(m_RenderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Layout, index, 1U, &descriptor->m_DescriptorSet, 0U, nullptr);
+		vkCmdBindIndexBuffer(m_BoundCommandBuffer, buffer->m_Buffer->GetHandle(), 0U, VK_INDEX_TYPE_UINT32);
 	}
-	void Pipeline::BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index)
+	void GraphicsPipeline::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t firstInstance)
 	{
-		vkCmdBindDescriptorSets(m_RenderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Layout, index, 1U, &descriptor, 0U, nullptr);
+		vkCmdDrawIndexed(m_BoundCommandBuffer, indexCount, instanceCount, firstIndex, 0U, firstInstance);
 	}
-	void Pipeline::BindVertexBuffer(VertexBuffer* buffer)
+	void GraphicsPipeline::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{
-		constexpr VkDeviceSize zeroOffset = 0U;
-		vkCmdBindVertexBuffers(m_RenderingCommandBuffer, 0U, 1U, &buffer->m_Buffer->m_Handle, &zeroOffset);
+		vkCmdDraw(m_BoundCommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 	}
-	void Pipeline::BindIndexBuffer(IndexBuffer* buffer)
+	void GraphicsPipeline::EndRendering()
 	{
-		vkCmdBindIndexBuffer(m_RenderingCommandBuffer, buffer->m_Buffer->m_Handle, 0U, VK_INDEX_TYPE_UINT32);
-	}
-	void Pipeline::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t firstInstance)
-	{
-		vkCmdDrawIndexed(m_RenderingCommandBuffer, indexCount, instanceCount, firstIndex, 0U, firstInstance);
-	}
-	void Pipeline::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-	{
-		vkCmdDraw(m_RenderingCommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
-	}
-	void Pipeline::EndRendering()
-	{
-		vkCmdEndRendering(m_RenderingCommandBuffer);
-		m_RenderingCommandBuffer = VK_NULL_HANDLE;
+		vkCmdEndRendering(m_BoundCommandBuffer);
+		m_BoundCommandBuffer = VK_NULL_HANDLE;
 	}
 }

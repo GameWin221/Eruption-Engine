@@ -23,12 +23,12 @@ namespace en
 		Texture(stbi_uc* pixels, std::string name, VkFormat format, VkExtent2D size, bool useMipMaps = true);
 		~Texture();
 
-		std::unique_ptr<Image> m_Image;
+		Handle<Image> m_Image;
 
 		VkSampler m_ImageSampler;
 
-		static Texture* GetWhiteSRGBTexture();
-		static Texture* GetWhiteNonSRGBTexture();
+		static Handle<Texture> GetWhiteSRGBTexture();
+		static Handle<Texture> GetWhiteNonSRGBTexture();
 
 		const std::string& GetFilePath() const { return m_FilePath; };
 		const std::string& GetName()     const { return m_Name;	    };

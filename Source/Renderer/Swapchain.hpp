@@ -19,11 +19,11 @@ namespace en
 		std::vector<VkImageView>   m_ImageViews;
 		std::vector<VkFramebuffer> m_Framebuffers;
 
-		void ChangeLayout(int index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd = VK_NULL_HANDLE);
+		void ChangeLayout(uint32_t index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
 		void CreateSwapchainFramebuffers(VkRenderPass inputRenderpass);
 
-		const VkFormat&  const GetFormat() { return m_ImageFormat; };
+		const VkFormat   const GetFormat() { return m_ImageFormat; };
 		const VkExtent2D const GetExtent() { return m_Extent;	   };
 
 	private:

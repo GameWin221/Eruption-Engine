@@ -17,11 +17,11 @@ namespace en
 
 		void MapBuffer(uint32_t frameIndex);
 
-		void UpdateBuffer(uint32_t frameIndex, Camera* camera, VkExtent2D extent, int debugMode);
+		void UpdateBuffer(uint32_t frameIndex, Handle<Camera> camera, VkExtent2D extent, int debugMode);
 
 		VkDescriptorSetLayout GetLayout();
 
-		DescriptorSet* GetDescriptorHandle(uint32_t frameIndex);
+		Handle<DescriptorSet> GetDescriptorHandle(uint32_t frameIndex);
 
 		struct CameraBufferObject
 		{
@@ -49,8 +49,8 @@ namespace en
 		std::array<CameraBufferObject, FRAMES_IN_FLIGHT> m_CBOs;
 
 	private:
-		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_DescriptorSets;
-		std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
+		std::array<Handle<DescriptorSet>, FRAMES_IN_FLIGHT> m_DescriptorSets;
+		std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
 	};
 }
 #endif

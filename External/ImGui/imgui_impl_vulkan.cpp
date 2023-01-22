@@ -113,7 +113,7 @@ struct ImGui_ImplVulkan_Data
     VkPipelineCreateFlags       PipelineCreateFlags;
     VkDescriptorSetLayout       DescriptorSetLayout;
     VkPipelineLayout            PipelineLayout;
-    VkPipeline                  Pipeline;
+    VkPipeline                  GraphicsPipeline;
     uint32_t                    Subpass;
     VkShaderModule              ShaderModuleVert;
     VkShaderModule              ShaderModuleFrag;
@@ -460,7 +460,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (pipeline == VK_NULL_HANDLE)
-        pipeline = bd->Pipeline;
+        pipeline = bd->GraphicsPipeline;
 
     // Allocate array to store enough vertex/index buffers. Each unique viewport gets its own storage.
     ImGui_ImplVulkan_ViewportData* viewport_renderer_data = (ImGui_ImplVulkan_ViewportData*)draw_data->OwnerViewport->RendererUserData;
@@ -986,7 +986,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         check_vk_result(err);
     }
 
-    ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, bd->RenderPass, v->MSAASamples, &bd->Pipeline, bd->Subpass);
+    ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, bd->RenderPass, v->MSAASamples, &bd->GraphicsPipeline, bd->Subpass);
 
     return true;
 }
@@ -1022,7 +1022,7 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->FontSampler)          { vkDestroySampler(v->Device, bd->FontSampler, v->Allocator); bd->FontSampler = VK_NULL_HANDLE; }
     if (bd->DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
     if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
-    if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
+    if (bd->GraphicsPipeline)             { vkDestroyPipeline(v->Device, bd->GraphicsPipeline, v->Allocator); bd->GraphicsPipeline = VK_NULL_HANDLE; }
 }
 
 bool    ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
@@ -1333,8 +1333,8 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
     wd->ImageCount = 0;
     if (wd->RenderPass)
         vkDestroyRenderPass(device, wd->RenderPass, allocator);
-    if (wd->Pipeline)
-        vkDestroyPipeline(device, wd->Pipeline, allocator);
+    if (wd->GraphicsPipeline)
+        vkDestroyPipeline(device, wd->GraphicsPipeline, allocator);
 
     // If min image count was not specified, request different count of images dependent on selected present mode
     if (min_image_count == 0)
@@ -1433,7 +1433,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
 
         // We do not create a pipeline by default as this is also used by examples' main.cpp,
         // but secondary viewport in multi-viewport mode may want to create one with:
-        //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->Pipeline, bd->Subpass);
+        //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->GraphicsPipeline, bd->Subpass);
     }
 
     // Create The Image Views
@@ -1484,7 +1484,7 @@ void ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevic
     IM_ASSERT(g_FunctionsLoaded && "Need to call ImGui_ImplVulkan_LoadFunctions() if IMGUI_IMPL_VULKAN_NO_PROTOTYPES or VK_NO_PROTOTYPES are set!");
     (void)instance;
     ImGui_ImplVulkanH_CreateWindowSwapChain(physical_device, device, wd, allocator, width, height, min_image_count);
-    //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->Pipeline, g_VulkanInitInfo.Subpass);
+    //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->GraphicsPipeline, g_VulkanInitInfo.Subpass);
     ImGui_ImplVulkanH_CreateWindowCommandBuffers(physical_device, device, wd, queue_family, allocator);
 }
 
@@ -1502,7 +1502,7 @@ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui
     IM_FREE(wd->FrameSemaphores);
     wd->Frames = NULL;
     wd->FrameSemaphores = NULL;
-    vkDestroyPipeline(device, wd->Pipeline, allocator);
+    vkDestroyPipeline(device, wd->GraphicsPipeline, allocator);
     vkDestroyRenderPass(device, wd->RenderPass, allocator);
     vkDestroySwapchainKHR(device, wd->Swapchain, allocator);
     vkDestroySurfaceKHR(instance, wd->Surface, allocator);
@@ -1677,7 +1677,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
         }
     }
 
-    ImGui_ImplVulkan_RenderDrawData(viewport->DrawData, fd->CommandBuffer, wd->Pipeline);
+    ImGui_ImplVulkan_RenderDrawData(viewport->DrawData, fd->CommandBuffer, wd->GraphicsPipeline);
 
     {
         vkCmdEndRenderPass(fd->CommandBuffer);

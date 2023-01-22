@@ -1,11 +1,10 @@
-#include <Core/EnPch.hpp>
 #include "Scene.hpp"
 
 namespace en
 {
-    SceneObject* g_EmptySceneObject;
+    Handle<SceneObject> g_EmptySceneObject;
 
-    SceneObject* Scene::CreateSceneObject(const std::string& name, Mesh* mesh)
+    Handle<SceneObject> Scene::CreateSceneObject(const std::string& name, Handle<Mesh> mesh)
     {
         if (m_SceneObjects.contains(name))
         {
@@ -13,11 +12,11 @@ namespace en
             return nullptr;
         }
 
-        m_SceneObjects[name] = std::make_unique<SceneObject>(mesh, name);
+        m_SceneObjects[name] = MakeHandle<SceneObject>(mesh, name);
 
         EN_LOG("Created a SceneObject called \"" + name + "\"");
 
-        return m_SceneObjects.at(name).get();
+        return m_SceneObjects.at(name);
     }
 
     void Scene::DeleteSceneObject(const std::string& name)
@@ -33,7 +32,7 @@ namespace en
         m_SceneObjects.erase(name);
     }
 
-    SceneObject* Scene::GetSceneObject(const std::string& name)
+    Handle<SceneObject> Scene::GetSceneObject(const std::string& name)
     {
         if (!m_SceneObjects.contains(name))
         {
@@ -42,7 +41,7 @@ namespace en
             return nullptr;
         }
 
-        return m_SceneObjects.at(name).get();
+        return m_SceneObjects.at(name);
     }
 
     void Scene::RenameSceneObject(const std::string& oldName, const std::string& newName)
@@ -113,12 +112,18 @@ namespace en
         m_DirectionalLights.erase(m_DirectionalLights.begin() + index);
     }
 
-    std::vector<SceneObject*> Scene::GetAllSceneObjects()
+    void Scene::UpdateSceneObjects()
     {
-        std::vector<SceneObject*> allSceneObjects(m_SceneObjects.size());
+        for (auto& [name, sceneObject] : m_SceneObjects)
+            sceneObject->UpdateModelMatrix();
+    }
+
+    std::vector<Handle<SceneObject>> Scene::GetAllSceneObjects()
+    {
+        std::vector<Handle<SceneObject>> allSceneObjects(m_SceneObjects.size());
 
         for (uint32_t i{}; const auto & [name, sceneObject] : m_SceneObjects)
-            allSceneObjects[i++] = sceneObject.get();
+            allSceneObjects[i++] = sceneObject;
 
         return allSceneObjects;
     }

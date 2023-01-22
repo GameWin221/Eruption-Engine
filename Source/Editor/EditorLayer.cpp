@@ -1,4 +1,3 @@
-#include <Core/EnPch.hpp>
 #include "EditorLayer.hpp"
 
 namespace en
@@ -23,7 +22,7 @@ namespace en
 
 		m_Atlas = std::make_unique<EditorImageAtlas>("Models/Atlas.png", 4, 1);
 
-		m_Renderer->SetUIRenderCallback(std::bind(&EditorLayer::OnUIDraw, this));
+		m_Renderer->m_ImGuiRenderCallback = std::bind(&EditorLayer::OnUIDraw, this);
 
 		m_AssetManagerPanel   = std::make_unique<AssetManagerPanel  >(assetManager, m_Atlas.get());
 		m_SceneHierarchyPanel = std::make_unique<SceneHierarchyPanel>(m_Renderer);
@@ -117,9 +116,9 @@ namespace en
 		m_Visible = visibility;
 
 		if(m_Visible)
-			m_Renderer->SetUIRenderCallback(std::bind(&EditorLayer::OnUIDraw, this));
+			m_Renderer->m_ImGuiRenderCallback = std::bind(&EditorLayer::OnUIDraw, this);
 		else
-			m_Renderer->SetUIRenderCallback(nullptr);
+			m_Renderer->m_ImGuiRenderCallback = nullptr;
 	}
 
 	void EditorLayer::BeginRender()
@@ -237,7 +236,7 @@ namespace en
 		ImGui::SliderFloat("Exposure", &m_Renderer->GetMainCamera()->m_Exposure, 0.0f, 16.0f);
 		ImGui::Checkbox("Dynamically Scaled", &m_Renderer->GetMainCamera()->m_DynamicallyScaled);
 
-		Camera* cam = m_Renderer->GetMainCamera();
+		Handle<Camera> cam = m_Renderer->GetMainCamera();
 
 		static int res[2] = { cam->m_Size.x, cam->m_Size.y };
 
@@ -276,7 +275,7 @@ namespace en
 			static int mode = 0;
 
 			if (ImGui::SliderInt("Debug View", &mode, 0, 8))
-				m_Renderer->SetDebugMode(mode);
+				m_Renderer->m_DebugMode = mode;
 
 			std::string modeName = "";
 

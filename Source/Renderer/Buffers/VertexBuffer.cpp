@@ -1,4 +1,3 @@
-#include <Core/EnPch.hpp>
 #include "VertexBuffer.hpp"
 
 namespace en
@@ -8,11 +7,19 @@ namespace en
 	{
 		VkDeviceSize bufferSize = vertices.size() * sizeof(Vertex);
 
-		MemoryBuffer stagingBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		MemoryBuffer stagingBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+			VMA_MEMORY_USAGE_CPU_TO_GPU
+		);
 		stagingBuffer.MapMemory(vertices.data(), bufferSize);
 
-		m_Buffer = std::make_unique<MemoryBuffer>(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		m_Buffer = MakeHandle<MemoryBuffer>(
+			bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
 
-		stagingBuffer.CopyTo(m_Buffer.get());
+		stagingBuffer.CopyTo(m_Buffer);
 	}
 }

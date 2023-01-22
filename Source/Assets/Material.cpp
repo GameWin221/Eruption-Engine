@@ -1,16 +1,15 @@
-#include <Core/EnPch.hpp>
 #include "Material.hpp"
 
 namespace en
 {
-	Material* g_DefaultMaterial;
+	Handle<Material> g_DefaultMaterial;
 	
 	VkDescriptorSetLayout g_MatDescriptorSetLayout;
 	VkDescriptorPool g_MatDescriptorPool;
 
 	void CreateMatDescriptorPool();
 
-	Material::Material(const std::string& name, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture)
+	Material::Material(const std::string& name, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Handle<Texture> albedoTexture, Handle<Texture> roughnessTexture, Handle<Texture> normalTexture, Handle<Texture> metalnessTexture)
 		: m_Name(name), m_Color(color), m_MetalnessVal(metalnessVal), m_RoughnessVal(roughnessVal), m_NormalStrength(normalStrength), m_Albedo(albedoTexture), m_Roughness(roughnessTexture), m_Metalness(metalnessTexture), m_Normal(normalTexture), Asset{ AssetType::Material }
 	{
 		if(g_MatDescriptorPool == VK_NULL_HANDLE)
@@ -25,10 +24,10 @@ namespace en
 		UseContext();
 		vkFreeDescriptorSets(ctx.m_LogicalDevice, g_MatDescriptorPool, 1, &m_DescriptorSet);
 	}
-	Material* Material::GetDefaultMaterial()
+	Handle<Material> Material::GetDefaultMaterial()
 	{
 		if (!g_DefaultMaterial)
-			g_DefaultMaterial = new Material("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 0.0f, Texture::GetWhiteSRGBTexture(), Texture::GetWhiteNonSRGBTexture(), Texture::GetWhiteNonSRGBTexture(), Texture::GetWhiteNonSRGBTexture());
+			g_DefaultMaterial = MakeHandle<Material>("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 0.0f, Texture::GetWhiteSRGBTexture(), Texture::GetWhiteNonSRGBTexture(), Texture::GetWhiteNonSRGBTexture(), Texture::GetWhiteNonSRGBTexture());
 
 		return g_DefaultMaterial;
 	}
@@ -54,22 +53,22 @@ namespace en
 		m_UpdateQueued = true;
 	}
 
-	void Material::SetAlbedoTexture(Texture* texture)
+	void Material::SetAlbedoTexture(Handle<Texture> texture)
 	{
 		m_Albedo = texture;
 		m_UpdateQueued = true;
 	}
-	void Material::SetRoughnessTexture(Texture* texture)
+	void Material::SetRoughnessTexture(Handle<Texture> texture)
 	{
 		m_Roughness = texture;
 		m_UpdateQueued = true;
 	}
-	void Material::SetMetalnessTexture(Texture* texture)
+	void Material::SetMetalnessTexture(Handle<Texture> texture)
 	{
 		m_Metalness = texture;
 		m_UpdateQueued = true;
 	}
-	void Material::SetNormalTexture(Texture* texture)
+	void Material::SetNormalTexture(Handle<Texture> texture)
 	{
 		m_Normal = texture;
 		m_UpdateQueued = true;
@@ -83,25 +82,25 @@ namespace en
 
 		VkDescriptorImageInfo albedoImageInfo {
 			.sampler	 = m_Albedo->m_ImageSampler,
-			.imageView   = m_Albedo->m_Image->m_ImageView,
+			.imageView   = m_Albedo->m_Image->GetViewHandle(),
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
 		VkDescriptorImageInfo specularImageInfo{
 			.sampler	 = m_Roughness->m_ImageSampler,
-			.imageView   = m_Roughness->m_Image->m_ImageView,
+			.imageView   = m_Roughness->m_Image->GetViewHandle(),
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
 		VkDescriptorImageInfo normalImageInfo{
 			.sampler	 = m_Normal->m_ImageSampler,
-			.imageView	 = m_Normal->m_Image->m_ImageView,
+			.imageView	 = m_Normal->m_Image->GetViewHandle(),
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
 		VkDescriptorImageInfo metalnessImageInfo{
 			.sampler	 = m_Metalness->m_ImageSampler,
-			.imageView   = m_Metalness->m_Image->m_ImageView,
+			.imageView   = m_Metalness->m_Image->GetViewHandle(),
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		};
 
@@ -166,13 +165,13 @@ namespace en
 		m_MatBuffer.roughnessVal   = m_RoughnessVal;
 		m_MatBuffer.normalStrength = m_NormalStrength;
 
-		if (m_Roughness != Texture::GetWhiteNonSRGBTexture())
+		if (m_Roughness.get() != Texture::GetWhiteNonSRGBTexture().get())
 			m_MatBuffer.roughnessVal = 1.0f;
 
-		if (m_Metalness != Texture::GetWhiteNonSRGBTexture())
+		if (m_Metalness.get() != Texture::GetWhiteNonSRGBTexture().get())
 			m_MatBuffer.metalnessVal = 1.0f;
 
-		if (m_Normal == Texture::GetWhiteNonSRGBTexture())
+		if (m_Normal.get() == Texture::GetWhiteNonSRGBTexture().get())
 			m_MatBuffer.normalStrength = 0.0f;
 	}
 

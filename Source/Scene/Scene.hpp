@@ -3,6 +3,8 @@
 #ifndef EN_SCENE_HPP
 #define EN_SCENE_HPP
 
+#include <unordered_map>
+
 #include <Scene/SceneObject.hpp>
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
@@ -12,12 +14,12 @@ namespace en
 {
 	class Scene
 	{
-		friend class RendererBackend;
+		friend class Renderer;
 
 	public:
-		SceneObject* GetSceneObject(const std::string& name);
+		Handle<SceneObject> GetSceneObject(const std::string& name);
 
-		SceneObject* CreateSceneObject(const std::string& name, Mesh* mesh);
+		Handle<SceneObject> CreateSceneObject(const std::string& name, Handle <Mesh> mesh);
 		void DeleteSceneObject(const std::string& name);
 
 		void RenameSceneObject(const std::string& oldName, const std::string& newName);
@@ -31,18 +33,20 @@ namespace en
 		DirectionalLight* CreateDirectionalLight(const glm::vec3 direction, const glm::vec3 color = glm::vec3(1.0f), const float intensity = 2.5f, const bool active = true);
 		void DeleteDirectionalLight(const uint32_t index);
 
+		void UpdateSceneObjects();
+
 		glm::vec3 m_AmbientColor = glm::vec3(0.0f);
 
 		std::vector<PointLight>		  m_PointLights;
 		std::vector<SpotLight>		  m_SpotLights;
 		std::vector<DirectionalLight> m_DirectionalLights;
 
-		std::vector<SceneObject*> GetAllSceneObjects();
+		std::vector<Handle<SceneObject>> GetAllSceneObjects();
 
 		const uint32_t& GetSceneObjectCount() const { return m_SceneObjects.size(); };
 
 	private:
-		std::unordered_map<std::string, std::unique_ptr<SceneObject>> m_SceneObjects;
+		std::unordered_map<std::string, Handle<SceneObject>> m_SceneObjects;
 	};
 }
 

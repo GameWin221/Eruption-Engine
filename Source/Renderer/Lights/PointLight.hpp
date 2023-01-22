@@ -9,7 +9,7 @@ namespace en
 {
 	class PointLight : public SceneMember
 	{
-	friend class RendererBackend;
+	friend class Renderer;
 
 	public:
 		constexpr PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active)

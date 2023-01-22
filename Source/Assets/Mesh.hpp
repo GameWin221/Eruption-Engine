@@ -26,7 +26,7 @@ namespace en
 		const std::string& GetName()	 const { return m_Name;     };
 		const std::string& GetFilePath() const { return m_FilePath; };
 
-		static Mesh* GetEmptyMesh();
+		static Handle<Mesh> GetEmptyMesh();
 
 		bool m_Active = true;
 

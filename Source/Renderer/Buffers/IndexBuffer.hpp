@@ -12,7 +12,7 @@ namespace en
     public:
         IndexBuffer(const std::vector<uint32_t>& indices);
 
-        std::unique_ptr<MemoryBuffer> m_Buffer;
+        Handle<MemoryBuffer> m_Buffer;
 
         const uint32_t m_IndicesCount;
     };

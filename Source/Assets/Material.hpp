@@ -14,10 +14,10 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Material(const std::string& name, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Texture* albedoTexture, Texture* roughnessTexture, Texture* normalTexture, Texture* metalnessTexture);
+		Material(const std::string& name, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Handle<Texture> albedoTexture, Handle<Texture> roughnessTexture, Handle<Texture> normalTexture, Handle<Texture> metalnessTexture);
 		~Material();
 
-		static Material* GetDefaultMaterial();
+		static Handle<Material> GetDefaultMaterial();
 
 		static VkDescriptorSetLayout& GetLayout();
 
@@ -26,15 +26,15 @@ namespace en
 		void SetMetalness(float metalness);
 		void SetRoughness(float roughness);
 
-		void SetAlbedoTexture(Texture* texture);
-		void SetRoughnessTexture(Texture* texture);
-		void SetMetalnessTexture(Texture* texture);
-		void SetNormalTexture(Texture* texture);
+		void SetAlbedoTexture(Handle<Texture> texture);
+		void SetRoughnessTexture(Handle<Texture> texture);
+		void SetMetalnessTexture(Handle<Texture> texture);
+		void SetNormalTexture(Handle<Texture> texture);
 
-		const Texture* GetAlbedoTexture()    const { return m_Albedo;    };
-		const Texture* GetRoughnessTexture() const { return m_Roughness; };
-		const Texture* GetMetalnessTexture() const { return m_Metalness; };
-		const Texture* GetNormalTexture()    const { return m_Normal;    };
+		const Handle<Texture> GetAlbedoTexture()    const { return m_Albedo;    };
+		const Handle<Texture> GetRoughnessTexture() const { return m_Roughness; };
+		const Handle<Texture> GetMetalnessTexture() const { return m_Metalness; };
+		const Handle<Texture> GetNormalTexture()    const { return m_Normal;    };
 
 		const glm::vec3 GetColor() const { return m_Color; };
 		const float GetNormalStrength() const { return m_NormalStrength; };
@@ -63,10 +63,10 @@ namespace en
 
 		std::string m_Name;
 
-		Texture* m_Albedo;
-		Texture* m_Roughness;
-		Texture* m_Metalness;
-		Texture* m_Normal;
+		Handle<Texture> m_Albedo;
+		Handle<Texture> m_Roughness;
+		Handle<Texture> m_Metalness;
+		Handle<Texture> m_Normal;
 
 		VkDescriptorSet m_DescriptorSet;
 

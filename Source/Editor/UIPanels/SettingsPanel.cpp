@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "SettingsPanel.hpp"
 
 #include <Editor/EditorCommons.hpp>
@@ -14,8 +13,6 @@ namespace en
 
 		ImGui::Begin("Settings", nullptr, EditorCommons::CommonFlags);
 
-		auto& postProcessing = m_Renderer->GetPPParams();
-
 		static bool vSync = true;
 
 		if (ImGui::Checkbox("VSync", &vSync))
@@ -23,26 +20,26 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Antialiasing"))
 		{
-			if (ImGui::Combo("Antialiasing Mode", (int*)&postProcessing.antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
-				m_Renderer->ReloadRenderer();
+			if (ImGui::Combo("Antialiasing Mode", (int*)&m_Renderer->m_PostProcessParams.antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
+				m_Renderer->ReloadBackend();
 			
-			switch (postProcessing.antialiasingMode)
+			switch (m_Renderer->m_PostProcessParams.antialiasingMode)
 			{
-			case RendererBackend::AntialiasingMode::FXAA:
+			case Renderer::AntialiasingMode::FXAA:
 				ImGui::Spacing();
 
 				if (ImGui::Button("Restore Defaults"))
-					postProcessing.antialiasing = RendererBackend::PostProcessingParams::Antialiasing{};
+					m_Renderer->m_PostProcessParams.antialiasing = Renderer::PostProcessingParams::Antialiasing{};
 
 				ImGui::Spacing();
 
-				ImGui::DragFloat("FXAA Span Max", &postProcessing.antialiasing.fxaaSpanMax, 0.02f, 0.0f, 16.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("FXAA Reduce Min", &postProcessing.antialiasing.fxaaReduceMin, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("FXAA Reduce Mult", &postProcessing.antialiasing.fxaaReduceMult, 0.01f, 0.0f, 1.0f), "%.3f", ImGuiSliderFlags_AlwaysClamp;
-				ImGui::DragFloat("FXAA Power", &postProcessing.antialiasing.fxaaPower, 0.2f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("FXAA Span Max", &m_Renderer->m_PostProcessParams.antialiasing.fxaaSpanMax, 0.02f, 0.0f, 16.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("FXAA Reduce Min", &m_Renderer->m_PostProcessParams.antialiasing.fxaaReduceMin, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("FXAA Reduce Mult", &m_Renderer->m_PostProcessParams.antialiasing.fxaaReduceMult, 0.01f, 0.0f, 1.0f), "%.3f", ImGuiSliderFlags_AlwaysClamp;
+				ImGui::DragFloat("FXAA Power", &m_Renderer->m_PostProcessParams.antialiasing.fxaaPower, 0.2f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				break;
 
-			case RendererBackend::AntialiasingMode::None:
+			case Renderer::AntialiasingMode::None:
 				ImGui::Text("Antialiasing is disabled.");
 				break;
 
@@ -55,25 +52,25 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Ambient Occlusion"))
 		{
-			if (ImGui::Combo("Ambient Occlusion Mode", (int*)&postProcessing.ambientOcclusionMode, g_AmbientOcclusionModeNames.data(), g_AmbientOcclusionModeNames.size()))
-				m_Renderer->ReloadRenderer();
+			if (ImGui::Combo("Ambient Occlusion Mode", (int*)&m_Renderer->m_PostProcessParams.ambientOcclusionMode, g_AmbientOcclusionModeNames.data(), g_AmbientOcclusionModeNames.size()))
+				m_Renderer->ReloadBackend();
 
-			switch (postProcessing.ambientOcclusionMode)
+			switch (m_Renderer->m_PostProcessParams.ambientOcclusionMode)
 			{
-			case RendererBackend::AmbientOcclusionMode::SSAO:
+			case Renderer::AmbientOcclusionMode::SSAO:
 				ImGui::Spacing();
 
 				if (ImGui::Button("Restore Defaults"))
-					postProcessing.ambientOcclusion = RendererBackend::PostProcessingParams::AmbientOcclusion{};
+					m_Renderer->m_PostProcessParams.ambientOcclusion = Renderer::PostProcessingParams::AmbientOcclusion{};
 
 				ImGui::Spacing();
 
-				ImGui::DragFloat("SSAO Bias", &postProcessing.ambientOcclusion.bias, 0.05f, 0.0f, 1.0f), "%.2f", ImGuiSliderFlags_AlwaysClamp;
-				ImGui::DragFloat("SSAO Radius", &postProcessing.ambientOcclusion.radius, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("SSAO Multiplier", &postProcessing.ambientOcclusion.multiplier, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("SSAO Bias", &m_Renderer->m_PostProcessParams.ambientOcclusion.bias, 0.05f, 0.0f, 1.0f), "%.2f", ImGuiSliderFlags_AlwaysClamp;
+				ImGui::DragFloat("SSAO Radius", &m_Renderer->m_PostProcessParams.ambientOcclusion.radius, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("SSAO Multiplier", &m_Renderer->m_PostProcessParams.ambientOcclusion.multiplier, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
 				break;
 
-			case RendererBackend::AmbientOcclusionMode::None:
+			case Renderer::AmbientOcclusionMode::None:
 				ImGui::Text("Ambient occlusion is disabled.");
 				break;
 

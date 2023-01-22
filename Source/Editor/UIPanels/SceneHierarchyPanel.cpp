@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "SceneHierarchyPanel.hpp"
 
 namespace en
@@ -30,14 +29,14 @@ namespace en
 			{
 				const SceneObject* chosenObject = m_ChosenSceneMember->CastTo<SceneObject>();
 
-				SceneObject* object = m_Renderer->GetScene()->CreateSceneObject(chosenObject->GetName() + "(Copy)", chosenObject->m_Mesh);
+				Handle<SceneObject> object = m_Renderer->GetScene()->CreateSceneObject(chosenObject->GetName() + "(Copy)", chosenObject->m_Mesh);
 
 				object->m_Active   = chosenObject->m_Active;
 				object->m_Position = chosenObject->m_Position;
 				object->m_Rotation = chosenObject->m_Rotation;
 				object->m_Scale	   = chosenObject->m_Scale;
 
-				m_ChosenSceneMember = object;
+				m_ChosenSceneMember = object.get();
 			}
 
 			SPACE();
@@ -46,7 +45,7 @@ namespace en
 			for (const auto& object : m_Renderer->GetScene()->GetAllSceneObjects())
 			{
 				if (ImGui::Button(object->GetName().c_str(), ImVec2(ImGui::GetWindowWidth() - 15.0f, 20)))
-					m_ChosenSceneMember = m_Renderer->GetScene()->GetSceneObject(object->GetName());
+					m_ChosenSceneMember = m_Renderer->GetScene()->GetSceneObject(object->GetName()).get();
 				
 				ImGui::Spacing();
 			}

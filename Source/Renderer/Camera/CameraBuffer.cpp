@@ -1,4 +1,4 @@
-#include "Core/EnPch.hpp"
+
 #include "CameraBuffer.hpp"
 
 namespace en
@@ -7,21 +7,21 @@ namespace en
 	{
 		for (auto& buffer : m_Buffers)
 		{
-			buffer = std::make_unique<MemoryBuffer>(
+			buffer = MakeHandle<MemoryBuffer>(
 				sizeof(CameraBufferObject),
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+				VMA_MEMORY_USAGE_CPU_ONLY
 			);
 		}
 
 
 		for (uint32_t i = 0U; i < FRAMES_IN_FLIGHT; i++)
 		{
-			m_DescriptorSets[i] = std::make_unique<DescriptorSet>(
+			m_DescriptorSets[i] = MakeHandle<DescriptorSet>(
 				std::vector<DescriptorSet::ImageInfo>{},
 				std::vector<DescriptorSet::BufferInfo>{{
 						.index = 0U,
-						.buffer = m_Buffers[i]->m_Handle,
+						.buffer = m_Buffers[i]->GetHandle(),
 						.size = m_Buffers[i]->m_BufferSize,
 
 						.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -38,7 +38,7 @@ namespace en
 		m_Buffers[frameIndex]->MapMemory(&m_CBOs[frameIndex], m_Buffers[frameIndex]->m_BufferSize);
 	}
 
-	void CameraBuffer::UpdateBuffer(uint32_t frameIndex, Camera* camera, VkExtent2D extent, int debugMode)
+	void CameraBuffer::UpdateBuffer(uint32_t frameIndex, Handle<Camera> camera, VkExtent2D extent, int debugMode)
 	{
 		m_CBOs[frameIndex].debugMode = debugMode;
 
@@ -66,10 +66,10 @@ namespace en
 
 	VkDescriptorSetLayout CameraBuffer::GetLayout()
 	{
-		return m_DescriptorSets[0]->m_DescriptorLayout;
+		return m_DescriptorSets[0]->GetLayout();
 	}
-	DescriptorSet* CameraBuffer::GetDescriptorHandle(uint32_t frameIndex)
+	Handle<DescriptorSet> CameraBuffer::GetDescriptorHandle(uint32_t frameIndex)
 	{
-		return m_DescriptorSets[frameIndex].get();
+		return m_DescriptorSets[frameIndex];
 	}
 }
