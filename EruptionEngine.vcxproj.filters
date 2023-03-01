@@ -305,7 +305,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
-    <None Include="Shaders\Lighting.frag" />
     <None Include="Shaders\FullscreenTriVert.vert" />
     <None Include="Shaders\TonemapComp.comp" />
     <None Include="Shaders\Depth.frag" />

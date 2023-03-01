@@ -490,15 +490,13 @@ namespace en
 
 		m_DepthPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
 
-		glm::mat4 cameraMatrix = m_CameraBuffer->m_CBOs[m_FrameIndex].proj * m_CameraBuffer->m_CBOs[m_FrameIndex].view;
-
 		for (const auto& [name, object] : m_Scene->m_SceneObjects)
 		{
 			if (!object->m_Active || !object->m_Mesh->m_Active) continue;
 
 			const DepthStageInfo cameraInfo{
 				.modelMatrix = object->GetModelMatrix(),
-				.viewProjMatrix = cameraMatrix
+				.viewProjMatrix = m_CameraBuffer->m_CBOs[m_FrameIndex].projView
 			};
 
 			m_DepthPipeline->PushConstants(&cameraInfo, sizeof(DepthStageInfo), 0U, VK_SHADER_STAGE_VERTEX_BIT);
@@ -838,7 +836,7 @@ namespace en
 	}
 	void Renderer::SSAOPass()
 	{
-		if (m_SkipFrame || !m_Scene || m_PostProcessParams.ambientOcclusionMode == AmbientOcclusionMode::None)
+		if (m_SkipFrame || !m_Scene)
 			return;
 			
 		m_DepthBuffer->ChangeLayout(
@@ -871,16 +869,19 @@ namespace en
 		};
 		
 		m_SSAOPipeline->BeginRendering(m_CommandBuffers[m_FrameIndex], info);
-		
-		m_PostProcessParams.ambientOcclusion.screenWidth = static_cast<float>(m_Swapchain->GetExtent().width);
-		m_PostProcessParams.ambientOcclusion.screenHeight = static_cast<float>(m_Swapchain->GetExtent().height);
-		
-		m_SSAOPipeline->PushConstants(&m_PostProcessParams.ambientOcclusion, sizeof(PostProcessingParams::AmbientOcclusion), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
-		
-		m_SSAOPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
-		m_SSAOPipeline->BindDescriptorSet(m_SSAOInput, 1U);
 
-		m_SSAOPipeline->Draw(3U);
+		if (m_PostProcessParams.ambientOcclusionMode != AmbientOcclusionMode::None) 
+		{
+			m_PostProcessParams.ambientOcclusion.screenWidth = static_cast<float>(m_Swapchain->GetExtent().width);
+			m_PostProcessParams.ambientOcclusion.screenHeight = static_cast<float>(m_Swapchain->GetExtent().height);
+
+			m_SSAOPipeline->PushConstants(&m_PostProcessParams.ambientOcclusion, sizeof(PostProcessingParams::AmbientOcclusion), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+			m_SSAOPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
+			m_SSAOPipeline->BindDescriptorSet(m_SSAOInput, 1U);
+
+			m_SSAOPipeline->Draw(3U);
+		}
 		
 		m_SSAOPipeline->EndRendering();
 		
@@ -1106,6 +1107,8 @@ namespace en
 		m_FramebufferResized = false;
 
 		vkDeviceWaitIdle(m_Ctx->m_LogicalDevice);
+
+		EN_LOG("Resized");
 	}
 	void Renderer::ReloadBackend()
 	{
@@ -2086,11 +2089,9 @@ namespace en
 			{ 1.0f,  1.0f,  1.0f, 1.0f},
 		};
 
-		glm::mat4 invViewProj = glm::inverse(m_CameraBuffer->m_CBOs[m_FrameIndex].proj * m_CameraBuffer->m_CBOs[m_FrameIndex].view);
-
 		for (auto& vert : frustumClipSpace)
 		{
-			vert = invViewProj * vert;
+			vert = m_CameraBuffer->m_CBOs[m_FrameIndex].invProjView * vert;
 			vert /= vert.w;
 		}
 

@@ -32,7 +32,7 @@ namespace en
 	{
 		UseContext();
 
-		VkDescriptorSetLayoutBinding descriptorBinding{
+		constexpr VkDescriptorSetLayoutBinding descriptorBinding{
 			.binding		 = 0U,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.descriptorCount = 1U,

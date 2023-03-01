@@ -22,10 +22,6 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
     mat4 invProjView;
 	mat4 projView;
 
-	vec3 position;
-
-	int debugMode;
-
 	uvec4 clusterTileCount;
 	uvec4 clusterTileSizes;
 
@@ -34,6 +30,10 @@ layout(set = 0, binding = 0) uniform CameraBufferObject
 
     float zNear;
 	float zFar;
+
+    vec3 position;
+
+	int debugMode;
 } camera;
 
 layout(push_constant) uniform PerObjectData

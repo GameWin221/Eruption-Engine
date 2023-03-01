@@ -32,18 +32,18 @@ namespace en
 			glm::mat4 invProjView = glm::mat4(1.0f);
 			glm::mat4 projView = glm::mat4(1.0f);
 
-			glm::vec3 position = glm::vec3(0.0f);
+			glm::uvec4 clusterTileCount = glm::uvec4(0U);
+			glm::uvec4 clusterTileSizes = glm::uvec4(0U);
 
-			int debugMode = 0;
-
-			glm::uvec4 clusterTileCount;
-			glm::uvec4 clusterTileSizes;
-
-			float clusterScale;
-			float clusterBias;
+			float clusterScale = 0.0f;
+			float clusterBias = 0.0f;
 
 			float zNear = 0.0f;
 			float zFar = 1.0f;
+
+			glm::vec3 position = glm::vec3(0.0f);
+
+			int debugMode = 0;
 		};
 
 		std::array<CameraBufferObject, FRAMES_IN_FLIGHT> m_CBOs;

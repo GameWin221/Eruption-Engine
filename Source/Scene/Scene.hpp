@@ -17,6 +17,8 @@ namespace en
 		friend class Renderer;
 
 	public:
+		Scene();
+
 		Handle<SceneObject> GetSceneObject(const std::string& name);
 
 		Handle<SceneObject> CreateSceneObject(const std::string& name, Handle <Mesh> mesh);

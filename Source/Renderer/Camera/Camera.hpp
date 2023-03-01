@@ -13,7 +13,7 @@ namespace en
 	class Camera
 	{
 	public:
-		Camera(float fov = 60.0f, float nearPlane = 0.01f, float farPlane = 200.0f, glm::vec3 position = glm::vec3(0.0f));
+		Camera(float fov = 60.0f, float nearPlane = 0.1f, float farPlane = 200.0f, glm::vec3 position = glm::vec3(0.0f));
 
 		void LookAt(const glm::vec3 target);
 

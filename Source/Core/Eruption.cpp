@@ -23,7 +23,7 @@ void Eruption::Init()
 	m_Editor = en::MakeScope<en::EditorLayer>();
 	m_Editor->AttachTo(m_Renderer.get(), m_AssetManager.get(), &m_DeltaTime);
 
-	m_Camera = en::MakeHandle<en::Camera>(60.0f, 0.01f, 200.0f, glm::vec3(3.333f, 2.762f, 0.897f));
+	m_Camera = en::MakeHandle<en::Camera>(60.0f, 0.1f, 200.0f, glm::vec3(3.333f, 2.762f, 0.897f));
 	m_Camera->m_Yaw = -161.6f;
 	m_Camera->m_Pitch = -30.3f;
 
@@ -142,8 +142,8 @@ void Eruption::CreateExampleScene()
 	//m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
 	//m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
 	
-	/*
-	for (uint32_t i = 0; i < MAX_POINT_LIGHTS-1; i++)
+	
+	for (uint32_t i = 0; i < (MAX_POINT_LIGHTS); i++)
 	{
 		glm::vec3 spawnPoint(
 			float(rand() % 2400 - 1200) / 100.0f,
@@ -163,7 +163,7 @@ void Eruption::CreateExampleScene()
 
 		m_ExampleScene->CreatePointLight(spawnPoint, color, intensity, radius);
 	}
-	*/
+	
 
 	/*
 	for (uint32_t i = 0; i < MAX_SPOT_LIGHTS - 1; i++)

@@ -14,6 +14,7 @@ namespace en
 		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps = false);
 		~Image();
 
+		void Fill(glm::vec4 color, VkCommandBuffer cmd = VK_NULL_HANDLE);
 		void SetData(void* data);
 		/*
 		void CopyTo(Image* dstImage, const VkCommandBuffer& cmd);

@@ -20,14 +20,14 @@ namespace en
 			m_DescriptorSets[i] = MakeHandle<DescriptorSet>(
 				std::vector<DescriptorSet::ImageInfo>{},
 				std::vector<DescriptorSet::BufferInfo>{{
-						.index = 0U,
-						.buffer = m_Buffers[i]->GetHandle(),
-						.size = m_Buffers[i]->m_BufferSize,
+					.index = 0U,
+					.buffer = m_Buffers[i]->GetHandle(),
+					.size = m_Buffers[i]->m_BufferSize,
 
-						.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 
-						.stage = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-					}}
+					.stage = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+				}}
 			);
 		}
 		
@@ -46,8 +46,10 @@ namespace en
 
 		m_CBOs[frameIndex].proj = camera->GetProjMatrix();
 		m_CBOs[frameIndex].invProj = glm::inverse(m_CBOs[frameIndex].proj);
+
 		m_CBOs[frameIndex].view = camera->GetViewMatrix();
 		m_CBOs[frameIndex].invView = glm::inverse(m_CBOs[frameIndex].view);
+
 		m_CBOs[frameIndex].projView = m_CBOs[frameIndex].proj * m_CBOs[frameIndex].view;
 		m_CBOs[frameIndex].invProjView = glm::inverse(m_CBOs[frameIndex].projView);
 

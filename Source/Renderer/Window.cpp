@@ -110,9 +110,7 @@ namespace en
 		int w = 0, h = 0;
 		glfwGetWindowSize(m_NativeHandle, &w, &h);
 
-		m_Size = glm::ivec2(w, h);
-
-		return m_Size;
+		return glm::ivec2(w, h);
 	}
 
 	glm::ivec2 Window::GetFramebufferSize()

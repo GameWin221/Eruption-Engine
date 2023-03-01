@@ -32,6 +32,14 @@ namespace en
         m_SceneObjects.erase(name);
     }
 
+    Scene::Scene()
+    {
+        m_SceneObjects.reserve(64);
+        m_PointLights.reserve(64);
+        m_SpotLights.reserve(64);
+        m_DirectionalLights.reserve(64);
+    }
+
     Handle<SceneObject> Scene::GetSceneObject(const std::string& name)
     {
         if (!m_SceneObjects.contains(name))

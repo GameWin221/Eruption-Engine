@@ -27,6 +27,31 @@ namespace en
 			vmaDestroyImage(ctx.m_Allocator, m_Image, m_Allocation);
 	}
 
+	void Image::Fill(glm::vec4 color, VkCommandBuffer cmd)
+	{
+		VkCommandBuffer commandBuffer = cmd;
+
+		if (cmd == VK_NULL_HANDLE)
+			commandBuffer = Helpers::BeginSingleTimeGraphicsCommands();
+
+		
+		VkClearColorValue colorValue {
+			{color.x, color.y, color.z, color.w}
+		};
+		VkImageSubresourceRange range {
+				.aspectMask = m_AspectFlags,
+				.baseMipLevel = 0U,
+				.levelCount = m_MipLevels,
+				.baseArrayLayer = 0U,
+				.layerCount = 1U,
+		};
+
+		vkCmdClearColorImage(commandBuffer, m_Image, m_CurrentLayout, &colorValue, 1U, &range);
+
+		if (cmd == VK_NULL_HANDLE)
+			Helpers::EndSingleTimeGraphicsCommands(commandBuffer);
+	}
+
 	void Image::SetData(void* data)
 	{
 		VkDeviceSize imageByteSize = m_Size.width * m_Size.height * 4U;
