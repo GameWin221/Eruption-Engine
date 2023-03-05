@@ -4,6 +4,7 @@
 #define EN_EDITORCOMMONS
 
 #include <imgui.h>
+#include <string>
 
 #define SPACE(); {ImGui::Spacing();ImGui::Separator();ImGui::Spacing();}
 

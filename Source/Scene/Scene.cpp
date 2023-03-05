@@ -38,6 +38,8 @@ namespace en
         m_PointLights.reserve(64);
         m_SpotLights.reserve(64);
         m_DirectionalLights.reserve(64);
+
+        m_MainCamera = MakeHandle<Camera>();
     }
 
     Handle<SceneObject> Scene::GetSceneObject(const std::string& name)

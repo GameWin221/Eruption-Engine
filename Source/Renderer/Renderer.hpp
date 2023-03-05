@@ -19,11 +19,11 @@
 #include <Renderer/Pipelines/GraphicsPipeline.hpp>
 #include <Renderer/Pipelines/ComputePipeline.hpp>
 
+#include <Renderer/RenderPass.hpp>
+
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
 #include <Renderer/Lights/SpotLight.hpp>
-#include <Renderer/Lights/LightsBuffer.hpp>
-#include <Renderer/Lights/CSMBuffer.hpp>
 
 #include <Renderer/Camera/Camera.hpp>
 #include <Renderer/Camera/CameraBuffer.hpp>
@@ -50,241 +50,29 @@ namespace en
 
 		void WaitForGPUIdle();
 
-		void UpdateLights();
-
 		void ReloadBackend();
 
+		void PreRender();
 		void Render();
 
-		void SetMainCamera(en::Handle<Camera> camera);
-		en::Handle<Camera> GetMainCamera() { return m_MainCamera; };
-
-
-		void SetShadowCascadesWeight(float weight);
-		const float GetShadowCascadesWeight() const { return m_Shadows.cascadeSplitWeight; }
-
-		void SetShadowCascadesFarPlane(float farPlane);
-		const float GetShadowCascadesFarPlane() const { return m_Shadows.cascadeFarPlane; }
-
-
-
-		void SetPointShadowResolution(uint32_t resolution);
-		const float GetPointShadowResolution() const { return m_Shadows.point.resolution; }
-
-		void SetSpotShadowResolution(uint32_t resolution);
-		const float GetSpotShadowResolution() const { return m_Shadows.spot.resolution; }
-
-		void SetDirShadowResolution(uint32_t resolution);
-		const float GetDirShadowResolution() const { return m_Shadows.dir.resolution; }
-
-
-		void SetShadowFormat(VkFormat format);
-		const VkFormat GetShadowFormat() const { return m_Shadows.shadowFormat; }
-
 		en::Handle<Scene> GetScene() { return m_Scene; };
+
+		const double GetFrameTime() const { return m_FrameTime; }
 
 		int m_DebugMode = 0;
 
 		std::function<void()> m_ImGuiRenderCallback;
 
-		enum struct AntialiasingMode
-		{
-			FXAA = 0,
-			None = 1
-		};
-
-		enum struct AmbientOcclusionMode
-		{
-			SSAO = 0,
-			None = 1
-		};
-
-		struct PostProcessingParams
-		{
-			struct Exposure
-			{
-				float value = 1.0f;
-			} exposure;
-
-			AntialiasingMode antialiasingMode = AntialiasingMode::FXAA;
-			AmbientOcclusionMode ambientOcclusionMode = AmbientOcclusionMode::None;
-
-			struct Antialiasing
-			{
-				float fxaaSpanMax = 4.0f;
-				float fxaaReduceMin = 0.001f;
-				float fxaaReduceMult = 0.050f;
-
-				float fxaaPower = 1.0f;
-
-				float texelSizeX = 1.0f / 1920.0f;
-				float texelSizeY = 1.0f / 1080.0f;
-			} antialiasing;
-
-			struct AmbientOcclusion
-			{
-				float screenWidth = 1920.0f;
-				float screenHeight = 1080.0f;
-				
-				float radius = 0.5f;
-				float bias = 0.025f;
-				float multiplier = 1.0f;
-			} ambientOcclusion;
-
-		} m_PostProcessParams;
-
 	private:
-		struct Shadows
-		{
-			VkSampler sampler;
-			
-			VkFormat shadowFormat = VK_FORMAT_D32_SFLOAT;
-
-			struct Point 
-			{
-				VkImage sharedImage;
-				VmaAllocation allocation;
-
-				VkImageView sharedView;
-				std::vector<std::array<VkImageView, 6>> singleViews;
-
-				std::array<std::array<glm::mat4, 6>, MAX_POINT_LIGHT_SHADOWS> shadowMatrices;
-				std::array<glm::vec3, MAX_POINT_LIGHT_SHADOWS> lightPositions;
-				std::array<float, MAX_POINT_LIGHT_SHADOWS> farPlanes;
-
-				VkImage depthImage;
-				VkImageView depthView;
-				VmaAllocation depthAllocation;
-
-				uint32_t resolution = 1024;
-
-				struct OmniShadowPushConstant
-				{
-					glm::mat4x4 viewProj;
-					glm::mat4x4 model;
-					// last row is (lightPos.x, lightPos.y, lightPos.z, farPlane)
-				};
-
-			} point;
-			struct Spot
-			{
-				VkImage sharedImage;
-				VmaAllocation allocation;
-
-				VkImageView sharedView;
-				std::vector<VkImageView> singleViews;
-
-				uint32_t resolution = 2048;
-
-			} spot;
-			struct Dir
-			{
-				VkImage sharedImage;
-				VmaAllocation allocation;
-
-				VkImageView sharedView;
-				std::vector<VkImageView> singleViews;
-
-				uint32_t resolution = 4096;
-			} dir;
-
-			struct Cascade
-			{
-				float split, radius, ratio;
-				
-				glm::vec3 center;
-			};
-
-			std::array<Cascade, SHADOW_CASCADES> frustums;
-			
-			float cascadeFarPlane = 140.0f;
-			float cascadeSplitWeight = 0.87f;
-
-		} m_Shadows;
-
-		struct DepthStageInfo
-		{
-			glm::mat4 modelMatrix;
-			glm::mat4 viewProjMatrix;
-		};
-
-		struct ImGuiVK
-		{
-			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-			VkRenderPass	 renderPass = VK_NULL_HANDLE;
-
-			VkCommandPool commandPool = VK_NULL_HANDLE;
-
-			std::vector<VkCommandBuffer> commandBuffers{};
-
-			void Destroy()
-			{
-				UseContext();
-
-				ImGui_ImplVulkan_Shutdown();
-				ImGui_ImplGlfw_Shutdown();
-				ImGui::DestroyContext();
-
-				vkDestroyCommandPool(ctx.m_LogicalDevice, commandPool, nullptr);
-
-				vkDestroyDescriptorPool(ctx.m_LogicalDevice, descriptorPool, nullptr);
-
-				vkDestroyRenderPass(ctx.m_LogicalDevice, renderPass, nullptr);
-			}
-
-		} m_ImGui;
-
-		struct ClusterSSBOs
-		{
-			Handle<MemoryBuffer> aabbClusters;
-			Handle<DescriptorSet> aabbClustersDescriptor;
-
-			Handle<MemoryBuffer> pointLightGrid;
-			Handle<MemoryBuffer> pointLightIndices;
-			Handle<MemoryBuffer> pointLightGlobalIndexOffset;
-
-			Handle<MemoryBuffer> spotLightGrid;
-			Handle<MemoryBuffer> spotLightIndices;
-			Handle<MemoryBuffer> spotLightGlobalIndexOffset;
-
-			Handle<DescriptorSet> clusterLightCullingDescriptor;
-		} m_ClusterSSBOs;
-
-		std::vector<std::function<void()>> m_RenderPasses;
-
-		Handle<ComputePipeline> m_ClusterAABBCompute;
-		Handle<ComputePipeline> m_ClusterLightCullingCompute;
-
 		Handle<Swapchain> m_Swapchain;
-
-		Handle<GraphicsPipeline> m_DepthPipeline;
-		Handle<GraphicsPipeline> m_ShadowPipeline;
-		Handle<GraphicsPipeline> m_OmniShadowPipeline;
-
-		Handle<GraphicsPipeline> m_ForwardClusteredPipeline;
-
-		Handle<GraphicsPipeline> m_SSAOPipeline;
-
-		Handle<GraphicsPipeline> m_TonemappingPipeline;
-		Handle<GraphicsPipeline> m_AntialiasingPipeline;
-
 		Handle<CameraBuffer> m_CameraBuffer;
-		Handle<LightsBuffer> m_LightsBuffer;
-		Handle<CSMBuffer> m_CSMBuffer;
-
-		Handle<DescriptorSet> m_ForwardClusteredDescriptor;
-
-		Handle<DescriptorSet> m_HDRInput;
-		std::vector<Handle<DescriptorSet>> m_SwapchainInputs;
-
-		Handle<Image> m_HDROffscreen;
-		Handle<Image> m_DepthBuffer;
 
 		VkSampler m_MainSampler;
 
-		Handle<Image> m_SSAOTarget;
-		Handle<MemoryBuffer> m_SSAOBuffer;
-		Handle<DescriptorSet> m_SSAOInput;
+		Handle<RenderPass> m_ImGuiRenderPass;
+		Handle<RenderPass> m_RenderPass;
+
+		Handle<GraphicsPipeline> m_Pipeline;
 
 		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
 
@@ -293,70 +81,40 @@ namespace en
 		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_MainSemaphores;
 		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_PresentSemaphores;
 		
-		const VkClearValue m_BlackClearValue{};
+		en::Handle<Scene> m_Scene;
 
-		// References to existing objects
-		Context* m_Ctx		  = nullptr;
-
-		en::Handle<Camera> m_MainCamera;
-		en::Handle<Scene>  m_Scene;
-
-		uint32_t m_SwapchainImageIndex = 0U; // Current swapchain index
-		uint32_t m_FrameIndex = 0U;			 // Frame in flight index
-		
-		bool m_ClusterFrustumChanged = false;
-		bool m_LightsBufferChanged = false;
+		uint32_t m_FrameIndex = 0U;	// Frame in flight index
+			
 		bool m_ReloadQueued = false;
 		bool m_FramebufferResized = false;
 		bool m_SkipFrame = false;
 		bool m_VSync = true;
 
+		double m_FrameTime{};
+
+		void MeasureFrameTime();
 		void BeginRender();
-		void DepthPass();
-		void SSAOPass();
-		void ShadowPass();
-		void ClusteredForwardPass();
-		void TonemappingPass();
-		void AntialiasPass();
+		void ForwardPass();
 		void ImGuiPass();
 		void EndRender();
+
+		void CreateForwardPass();
+		void CreateForwardPipeline();
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
 		void ReloadBackendImpl();
 
+		void CreateBackend();
+
 		void CreateCommandBuffer();
-		void CreateSSAOBuffer();
-		void CreateClusterSSBOs();
-		void CreateClusterComputePipelines();
-
-		//void UpdateClusterAABBs();
-
-		void CreateDepthBuffer();
-		void CreateHDROffscreen();
-		void CreateSSAOTarget();
-
-		void UpdateForwardInput();
-		void UpdateHDRInput();
-		void UpdateSwapchainInputs();
-		void UpdateSSAOInput();
-
-		void InitShadows();
-		void RecalculateShadowMatrices(const DirectionalLight& light, glm::mat4* lightMatrices);
-		void UpdateShadowFrustums();
-		void DestroyShadows();
-
-		void InitDepthPipeline();
-		void InitShadowPipeline();
-		void InitOmniShadowPipeline();
-		void InitForwardClusteredPipeline();
-		void InitSSAOPipeline();
-		void InitTonemappingPipeline();
-		void InitAntialiasingPipeline();
+		void DestroyCommandBuffer();
 
 		void CreateSyncObjects();
+		void DestroySyncObjects();
 
-		void InitImGui();
+		void CreateImGuiContext();
+		void DestroyImGuiContext();
 	};
 }
 

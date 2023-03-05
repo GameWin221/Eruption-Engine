@@ -12,6 +12,7 @@ namespace en
 	{
 	public:
 		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps = false);
+		Image(VkImage existingImage, VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout);
 		~Image();
 
 		void Fill(glm::vec4 color, VkCommandBuffer cmd = VK_NULL_HANDLE);
@@ -23,14 +24,14 @@ namespace en
 		*/
 		void ChangeLayout(VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
-		const VkExtent2D m_Size;
+		const VkExtent2D m_Size{};
 
-		const VkImageUsageFlags  m_UsageFlags;
-		const VkImageAspectFlags m_AspectFlags;
+		const VkImageUsageFlags  m_UsageFlags{};
+		const VkImageAspectFlags m_AspectFlags{};
 
-		const VkFormat m_Format;
+		const VkFormat m_Format{};
 
-		const VkImage GetHandle() const { return m_Image; };
+		const VkImage	  GetHandle() const { return m_Image; };
 		const VkImageView GetViewHandle() const { return m_ImageView; };
 
 		const VkImageLayout GetLayout()    const { return m_CurrentLayout; };
@@ -45,6 +46,8 @@ namespace en
 
 		VkImageLayout m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		const VkImageLayout m_InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		const bool m_CreatedFromExisting;
 
 		VkImage		m_Image = VK_NULL_HANDLE;
 		VkImageView	m_ImageView = VK_NULL_HANDLE;

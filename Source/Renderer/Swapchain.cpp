@@ -73,38 +73,17 @@ namespace en
 	{
 		UseContext();
 
-		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
-
 		for (auto& imageView : m_ImageViews)
 			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
 
 		for (auto& framebuffer : m_Framebuffers)
 			vkDestroyFramebuffer(ctx.m_LogicalDevice, framebuffer, nullptr);
 
+		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
+
 		m_CurrentLayouts.clear();
 	}
-	
-	void Swapchain::CreateSwapchainFramebuffers(VkRenderPass inputRenderpass)
-	{
-		m_Framebuffers.resize(m_ImageViews.size());
 
-		for (int i = 0; i < m_Framebuffers.size(); i++)
-		{
-			const VkFramebufferCreateInfo framebufferInfo{
-				.sType			 = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				.renderPass		 = inputRenderpass,
-				.attachmentCount = 1U,
-				.pAttachments	 = &m_ImageViews[i],
-				.width			 = m_Extent.width,
-				.height			 = m_Extent.height,
-				.layers			 = 1U
-			};
-
-			if (vkCreateFramebuffer(Context::Get().m_LogicalDevice, &framebufferInfo, nullptr, &m_Framebuffers[i]) != VK_SUCCESS)
-				EN_ERROR("Renderer::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
-		}
-	}
-	
 	void Swapchain::ChangeLayout(uint32_t index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd)
 	{
 		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, 1U, cmd);

@@ -3,6 +3,7 @@
 #ifndef EN_CONTEXT_HPP
 #define EN_CONTEXT_HPP
 
+#include <Renderer/DescriptorAllocator.hpp>
 #include <Renderer/Window.hpp>
 #include <Core/Types.hpp>
 
@@ -41,6 +42,8 @@ namespace en
 		VkQueue	m_TransferQueue;
 		VkQueue	m_PresentQueue;
 
+		Scope<DescriptorAllocator> m_DescriptorAllocator;
+
 		VmaAllocator m_Allocator;
 
 		struct QueueFamilyIndices
@@ -68,6 +71,8 @@ namespace en
 		void CreateLogicalDevice();
 		void InitVMA();
 		void CreateCommandPool();
+		void CreateDescriptorAllocator();
+
 
 		std::string m_PhysicalDeviceName;
 

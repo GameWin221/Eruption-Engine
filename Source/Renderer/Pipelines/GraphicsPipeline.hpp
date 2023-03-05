@@ -6,6 +6,7 @@
 #include <Renderer/Pipelines/Pipeline.hpp>
 
 #include <Renderer/DescriptorSet.hpp>
+#include <Renderer/RenderPass.hpp>
 #include <Renderer/Buffers/VertexBuffer.hpp>
 #include <Renderer/Buffers/IndexBuffer.hpp>
 
@@ -24,19 +25,9 @@ namespace en
 
 			VkClearValue clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 		};
-		struct BindInfo
-		{
-			std::vector<Attachment> colorAttachments{};
-			Attachment depthAttachment{};
-
-			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-
-			VkExtent2D extent{};
-		};
 		struct CreateInfo
 		{
-			std::vector<VkFormat> colorFormats{};
-			VkFormat depthFormat{};
+			Handle<RenderPass> renderPass{};
 
 			std::string vShader = "";
 			std::string fShader = "";
@@ -55,15 +46,13 @@ namespace en
 
 		GraphicsPipeline(const CreateInfo& pipeline);
 
-		void BeginRendering(VkCommandBuffer commandBuffer, const BindInfo& info);
+		void Bind(VkCommandBuffer commandBuffer, VkExtent2D extent, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT);
 
 		void BindVertexBuffer(Handle<VertexBuffer> buffer, VkDeviceSize offset = 0U);
 		void BindIndexBuffer(Handle<IndexBuffer> buffer);
 
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1U, uint32_t firstIndex = 0U, uint32_t firstInstance = 0U);
 		void Draw(uint32_t vertexCount, uint32_t instanceCount = 1U, uint32_t firstVertex = 0U, uint32_t firstInstance = 0U);
-
-		void EndRendering();
 	};
 }
 

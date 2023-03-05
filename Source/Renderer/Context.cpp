@@ -5,9 +5,8 @@ en::Context* g_CurrentContext = nullptr;
 constexpr std::array<const char*, 1> validationLayers {
 	"VK_LAYER_KHRONOS_validation"
 };
-constexpr std::array<const char*, 2> deviceExtensions {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+constexpr std::array<const char*, 1> deviceExtensions {
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 #if defined(_DEBUG)
@@ -29,6 +28,7 @@ namespace en
 		CreateLogicalDevice();
 		InitVMA();
 		CreateCommandPool();
+		CreateDescriptorAllocator();
 
 		EN_SUCCESS("Created the Vulkan context");
 	}
@@ -202,15 +202,9 @@ namespace en
 			.descriptorBindingUpdateUnusedWhilePending = VK_TRUE
 		};
 
-		const VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature {
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-			.pNext = &descriptorFeatures,
-			.dynamicRendering = VK_TRUE
-		};
-
 		VkDeviceCreateInfo createInfo{
 			.sType					 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-			.pNext					 = &dynamicRenderingFeature,
+			.pNext					 = &descriptorFeatures,
 			.queueCreateInfoCount	 = static_cast<uint32_t>(queueCreateInfos.size()),
 			.pQueueCreateInfos		 = queueCreateInfos.data(),
 			.enabledLayerCount		 = 0U,
@@ -263,6 +257,11 @@ namespace en
 
 		if (vkCreateCommandPool(m_LogicalDevice, &transferCommandPoolCreateInfo, nullptr, &m_TransferCommandPool) != VK_SUCCESS)
 			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a transfer command pool!");
+	}
+
+	void Context::CreateDescriptorAllocator()
+	{
+		m_DescriptorAllocator = MakeScope<DescriptorAllocator>(m_LogicalDevice);
 	}
 
 	bool Context::AreValidationLayerSupported()

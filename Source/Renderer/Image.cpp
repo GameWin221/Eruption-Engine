@@ -5,12 +5,20 @@
 namespace en
 {
 	Image::Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps) 
-		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
+		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_CreatedFromExisting(false)
 	{
 		if(genMipMaps)
 			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
 
 		Helpers::CreateImage(m_Image, m_Allocation, m_Size, m_Format, VK_IMAGE_TILING_OPTIMAL, m_UsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1U, m_MipLevels);
+		Helpers::CreateImageView(m_Image, m_ImageView, VK_IMAGE_VIEW_TYPE_2D, m_Format, m_AspectFlags, 0U, 1U, m_MipLevels);
+
+		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_MipLevels);
+		m_CurrentLayout = m_InitialLayout;
+	}
+	Image::Image(VkImage existingImage, VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout)
+		: m_Image(existingImage), m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_CreatedFromExisting(true)
+	{
 		Helpers::CreateImageView(m_Image, m_ImageView, VK_IMAGE_VIEW_TYPE_2D, m_Format, m_AspectFlags, 0U, 1U, m_MipLevels);
 
 		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_MipLevels);
@@ -23,7 +31,7 @@ namespace en
 		if (m_ImageView != VK_NULL_HANDLE)
 			vkDestroyImageView(ctx.m_LogicalDevice, m_ImageView, nullptr);
 
-		if (m_Allocation != VK_NULL_HANDLE && m_Image != VK_NULL_HANDLE)
+		if (!m_CreatedFromExisting && m_Allocation != VK_NULL_HANDLE && m_Image != VK_NULL_HANDLE)
 			vmaDestroyImage(ctx.m_Allocator, m_Image, m_Allocation);
 	}
 

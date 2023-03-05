@@ -32,8 +32,6 @@ private:
 
 	en::Handle<en::Camera> m_Camera;
 	en::Handle<en::Scene>  m_ExampleScene;
-
-	double m_DeltaTime;
 };
 
 #endif

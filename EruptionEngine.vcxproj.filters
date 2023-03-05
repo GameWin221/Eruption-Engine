@@ -120,28 +120,19 @@
     <ClCompile Include="Source\Assets\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Input\InputManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Renderer\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\EditorImageAtlas.cpp">
+    <ClCompile Include="Source\Renderer\RenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\EditorLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp">
+    <ClCompile Include="Source\Input\InputManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp">
+    <ClCompile Include="Source\Renderer\DescriptorAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -275,37 +266,27 @@
     <ClInclude Include="Source\Assets\Texture.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Input\InputManager.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\Renderer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\EditorCommons.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\EditorImageAtlas.hpp">
+    <ClInclude Include="Source\Renderer\RenderPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\EditorLayer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp">
+    <ClInclude Include="Source\Input\InputManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp">
+    <ClInclude Include="Source\Editor\EditorCommons.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
+    <ClInclude Include="Source\Renderer\DescriptorAllocator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
-    <None Include="Shaders\FullscreenTriVert.vert" />
     <None Include="Shaders\TonemapComp.comp" />
     <None Include="Shaders\Depth.frag" />
     <None Include="Shaders\SMAA.frag" />
@@ -314,16 +295,8 @@
     <None Include="Shaders\AMD\AMDTonemapping.comp" />
     <None Include="Shaders\NVIDIA\NVFXAA.comp" />
     <None Include="Shaders\NVIDIA\NVTonemapping.comp" />
-    <None Include="Shaders\Depth.vert" />
-    <None Include="Shaders\Tonemapping.frag" />
-    <None Include="Shaders\FXAA.frag" />
-    <None Include="Shaders\OmniDepthVert.vert" />
-    <None Include="Shaders\OmniDepthFrag.frag" />
-    <None Include="Shaders\SSAO.frag" />
-    <None Include="Shaders\ClusterAABB.comp" />
-    <None Include="Shaders\ActiveClusterCulling.comp" />
-    <None Include="Shaders\ClusterLightCulling.comp" />
-    <None Include="Shaders\ForwardClusteredVert.vert" />
-    <None Include="Shaders\ForwardClusteredFrag.frag" />
+    <None Include="Shaders\vert.vert" />
+    <None Include="Shaders\frag.frag" />
+    <None Include="Shaders\camera.glsl" />
   </ItemGroup>
 </Project>

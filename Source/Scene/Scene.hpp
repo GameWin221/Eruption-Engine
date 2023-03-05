@@ -10,6 +10,8 @@
 #include <Renderer/Lights/DirectionalLight.hpp>
 #include <Renderer/Lights/SpotLight.hpp>
 
+#include <Renderer/Camera/Camera.hpp>
+
 namespace en
 {
 	class Scene
@@ -42,6 +44,8 @@ namespace en
 		std::vector<PointLight>		  m_PointLights;
 		std::vector<SpotLight>		  m_SpotLights;
 		std::vector<DirectionalLight> m_DirectionalLights;
+
+		Handle<Camera> m_MainCamera;
 
 		std::vector<Handle<SceneObject>> GetAllSceneObjects();
 

@@ -17,9 +17,9 @@ namespace en
 
 		for (uint32_t i = 0U; i < FRAMES_IN_FLIGHT; i++)
 		{
-			m_DescriptorSets[i] = MakeHandle<DescriptorSet>(
-				std::vector<DescriptorSet::ImageInfo>{},
-				std::vector<DescriptorSet::BufferInfo>{{
+			m_DescriptorSets[i] = MakeHandle<DescriptorSet>(DescriptorInfo{
+				std::vector<DescriptorInfo::ImageInfo>{},
+				std::vector<DescriptorInfo::BufferInfo>{ {
 					.index = 0U,
 					.buffer = m_Buffers[i]->GetHandle(),
 					.size = m_Buffers[i]->m_BufferSize,
@@ -27,7 +27,7 @@ namespace en
 					.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 
 					.stage = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-				}}
+				}}}
 			);
 		}
 		

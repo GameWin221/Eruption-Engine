@@ -2,20 +2,24 @@
 
 #ifndef EN_UILAYER_HPP
 #define EN_UILAYER_HPP
-
+/*
 #include <Editor/EditorImageAtlas.hpp>
 
 #include "UIPanels/AssetManagerPanel.hpp"
 #include "UIPanels/SceneHierarchyPanel.hpp"
 #include "UIPanels/InspectorPanel.hpp"
 #include "UIPanels/SettingsPanel.hpp"
+*/
+#include <Editor/EditorCommons.hpp>
+#include <Renderer/Renderer.hpp>
+#include <Assets/AssetManager.hpp>
 
 namespace en
 {
 	class EditorLayer
 	{
 	public:
-		void AttachTo(Renderer* renderer, AssetManager* assetManager, double* deltaTimeVar);
+		void AttachTo(Renderer* renderer, AssetManager* assetManager);
 
 		void OnUIDraw();
 
@@ -24,10 +28,9 @@ namespace en
 
 	private:
 		Renderer* m_Renderer  = nullptr;
-		double*	  m_DeltaTime = nullptr;
 
 		bool m_Visible = true;
-
+		/*
 		std::unique_ptr<EditorImageAtlas> m_Atlas;
 
 		std::unique_ptr<AssetManagerPanel  > m_AssetManagerPanel;
@@ -42,7 +45,7 @@ namespace en
 		bool m_ShowSceneMenu	= true;
 		bool m_ShowInspector	= true;
 		bool m_ShowSettingsMenu = false;
-
+		*/
 		void BeginRender();
 		void DrawDockspace();
 		void DrawCameraMenu();
