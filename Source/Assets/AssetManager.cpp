@@ -3,8 +3,8 @@
 
 namespace en
 {
-    uint32_t g_MatIndex = 0U;
-
+    constexpr uint64_t WHITE_PIXEL = 0xffffffffffffffff; // UINT64_MAX;
+   
     AssetManager* g_AssetManagerInstance = nullptr;
 
     AssetManager::AssetManager()
@@ -58,6 +58,15 @@ namespace en
 
     bool AssetManager::CreateMaterial(const std::string& nameID, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Handle<Texture> albedoTexture, Handle<Texture> roughnessTexture, Handle<Texture> normalTexture, Handle<Texture> metalnessTexture)
     {
+        if (!albedoTexture)
+            albedoTexture = GetWhiteSRGBTexture();
+        if (!roughnessTexture)
+            roughnessTexture = GetWhiteNonSRGBTexture();
+        if(!normalTexture)
+            normalTexture = GetWhiteNonSRGBTexture();
+        if(!metalnessTexture)
+            metalnessTexture = GetWhiteNonSRGBTexture();
+       
         if (m_Materials.contains(nameID))
         {
             EN_WARN("AssetManager::CreateMaterial() - Failed to create a material with name \"" + nameID + "\" because a material with that name already exists!");
@@ -153,7 +162,7 @@ namespace en
         if (!m_Textures.contains(nameID))
         {
             EN_WARN("AssetManager::GetTexture() - There's currently no loaded texture named \"" + nameID + "\"!");
-            return Texture::GetWhiteNonSRGBTexture();
+            return GetWhiteNonSRGBTexture();
         }
 
         return m_Textures.at(nameID);
@@ -164,7 +173,7 @@ namespace en
         if (!m_Materials.contains(nameID))
         {
             EN_WARN("AssetManager::GetMaterial() - There's currently no material named \"" + nameID + "\"!");
-            return Material::GetDefaultMaterial();
+            return GetDefaultMaterial();
         }
 
         return m_Materials.at(nameID);
@@ -196,6 +205,29 @@ namespace en
             materials[i++] = material;
 
         return materials;
+    }
+
+    Handle<Texture> AssetManager::GetWhiteSRGBTexture()
+    {
+        if (!m_SRGBWhiteTexture)
+            m_SRGBWhiteTexture = MakeHandle<Texture>((uint8_t*)&WHITE_PIXEL, "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, VkExtent2D{ 1U, 1U }, false);
+
+        return m_SRGBWhiteTexture;
+    }
+    Handle<Texture> AssetManager::GetWhiteNonSRGBTexture()
+    {
+        if (!m_NSRGBTexture)
+            m_NSRGBTexture = MakeHandle<Texture>((uint8_t*)&WHITE_PIXEL, "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, VkExtent2D{ 1U, 1U }, false);
+
+        return m_NSRGBTexture;
+    }
+
+    Handle<Material> AssetManager::GetDefaultMaterial()
+    {
+        if (!m_DefaultMaterial)
+            m_DefaultMaterial = MakeHandle<Material>("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 0.0f, GetWhiteSRGBTexture(), GetWhiteNonSRGBTexture(), GetWhiteNonSRGBTexture(), GetWhiteNonSRGBTexture());
+
+        return m_DefaultMaterial;
     }
 
     void AssetManager::UpdateMaterials()
@@ -239,8 +271,8 @@ namespace en
             
             if (name.length == 0)
             {
-                g_MatIndex++;
-                name = aiString("New Material (" + std::to_string(g_MatIndex) + ")");
+                m_MatIndex++;
+                name = aiString("New Material (" + std::to_string(m_MatIndex) + ")");
             }
 
             if (ContainsMaterial(name.C_Str()))
@@ -281,10 +313,10 @@ namespace en
             if(hasNormalTex   ) LoadTexture(std::string(normalPath   .C_Str()), directory + std::string(normalPath  .C_Str()) , { TextureFormat::NonColor });
             if(hasMetallicTex ) LoadTexture(std::string(metallicPath .C_Str()), directory + std::string(metallicPath.C_Str()) , { TextureFormat::NonColor });
 
-            Handle<Texture> diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : Texture::GetWhiteSRGBTexture();
-            Handle<Texture> roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : Texture::GetWhiteNonSRGBTexture();
-            Handle<Texture> normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : Texture::GetWhiteNonSRGBTexture();
-            Handle<Texture> metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : Texture::GetWhiteNonSRGBTexture();
+            Handle<Texture> diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : GetWhiteSRGBTexture();
+            Handle<Texture> roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : GetWhiteNonSRGBTexture();
+            Handle<Texture> normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : GetWhiteNonSRGBTexture();
+            Handle<Texture> metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : GetWhiteNonSRGBTexture();
 
             CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, roughness, 1.0f, diffuseTexture, roughnessTexture, normalTexture, metalnessTexture);
 
@@ -312,7 +344,7 @@ namespace en
             if (assimpMesh->mMaterialIndex < materials.size() && materials.size() > 0)
                 material = materials[assimpMesh->mMaterialIndex];
             else
-                material = Material::GetDefaultMaterial();
+                material = GetDefaultMaterial();
             
             std::vector<Vertex> vertices;
             std::vector<uint32_t> indices;

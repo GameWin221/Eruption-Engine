@@ -36,6 +36,9 @@ en::DescriptorAllocator::DescriptorAllocator(VkDevice logicalDevice) : m_Logical
 
 en::DescriptorAllocator::~DescriptorAllocator()
 {
+	for (const auto& [info, layout] : m_LayoutMap)
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, layout, nullptr);
+
 	vkDestroyDescriptorPool(m_LogicalDevice, m_DescriptorPool, nullptr);
 }
 

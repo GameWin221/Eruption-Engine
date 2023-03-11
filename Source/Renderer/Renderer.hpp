@@ -74,21 +74,22 @@ namespace en
 
 		Handle<GraphicsPipeline> m_Pipeline;
 
-		std::array<VkCommandBuffer, FRAMES_IN_FLIGHT> m_CommandBuffers;
+		Handle<Scene> m_Scene;
 
-		std::array<VkFence, FRAMES_IN_FLIGHT> m_SubmitFences;
+		struct Frame {
+			VkCommandBuffer commandBuffer;
+			VkFence submitFence;
 
-		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_MainSemaphores;
-		std::array<VkSemaphore, FRAMES_IN_FLIGHT> m_PresentSemaphores;
-		
-		en::Handle<Scene> m_Scene;
-
-		uint32_t m_FrameIndex = 0U;	// Frame in flight index
+			VkSemaphore mainSemaphore;
+			VkSemaphore presentSemaphore;
+		} m_Frames[FRAMES_IN_FLIGHT];
+	
+		uint32_t m_FrameIndex = 0U;
 			
-		bool m_ReloadQueued = false;
+		bool m_ReloadQueued		  = false;
 		bool m_FramebufferResized = false;
-		bool m_SkipFrame = false;
-		bool m_VSync = true;
+		bool m_SkipFrame		  = false;
+		bool m_VSync			  = true;
 
 		double m_FrameTime{};
 
@@ -107,11 +108,8 @@ namespace en
 
 		void CreateBackend();
 
-		void CreateCommandBuffer();
-		void DestroyCommandBuffer();
-
-		void CreateSyncObjects();
-		void DestroySyncObjects();
+		void CreatePerFrameData();
+		void DestroyPerFrameData();
 
 		void CreateImGuiContext();
 		void DestroyImGuiContext();

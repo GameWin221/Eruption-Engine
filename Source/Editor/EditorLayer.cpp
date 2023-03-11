@@ -23,7 +23,7 @@ namespace en
 		//m_AssetManagerPanel   = std::make_unique<AssetManagerPanel  >(assetManager, m_Atlas.get());
 		//m_SceneHierarchyPanel = std::make_unique<SceneHierarchyPanel>(m_Renderer);
 		//m_InspectorPanel	  = std::make_unique<InspectorPanel		>(m_SceneHierarchyPanel.get(), m_Renderer, assetManager);
-		//m_SettingsPanel  	  = std::make_unique<SettingsPanel		>(m_Renderer);
+		m_SettingsPanel  	  = std::make_unique<SettingsPanel		>(m_Renderer);
 
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
@@ -90,10 +90,10 @@ namespace en
 		// UI Panels
 		if (m_ShowCameraMenu)
 			DrawCameraMenu();
-
+			*/
 		if (m_ShowDebugMenu)
 			DrawDebugMenu();
-
+		/*
 		if (m_ShowSceneMenu)
 			m_SceneHierarchyPanel->Render();
 
@@ -102,10 +102,10 @@ namespace en
 
 		if (m_ShowAssetMenu)
 			m_AssetManagerPanel->Render();
-
+			*/
 		if (m_ShowSettingsMenu)
 			m_SettingsPanel->Render();
-			*/
+			
 		EndRender();
 	}
 
@@ -201,7 +201,7 @@ namespace en
 
 			ImGui::EndMenu();
 		}
-		/*
+		
 		if (ImGui::BeginMenu("UI Panels"))
 		{
 			ImGui::MenuItem("Asset Menu", "", &m_ShowAssetMenu);
@@ -218,7 +218,7 @@ namespace en
 
 			ImGui::EndMenu();
 		}
-		*/
+		
 		ImGui::EndMainMenuBar();
 
 		ImGui::End();

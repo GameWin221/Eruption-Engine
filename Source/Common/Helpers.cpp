@@ -331,33 +331,6 @@ namespace en
             }
         }
 
-        void BufferPipelineBarrier(const VkBuffer buffer, const VkDeviceSize size, const VkAccessFlags srcAccessMask, const VkAccessFlags dstAccessMask, const VkPipelineStageFlags srcStage, const VkPipelineStageFlags dstStage, const VkCommandBuffer cmdBuffer)
-        {
-            VkBufferMemoryBarrier barrier{
-                .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-
-                .srcAccessMask = srcAccessMask,
-                .dstAccessMask = dstAccessMask,
-
-                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-
-                .buffer = buffer,
-
-                .offset = 0U,
-                .size = size,
-            };
-
-            vkCmdPipelineBarrier(
-                cmdBuffer,
-                srcStage, dstStage,
-                0U,
-                0U, nullptr,
-                1U, &barrier,
-                0U, nullptr
-            );
-        }
-
         void DestroyImage(const VkImage image, const VmaAllocation imageAllocation)
         {
             UseContext();
@@ -401,50 +374,6 @@ namespace en
 
             if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
                 EN_ERROR("Helpers::CreateSampler() - Failed to create texture sampler!");
-        }
-
-        void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags commandPoolCreateFlags)
-        {
-            UseContext();
-
-            VkCommandPoolCreateInfo commandPoolCreateInfo{
-                .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-                .flags            = commandPoolCreateFlags,
-                .queueFamilyIndex = ctx.m_QueueFamilies.graphics.value(),
-            };
-            
-            if (vkCreateCommandPool(ctx.m_LogicalDevice, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS)
-                EN_ERROR("Helpers::CreateCommandPool() - Failed to create a command pool!");
-        }
-
-        void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t commandBufferCount, VkCommandPool commandPool)
-        {
-            UseContext();
-
-            VkCommandBufferAllocateInfo commandBufferAllocateInfo{
-                .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                .commandPool        = commandPool,
-                .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                .commandBufferCount = commandBufferCount,
-            };
-
-            vkAllocateCommandBuffers(ctx.m_LogicalDevice, &commandBufferAllocateInfo, commandBuffers);
-        }
-        
-        uint32_t FindMemoryType(const uint32_t typeFilter, const VkMemoryPropertyFlags properties)
-        {
-            UseContext();
-
-            VkPhysicalDeviceMemoryProperties memProperties{};
-            vkGetPhysicalDeviceMemoryProperties(ctx.m_PhysicalDevice, &memProperties);
-
-            for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-            {
-                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-                    return i;
-            }
-
-            EN_ERROR("Helpers::FindMemoryType() - Failed to find suitable memory type!");
         }
     }
 }

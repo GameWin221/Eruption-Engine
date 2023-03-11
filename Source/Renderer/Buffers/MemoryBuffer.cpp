@@ -86,6 +86,28 @@ namespace en
     }
     void MemoryBuffer::PipelineBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer)
     {
-        Helpers::BufferPipelineBarrier(m_Buffer, m_BufferSize, srcAccessMask, dstAccessMask, srcStage, dstStage, cmdBuffer);
+        VkBufferMemoryBarrier barrier{
+                .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+
+                .srcAccessMask = srcAccessMask,
+                .dstAccessMask = dstAccessMask,
+
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+                .buffer = m_Buffer,
+
+                .offset = 0U,
+                .size   = m_BufferSize,
+        };
+
+        vkCmdPipelineBarrier(
+            cmdBuffer,
+            srcStage, dstStage,
+            0U,
+            0U, nullptr,
+            1U, &barrier,
+            0U, nullptr
+        );
     }
 }

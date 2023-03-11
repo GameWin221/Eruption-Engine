@@ -17,7 +17,7 @@ namespace en
 
 		if (ImGui::Checkbox("VSync", &vSync))
 			m_Renderer->SetVSync(vSync);
-
+		/*
 		if (ImGui::CollapsingHeader("Antialiasing"))
 		{
 			if (ImGui::Combo("Antialiasing Mode", (int*)&m_Renderer->m_PostProcessParams.antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
@@ -114,7 +114,7 @@ namespace en
 					m_Renderer->SetShadowFormat(VK_FORMAT_D16_UNORM);
 			}
 		}
-
+		*/
 		ImGui::End();
 	}
 }

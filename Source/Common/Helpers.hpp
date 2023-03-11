@@ -23,13 +23,6 @@ namespace en
 		
 		void SimpleTransitionImageLayout(const VkImage image, const VkFormat format, const VkImageAspectFlags aspectFlags, const VkImageLayout oldLayout, const VkImageLayout newLayout, const uint32_t mipLevels = 1U, const VkCommandBuffer cmdBuffer = VK_NULL_HANDLE);
 		void TransitionImageLayout(const VkImage image, const VkFormat format, const VkImageAspectFlags aspectFlags, const VkImageLayout oldLayout, const VkImageLayout newLayout, const VkAccessFlags srcAccessMask, const VkAccessFlags dstAccessMask, const VkPipelineStageFlags srcStage, const VkPipelineStageFlags dstStage, const uint32_t layer = 0U, const uint32_t layerCount = 1U, const uint32_t mipLevels = 1U, const VkCommandBuffer cmdBuffer = VK_NULL_HANDLE);
-
-		void BufferPipelineBarrier(const VkBuffer buffer, const VkDeviceSize size, const VkAccessFlags srcAccessMask, const VkAccessFlags dstAccessMask, const VkPipelineStageFlags srcStage, const VkPipelineStageFlags dstStage, const VkCommandBuffer cmdBuffer);
-
-		void CreateCommandPool(VkCommandPool& commandPool, const VkCommandPoolCreateFlags commandPoolCreateFlags);
-		void CreateCommandBuffers(VkCommandBuffer* commandBuffers, const uint32_t commandBufferCount, VkCommandPool commandPool);
-
-		uint32_t FindMemoryType(const uint32_t typeFilter, const VkMemoryPropertyFlags properties);
 	}
 }
 

@@ -194,6 +194,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Renderer\DescriptorAllocator.cpp" />
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -263,6 +264,7 @@
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\DescriptorAllocator.hpp" />
     <ClInclude Include="External\ImGui\imconfig.h" />
     <ClInclude Include="External\ImGui\imgui.h" />
@@ -319,6 +321,8 @@
     <None Include="Shaders\AMD\AMDTonemapping.comp" />
     <None Include="Shaders\camera.glsl" />
     <None Include="Shaders\Depth.frag" />
+    <None Include="Shaders\ForwardFrag.frag" />
+    <None Include="Shaders\ForwardVert.vert" />
     <None Include="Shaders\frag.frag" />
     <None Include="Shaders\Move.frag" />
     <None Include="Shaders\NVIDIA\NVFXAA.comp" />

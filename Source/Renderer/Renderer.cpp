@@ -22,8 +22,7 @@ namespace en
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
 		DestroyImGuiContext();
-		DestroyCommandBuffer();
-		DestroySyncObjects();
+		DestroyPerFrameData();
 	}
 
 	void Renderer::PreRender()
@@ -61,7 +60,7 @@ namespace en
 
 	void Renderer::WaitForGPUIdle()
 	{
-		vkWaitForFences(g_Ctx->m_LogicalDevice, 1U, &m_SubmitFences[m_FrameIndex], VK_TRUE, UINT64_MAX);
+		vkWaitForFences(g_Ctx->m_LogicalDevice, 1U, &m_Frames[m_FrameIndex].submitFence, VK_TRUE, UINT64_MAX);
 	}
 
 	void Renderer::MeasureFrameTime()
@@ -76,7 +75,7 @@ namespace en
 	}
 	void Renderer::BeginRender()
 	{
-		VkResult result = vkAcquireNextImageKHR(g_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_MainSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_Swapchain->m_ImageIndex);
+		VkResult result = vkAcquireNextImageKHR(g_Ctx->m_LogicalDevice, m_Swapchain->m_Swapchain, UINT64_MAX, m_Frames[m_FrameIndex].mainSemaphore, VK_NULL_HANDLE, &m_Swapchain->m_ImageIndex);
 
 		m_SkipFrame = false;
 
@@ -95,24 +94,24 @@ namespace en
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 			EN_ERROR("Renderer::BeginRender() - Failed to acquire swap chain image!");
 
-		vkResetFences(g_Ctx->m_LogicalDevice, 1U, &m_SubmitFences[m_FrameIndex]);
+		vkResetFences(g_Ctx->m_LogicalDevice, 1U, &m_Frames[m_FrameIndex].submitFence);
 
-		vkResetCommandBuffer(m_CommandBuffers[m_FrameIndex], 0U);
+		vkResetCommandBuffer(m_Frames[m_FrameIndex].commandBuffer, 0U);
 
 		constexpr VkCommandBufferBeginInfo beginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
 		};
 
-		if (vkBeginCommandBuffer(m_CommandBuffers[m_FrameIndex], &beginInfo) != VK_SUCCESS)
+		if (vkBeginCommandBuffer(m_Frames[m_FrameIndex].commandBuffer, &beginInfo) != VK_SUCCESS)
 			EN_ERROR("Renderer::BeginRender() - Failed to begin recording command buffer!");
 	}
 	void Renderer::ForwardPass()
 	{
 		if (m_SkipFrame) return;
 
-		m_RenderPass->Begin(m_CommandBuffers[m_FrameIndex], m_Swapchain->m_ImageIndex);
+		m_RenderPass->Begin(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->m_ImageIndex);
 
-			m_Pipeline->Bind(m_CommandBuffers[m_FrameIndex], m_Swapchain->GetExtent());
+			m_Pipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent());
 
 			m_Pipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex));
 
@@ -136,30 +135,25 @@ namespace en
 
 		m_ImGuiRenderCallback();
 
-		m_ImGuiRenderPass->Begin(m_CommandBuffers[m_FrameIndex], m_Swapchain->m_ImageIndex);
+		m_ImGuiRenderPass->Begin(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->m_ImageIndex);
 
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_CommandBuffers[m_FrameIndex]);
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_Frames[m_FrameIndex].commandBuffer);
 
 		m_ImGuiRenderPass->End();
 	}
 	void Renderer::EndRender()
 	{
 		if (m_SkipFrame) return;
-		
-		/*m_Swapchain->ChangeLayout(m_SwapchainImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-								  0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-								  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-								  m_CommandBuffers[m_FrameIndex]);*/
 
-		if (vkEndCommandBuffer(m_CommandBuffers[m_FrameIndex]) != VK_SUCCESS)
+		if (vkEndCommandBuffer(m_Frames[m_FrameIndex].commandBuffer) != VK_SUCCESS)
 			EN_ERROR("Renderer::EndRender() - Failed to record command buffer!");
 
 		const VkPipelineStageFlags waitStages[]     = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		const VkSemaphore		   waitSemaphores[] = { m_MainSemaphores[m_FrameIndex] };
+		const VkSemaphore		   waitSemaphores[] = { m_Frames[m_FrameIndex].mainSemaphore };
 		
-		const VkCommandBuffer commandBuffers[] = { m_CommandBuffers[m_FrameIndex] };
+		const VkCommandBuffer commandBuffers[] = { m_Frames[m_FrameIndex].commandBuffer };
 
-		const VkSemaphore signalSemaphores[] = { m_PresentSemaphores[m_FrameIndex] };
+		const VkSemaphore signalSemaphores[] = { m_Frames[m_FrameIndex].presentSemaphore };
 
 		VkSubmitInfo submitInfo{
 			.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -175,7 +169,7 @@ namespace en
 		};
 
 
-		if (vkQueueSubmit(g_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_SubmitFences[m_FrameIndex]) != VK_SUCCESS)
+		if (vkQueueSubmit(g_Ctx->m_GraphicsQueue, 1U, &submitInfo, m_Frames[m_FrameIndex].submitFence) != VK_SUCCESS)
 			EN_ERROR("Renderer::EndRender() - Failed to submit command buffer!");
 
 		VkPresentInfoKHR presentInfo{
@@ -218,7 +212,6 @@ namespace en
 		CreateForwardPass();
 
 		DestroyImGuiContext();
-
 		CreateImGuiContext();
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain->m_ImageViews.size());
@@ -238,8 +231,7 @@ namespace en
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
 		DestroyImGuiContext();
-		DestroyCommandBuffer();
-		DestroySyncObjects();
+		DestroyPerFrameData();
 
 		CreateBackend();
 
@@ -260,13 +252,9 @@ namespace en
 
 		EN_SUCCESS("Created the camera buffer!")
 
-			CreateSyncObjects();
+			CreatePerFrameData();
 
-		EN_SUCCESS("Created sync objects!")
-
-			CreateCommandBuffer();
-
-		EN_SUCCESS("Created command buffers!")
+		EN_SUCCESS("Created per frame data!")
 
 			CreateForwardPass();
 
@@ -336,56 +324,49 @@ namespace en
 		m_Pipeline = MakeHandle<GraphicsPipeline>(info);
 	}
 
-	void Renderer::CreateCommandBuffer()
-	{
-		const VkCommandBufferAllocateInfo allocInfo{
-			.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.commandPool		= g_Ctx->m_GraphicsCommandPool,
-			.level				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = FRAMES_IN_FLIGHT
-		};
-
-		if (vkAllocateCommandBuffers(g_Ctx->m_LogicalDevice, &allocInfo, m_CommandBuffers.data()) != VK_SUCCESS)
-			EN_ERROR("Renderer::GCreateCommandBuffer() - Failed to allocate command buffer!");
-	}
-	void Renderer::CreateSyncObjects()
+	void Renderer::CreatePerFrameData()
 	{
 		constexpr VkFenceCreateInfo fenceInfo{
 			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 			.flags = VK_FENCE_CREATE_SIGNALED_BIT
 		};
 
-		for(auto& fence : m_SubmitFences)
-			if (vkCreateFence(g_Ctx->m_LogicalDevice, &fenceInfo, nullptr, &fence) != VK_SUCCESS)
-				EN_ERROR("Renderer::CreateSyncObjects() - Failed to create submit fences!");
-		
 		constexpr VkSemaphoreCreateInfo semaphoreInfo{
 			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
 		};
+
+		for (auto& frame : m_Frames)
+		{
+			if (vkCreateFence(g_Ctx->m_LogicalDevice, &fenceInfo, nullptr, &frame.submitFence) != VK_SUCCESS)
+				EN_ERROR("Renderer::CreatePerFrameData() - Failed to create a submit fence!");
+
+			if (vkCreateSemaphore(g_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &frame.mainSemaphore) != VK_SUCCESS)
+				EN_ERROR("GraphicsPipeline::CreatePerFrameData - Failed to create a main semaphore!");
+
+			if (vkCreateSemaphore(g_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &frame.presentSemaphore) != VK_SUCCESS)
+				EN_ERROR("GraphicsPipeline::CreatePerFrameData - Failed to create a present semaphore!");
 		
-		for (auto& semaphore : m_MainSemaphores)
-			if (vkCreateSemaphore(g_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS)
-				EN_ERROR("GraphicsPipeline::CreateSyncSemaphore - Failed to create main semaphores!");
+			VkCommandBufferAllocateInfo allocInfo{
+				.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+				.commandPool		= g_Ctx->m_GraphicsCommandPool,
+				.level				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+				.commandBufferCount = 1U
+			};
 
-		for (auto& semaphore : m_PresentSemaphores)
-			if (vkCreateSemaphore(g_Ctx->m_LogicalDevice, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS)
-				EN_ERROR("GraphicsPipeline::CreateSyncSemaphore - Failed to create present semaphores!");
+			if (vkAllocateCommandBuffers(g_Ctx->m_LogicalDevice, &allocInfo, &frame.commandBuffer) != VK_SUCCESS)
+				EN_ERROR("Renderer::CreatePerFrameData() - Failed to allocate a command buffer!");
+		}	
 	}
-
-	void Renderer::DestroyCommandBuffer()
+	void Renderer::DestroyPerFrameData()
 	{
-		vkFreeCommandBuffers(g_Ctx->m_LogicalDevice, g_Ctx->m_GraphicsCommandPool, FRAMES_IN_FLIGHT, m_CommandBuffers.data());
-	}
-	void Renderer::DestroySyncObjects()
-	{
-		for (auto& fence : m_SubmitFences)
-			vkDestroyFence(g_Ctx->m_LogicalDevice, fence, nullptr);
+		for (auto& frame : m_Frames)
+		{
+			vkDestroyFence(g_Ctx->m_LogicalDevice, frame.submitFence, nullptr);
+			vkDestroySemaphore(g_Ctx->m_LogicalDevice, frame.mainSemaphore, nullptr);
+			vkDestroySemaphore(g_Ctx->m_LogicalDevice, frame.presentSemaphore, nullptr);
 
-		for (auto& semaphore : m_MainSemaphores)
-			vkDestroySemaphore(g_Ctx->m_LogicalDevice, semaphore, nullptr);
-
-		for (auto& semaphore : m_PresentSemaphores)
-			vkDestroySemaphore(g_Ctx->m_LogicalDevice, semaphore, nullptr);
+			vkFreeCommandBuffers(g_Ctx->m_LogicalDevice, g_Ctx->m_GraphicsCommandPool, 1U, &frame.commandBuffer);
+		}
 	}
 
 	void ImGuiCheckResult(VkResult err)

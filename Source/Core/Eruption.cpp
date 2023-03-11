@@ -96,7 +96,7 @@ void Eruption::Update()
 	m_ExampleScene->UpdateSceneObjects();
 
 	m_Input->UpdateInput();
-
+	
 	//m_Renderer->UpdateLights();
 
 	m_Renderer->WaitForGPUIdle();
@@ -213,4 +213,8 @@ void Eruption::Run()
 		Update();
 		Render();
 	}
+
+	m_AssetManager.reset();
+	m_Renderer.reset();
+	m_Context.reset();
 }

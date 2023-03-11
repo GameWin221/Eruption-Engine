@@ -4,6 +4,8 @@
 #define EN_MATERIAL_HPP
 
 #include <Assets/Texture.hpp>
+#include <Renderer/DescriptorSet.hpp>
+#include <Renderer/DescriptorAllocator.hpp>
 
 #include "Asset.hpp"
 
@@ -16,10 +18,6 @@ namespace en
 	public:
 		Material(const std::string& name, const glm::vec3 color, const float metalnessVal, const float roughnessVal, const float normalStrength, Handle<Texture> albedoTexture, Handle<Texture> roughnessTexture, Handle<Texture> normalTexture, Handle<Texture> metalnessTexture);
 		~Material();
-
-		static Handle<Material> GetDefaultMaterial();
-
-		static VkDescriptorSetLayout& GetLayout();
 
 		void SetColor(glm::vec3 color);
 		void SetNormalStrength(float normalStrength);
@@ -45,13 +43,14 @@ namespace en
 
 		const void* GetMatBufferPtr() const { return &m_MatBuffer; };
 
-		const VkDescriptorSet GetDescriptorSet() const { return m_DescriptorSet; };
+		static VkDescriptorSetLayout GetLayout();
+
+		const Handle<DescriptorSet> GetDescriptorSet() const { return m_DescriptorSet; };
 
 	private:
 		void Update();
-		void CreateDescriptorSet();
 
-		void UpdateBuffer();
+		DescriptorInfo MakeDescriptorInfo();
 
 		bool m_UpdateQueued = false;
 
@@ -68,7 +67,7 @@ namespace en
 		Handle<Texture> m_Metalness;
 		Handle<Texture> m_Normal;
 
-		VkDescriptorSet m_DescriptorSet;
+		Handle<DescriptorSet> m_DescriptorSet;
 
 		struct MatBuffer
 		{

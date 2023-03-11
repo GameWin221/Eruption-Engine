@@ -27,9 +27,6 @@ namespace en
 
 		VkSampler m_ImageSampler;
 
-		static Handle<Texture> GetWhiteSRGBTexture();
-		static Handle<Texture> GetWhiteNonSRGBTexture();
-
 		const std::string& GetFilePath() const { return m_FilePath; };
 		const std::string& GetName()     const { return m_Name;	    };
 

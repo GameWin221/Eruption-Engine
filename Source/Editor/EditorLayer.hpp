@@ -8,8 +8,9 @@
 #include "UIPanels/AssetManagerPanel.hpp"
 #include "UIPanels/SceneHierarchyPanel.hpp"
 #include "UIPanels/InspectorPanel.hpp"
-#include "UIPanels/SettingsPanel.hpp"
 */
+#include "UIPanels/SettingsPanel.hpp"
+
 #include <Editor/EditorCommons.hpp>
 #include <Renderer/Renderer.hpp>
 #include <Assets/AssetManager.hpp>
@@ -36,8 +37,9 @@ namespace en
 		std::unique_ptr<AssetManagerPanel  > m_AssetManagerPanel;
 		std::unique_ptr<SceneHierarchyPanel> m_SceneHierarchyPanel;
 		std::unique_ptr<InspectorPanel	   > m_InspectorPanel;
+		*/
 		std::unique_ptr<SettingsPanel      > m_SettingsPanel;
-
+		
 		bool m_ShowLightsMenu	= true;
 		bool m_ShowAssetMenu	= false;
 		bool m_ShowCameraMenu	= true;
@@ -45,7 +47,7 @@ namespace en
 		bool m_ShowSceneMenu	= true;
 		bool m_ShowInspector	= true;
 		bool m_ShowSettingsMenu = false;
-		*/
+		
 		void BeginRender();
 		void DrawDockspace();
 		void DrawCameraMenu();

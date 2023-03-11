@@ -5,11 +5,6 @@
 
 namespace en
 {
-	constexpr uint64_t WHITE_PIXEL = 0xffffffffffffffff; // UINT64_MAX;
-
-	Handle<Texture> g_SRGBWhiteTexture;
-	Handle<Texture> g_NSRGBTexture;
-
 	Texture::Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture, bool useMipMaps) : m_Name(name), m_FilePath(texturePath), Asset{ AssetType::Texture }
 	{
 		bool shouldFreeImage = true;
@@ -19,10 +14,11 @@ namespace en
 		int sizeX, sizeY, channels;
 
 		uint8_t* pixels = stbi_load(m_FilePath.c_str(), &sizeX, &sizeY, &channels, 4);
+		uint64_t white = 0xffffffffffffffff;
 
 		if (!pixels)
 		{
-			pixels = (uint8_t*)&WHITE_PIXEL;
+			pixels = (uint8_t*)&white;
 
 			sizeX = 1;
 			sizeY = 1;
@@ -55,20 +51,5 @@ namespace en
 	Texture::~Texture()
 	{
 		vkDestroySampler(Context::Get().m_LogicalDevice, m_ImageSampler, nullptr);
-	}
-
-	Handle<Texture> Texture::GetWhiteSRGBTexture()
-	{
-		if (!g_SRGBWhiteTexture)
-			g_SRGBWhiteTexture = MakeHandle<Texture>((uint8_t*)&WHITE_PIXEL, "_DefaultWhiteSRGB", VK_FORMAT_R8G8B8A8_SRGB, VkExtent2D{ 1U, 1U }, false);
-
-		return g_SRGBWhiteTexture;
-	}
-	Handle<Texture> Texture::GetWhiteNonSRGBTexture()
-	{
-		if (!g_NSRGBTexture)
-			g_NSRGBTexture = MakeHandle<Texture>((uint8_t*)&WHITE_PIXEL, "_DefaultWhiteNonSRGB", VK_FORMAT_R8G8B8A8_UNORM, VkExtent2D{ 1U, 1U }, false);
-
-		return g_NSRGBTexture;
 	}
 }

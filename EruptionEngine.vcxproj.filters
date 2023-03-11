@@ -135,6 +135,9 @@
     <ClCompile Include="Source\Renderer\DescriptorAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -284,6 +287,9 @@
     <ClInclude Include="Source\Renderer\DescriptorAllocator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -298,5 +304,7 @@
     <None Include="Shaders\vert.vert" />
     <None Include="Shaders\frag.frag" />
     <None Include="Shaders\camera.glsl" />
+    <None Include="Shaders\ForwardFrag.frag" />
+    <None Include="Shaders\ForwardVert.vert" />
   </ItemGroup>
 </Project>
