@@ -22,10 +22,8 @@ namespace en
 				std::vector<DescriptorInfo::BufferInfo>{ {
 						.index = 0U,
 						.buffer = m_Buffers[i]->GetHandle(),
-						.size = m_Buffers[i]->m_BufferSize,
-
+						.size = m_Buffers[i]->GetSize(),
 						.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-
 						.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 					}}}
 			);
@@ -33,7 +31,7 @@ namespace en
     }
     void CSMBuffer::MapBuffer(uint32_t frameIndex)
     {
-		m_Buffers[frameIndex]->MapMemory(&m_CSMBOs[frameIndex], m_Buffers[frameIndex]->m_BufferSize);
+		m_Buffers[frameIndex]->MapMemory(&m_CSMBOs[frameIndex], m_Buffers[frameIndex]->GetSize());
     }
 
 	VkDescriptorSetLayout CSMBuffer::GetLayout()

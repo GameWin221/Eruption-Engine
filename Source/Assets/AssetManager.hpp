@@ -77,8 +77,8 @@ namespace en
 	private:
 		void UpdateMaterials();
 
-		std::unordered_map<std::string, Handle<Mesh>>     m_Meshes;
-		std::unordered_map<std::string, Handle<Texture>>  m_Textures;
+		std::unordered_map<std::string, Handle<Mesh>    > m_Meshes;
+		std::unordered_map<std::string, Handle<Texture> > m_Textures;
 		std::unordered_map<std::string, Handle<Material>> m_Materials;
 
 		Handle<Texture> m_SRGBWhiteTexture;

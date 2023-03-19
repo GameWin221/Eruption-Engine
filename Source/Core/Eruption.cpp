@@ -127,8 +127,9 @@ void Eruption::CreateExampleScene()
 	auto m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->m_Position = glm::vec3(0, 0.5f, -0.3);
 	m_Skull->m_Rotation = glm::vec3(45.0f, 90.0f, 0.0f);
-	/*
-	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
+	
+	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf", 
+		en::MeshImportProperties{.importMaterials = false});
 
 	auto m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->m_Scale = glm::vec3(1.2f);
@@ -137,10 +138,7 @@ void Eruption::CreateExampleScene()
 	m_AssetManager->GetMaterial("RedCurtains")->SetNormalStrength(0.6f);
 	m_AssetManager->GetMaterial("GreenCurtains")->SetNormalStrength(0.6f);
 
-	//m_ExampleScene->CreatePointLight(glm::vec3(8.1, 2.1, -4.1), glm::vec3(0.167, 0.51, 1.0), 9.0)->m_CastShadows = true;
-	//m_ExampleScene->CreatePointLight(glm::vec3(-0.4, 6.2, 2.5), glm::vec3(1.0, 0.4, 0.4))->m_CastShadows = true;
-	
-	
+	/*
 	for (uint32_t i = 0; i < (MAX_POINT_LIGHTS); i++)
 	{
 		glm::vec3 spawnPoint(
@@ -214,7 +212,11 @@ void Eruption::Run()
 		Render();
 	}
 
+	m_ExampleScene.reset();
+	m_Editor.reset();
 	m_AssetManager.reset();
 	m_Renderer.reset();
+	m_Input.reset();
+	m_Window.reset();
 	m_Context.reset();
 }

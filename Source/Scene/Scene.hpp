@@ -47,11 +47,6 @@ namespace en
 
 		Handle<Camera> m_MainCamera;
 
-		std::vector<Handle<SceneObject>> GetAllSceneObjects();
-
-		const uint32_t& GetSceneObjectCount() const { return m_SceneObjects.size(); };
-
-	private:
 		std::unordered_map<std::string, Handle<SceneObject>> m_SceneObjects;
 	};
 }

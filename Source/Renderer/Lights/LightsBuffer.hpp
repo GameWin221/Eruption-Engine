@@ -43,7 +43,7 @@ namespace en
 		std::array<LightsBufferObject, FRAMES_IN_FLIGHT> m_LBOs;
 
 		inline const VkBuffer     GetHandle() const { return m_Buffer->GetHandle();  }
-		inline const VkDeviceSize GetSize()   const { return m_Buffer->m_BufferSize; }
+		inline const VkDeviceSize GetSize()   const { return m_Buffer->GetSize(); }
 
 	private:
 		std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_StagingBuffers;

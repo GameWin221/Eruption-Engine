@@ -20,11 +20,11 @@ namespace en
 
 	void LightsBuffer::MapStagingMemory(uint32_t frameIndex)
 	{
-		m_StagingBuffers[frameIndex]->MapMemory(&LBO, m_StagingBuffers[frameIndex]->m_BufferSize);
+		m_StagingBuffers[frameIndex]->MapMemory(&LBO, m_StagingBuffers[frameIndex]->GetSize());
 	}
 	void LightsBuffer::CopyStagingToDevice(uint32_t frameIndex, VkCommandBuffer cmd)
 	{
-		m_StagingBuffers[frameIndex]->CopyTo(m_Buffer, cmd);
+		m_StagingBuffers[frameIndex]->CopyTo(m_Buffer, m_Buffer->GetSize(), 0U, 0U, cmd);
 
 		m_Buffer->PipelineBarrier(
 			VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,

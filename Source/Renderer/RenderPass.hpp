@@ -26,7 +26,7 @@ namespace en
 			VkAttachmentStoreOp stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 		};
 
-		RenderPass(const VkExtent2D extent, const std::vector<RenderPass::Attachment>& attachments, const std::vector<VkSubpassDependency>& dependencies = {});
+		RenderPass(const VkExtent2D extent, const std::vector<RenderPass::Attachment>& attachments, const RenderPass::Attachment& depthStencilAttachment = RenderPass::Attachment{}, const std::vector<VkSubpassDependency>& dependencies = {});
 		~RenderPass();
 
 		void Begin(VkCommandBuffer cmd, uint32_t framebufferIndex = 0U);

@@ -8,6 +8,11 @@ constexpr std::array<const char*, 1> validationLayers {
 constexpr std::array<const char*, 1> deviceExtensions {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
+constexpr VkPhysicalDeviceFeatures deviceFeatures {
+	.imageCubeArray    = VK_TRUE,
+	.multiDrawIndirect = VK_TRUE,
+	.samplerAnisotropy = VK_TRUE,
+};
 
 #if defined(_DEBUG)
 constexpr bool enableValidationLayers = true;
@@ -34,6 +39,8 @@ namespace en
 	}
 	Context::~Context()
 	{
+		m_DescriptorAllocator.reset();
+
 		vmaDestroyAllocator(m_Allocator);
 
 		vkDeviceWaitIdle(m_LogicalDevice);
@@ -191,11 +198,6 @@ namespace en
 
 			queueCreateInfos.emplace_back(queueCreateInfo);
 		}
-
-		constexpr VkPhysicalDeviceFeatures deviceFeatures{
-			.imageCubeArray	   = VK_TRUE,
-			.samplerAnisotropy = VK_TRUE,
-		};
 
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures{
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,

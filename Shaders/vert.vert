@@ -16,13 +16,13 @@ layout(set = 0, binding = 0) uniform CameraBuffer {
 	CameraBufferObject camera;
 };
 
-layout(push_constant) uniform ModelMatrix {
-	mat4 model;
+layout(push_constant) uniform PushConstant {
+	mat4 modelMatrix;
 };
 
 void main() 
 {
-	vec4 worldPos = model * vec4(vPosition, 1.0);
+	vec4 worldPos = modelMatrix * vec4(vPosition, 1.0);
 
     gl_Position = camera.projView * worldPos;
 

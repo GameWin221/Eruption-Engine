@@ -4,6 +4,7 @@
 
 namespace en
 {
+
 	DescriptorSet::DescriptorSet(const DescriptorInfo& info)
 	{
 		UseContext();

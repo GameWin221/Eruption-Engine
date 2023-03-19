@@ -4,9 +4,7 @@ namespace en
 {
 	void SceneObject::UpdateModelMatrix()
 	{
-		m_ModelMatrix = glm::mat4(1.0f);
-
-		m_ModelMatrix = glm::translate(m_ModelMatrix, m_Position);
+		m_ModelMatrix = glm::translate(glm::mat4(1.0f), m_Position);
 
 		if (m_Rotation != glm::vec3(0.0f))
 		{

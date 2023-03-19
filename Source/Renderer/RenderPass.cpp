@@ -2,10 +2,12 @@
 
 namespace en
 {
-    RenderPass::RenderPass(const VkExtent2D extent, const std::vector<RenderPass::Attachment>& attachments, const std::vector<VkSubpassDependency>& dependencies)
+    RenderPass::RenderPass(const VkExtent2D extent, const std::vector<RenderPass::Attachment>& attachments, const RenderPass::Attachment& depthStencilAttachment, const std::vector<VkSubpassDependency>& dependencies)
         : m_Extent(extent), m_AttachmentCount(attachments.size())
     {
         UseContext();
+
+        bool usesDepthStencilAttachment = depthStencilAttachment.imageViews.size() > 0;
 
         std::vector<VkAttachmentDescription> descriptions(attachments.size());
         for (uint32_t i = 0U; i < attachments.size(); i++)
@@ -28,10 +30,30 @@ namespace en
                 .layout     = attachments[i].refLayout,
             };
 
-        VkSubpassDescription subpass{
+        VkAttachmentDescription depthAttachmentDescription {
+            .format         = depthStencilAttachment.format,
+            .samples        = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp         = depthStencilAttachment.loadOp,
+            .storeOp        = depthStencilAttachment.storeOp,
+            .stencilLoadOp  = depthStencilAttachment.stencilLoadOp,
+            .stencilStoreOp = depthStencilAttachment.stencilStoreOp,
+            .initialLayout  = depthStencilAttachment.initialLayout,
+            .finalLayout    = depthStencilAttachment.finalLayout,
+        };
+
+        VkAttachmentReference depthReference {
+            .attachment = static_cast<uint32_t>(descriptions.size()),
+            .layout     = depthStencilAttachment.refLayout
+        };
+
+        if (usesDepthStencilAttachment)
+            descriptions.emplace_back(depthAttachmentDescription);
+
+        VkSubpassDescription subpass {
             .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .colorAttachmentCount = static_cast<uint32_t>(references.size()),
             .pColorAttachments    = references.data(),
+            .pDepthStencilAttachment = usesDepthStencilAttachment ? &depthReference : nullptr,
         };
 
         VkRenderPassCreateInfo renderPassInfo{
@@ -53,14 +75,19 @@ namespace en
                 maxFramebuffers = attachment.imageViews.size();
 
         m_Framebuffers.resize(maxFramebuffers);
-        m_ClearColors.resize(attachments.size(), VkClearValue{{0.0f, 0.0f, 0.0f, 1.0f}});
+        m_ClearColors.resize(attachments.size()+usesDepthStencilAttachment, VkClearValue{{0.0f, 0.0f, 0.0f, 1.0f}});
 
         for (int32_t i = 0U; i < maxFramebuffers; i++)
         {
-
             std::vector<VkImageView> imageViews{};
             for (const auto& attachment : attachments)
                 imageViews.emplace_back(attachment.imageViews[i]);
+
+            if (usesDepthStencilAttachment)
+            {
+                imageViews.emplace_back(depthStencilAttachment.imageViews.front());
+                m_ClearColors.back().depthStencil = { 1.0f, 0 };
+            }
 
             VkFramebufferCreateInfo framebufferInfo{
                 .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,

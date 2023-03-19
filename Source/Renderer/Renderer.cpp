@@ -4,14 +4,19 @@
 
 namespace en
 {
+	constexpr uint32_t MAX_INSTANCES = 16U * 1024U;
+	constexpr uint32_t MAX_INDIRECT_DRAWS = 1024U;
+
 	Renderer* g_CurrentBackend{};
-	Context* g_Ctx{};
+	Context*  g_Ctx{};
 
 	Renderer::Renderer()
 	{
 		g_Ctx = &Context::Get();
 
 		g_CurrentBackend = this;
+
+		m_Scene = MakeHandle<Scene>();
 
 		Window::Get().SetResizeCallback(Renderer::FramebufferResizeCallback);
 
@@ -51,11 +56,6 @@ namespace en
 	void Renderer::UnbindScene()
 	{
 		m_Scene = nullptr;
-	}
-	void Renderer::SetVSync(bool vSync)
-	{
-		m_VSync = vSync;
-		m_FramebufferResized = true;
 	}
 
 	void Renderer::WaitForGPUIdle()
@@ -113,17 +113,18 @@ namespace en
 
 			m_Pipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent());
 
-			m_Pipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex));
+			m_Pipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
 
-			for (const auto& sceneObject : m_Scene->GetAllSceneObjects())
+			for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 			{
 				m_Pipeline->PushConstants(&sceneObject->GetModelMatrix(), sizeof(glm::mat4), 0U, VK_SHADER_STAGE_VERTEX_BIT);
-
+			
 				for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
 				{
 					m_Pipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
 					m_Pipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
-					m_Pipeline->DrawIndexed(subMesh.m_IndexBuffer->m_IndicesCount);
+
+					m_Pipeline->DrawIndexed(subMesh.m_IndexCount);
 				}
 			}
 
@@ -193,6 +194,12 @@ namespace en
 		m_FrameIndex = (m_FrameIndex + 1) % FRAMES_IN_FLIGHT;
 	}
 
+	void Renderer::SetVSync(bool vSync)
+	{
+		m_VSync = vSync;
+		m_FramebufferResized = true;
+	}
+
 	void Renderer::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		g_CurrentBackend->m_FramebufferResized = true;
@@ -206,8 +213,9 @@ namespace en
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
 		m_Swapchain.reset(); // It is critical to reset before creating a new one
-
 		m_Swapchain = MakeHandle<Swapchain>(m_VSync);
+
+		CreateDepthBuffer();
 
 		CreateForwardPass();
 
@@ -256,6 +264,10 @@ namespace en
 
 		EN_SUCCESS("Created per frame data!")
 
+			CreateDepthBuffer();
+
+		EN_SUCCESS("Created depth buffer!")
+
 			CreateForwardPass();
 
 		EN_SUCCESS("Created the forward pass!")
@@ -275,29 +287,54 @@ namespace en
 
 	void Renderer::CreateForwardPass()
 	{
+		std::vector<VkSubpassDependency> dependencies{
+			VkSubpassDependency {
+				.srcSubpass = VK_SUBPASS_EXTERNAL,
+				.dstSubpass = 0U,
+				.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+			}
+		};
+
 		std::vector<RenderPass::Attachment> attachments{
 			RenderPass::Attachment {
 				.imageViews = m_Swapchain->m_ImageViews,
 
 				.format = m_Swapchain->GetFormat(),
 
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				.refLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				.finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 
 				.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 
-				.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			}
 		};
 
-		m_RenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments);
+		RenderPass::Attachment depthAttachment{
+			.imageViews = {m_DepthBuffer->GetViewHandle()},
+
+			.format = m_DepthBuffer->m_Format,
+
+			.refLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+
+			.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		};
+
+		m_RenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments, depthAttachment, dependencies);
 	}
 	void Renderer::CreateForwardPipeline()
 	{
-		VkPushConstantRange pc{
+		constexpr VkPushConstantRange pc {
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset = 0U,
 			.size = sizeof(glm::mat4),
@@ -309,19 +346,30 @@ namespace en
 			.vShader = "Shaders/vert.spv",
 			.fShader = "Shaders/frag.spv",
 
-			.descriptorLayouts{m_CameraBuffer->GetLayout()},
-			.pushConstantRanges{pc},
+			.descriptorLayouts {m_CameraBuffer->GetLayout()},
+			.pushConstantRanges {pc},
 
 			.useVertexBindings = true,
-			.enableDepthTest = true,
-			.enableDepthWrite = false,
-			.blendEnable = false,
+			.enableDepthTest   = true,
+			.enableDepthWrite  = true,
+			.blendEnable	   = false,
 
-			.compareOp = VK_COMPARE_OP_LESS,
+			.compareOp	 = VK_COMPARE_OP_LESS,
 			.polygonMode = VK_POLYGON_MODE_FILL,
 		};
 
 		m_Pipeline = MakeHandle<GraphicsPipeline>(info);
+	}
+
+	void Renderer::CreateDepthBuffer()
+	{
+		m_DepthBuffer = MakeHandle<Image>(
+			m_Swapchain->GetExtent(),
+			VK_FORMAT_D32_SFLOAT,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
+		);
 	}
 
 	void Renderer::CreatePerFrameData()
@@ -411,7 +459,7 @@ namespace en
 			}
 		};
 
-		m_ImGuiRenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments, dependencies);
+		m_ImGuiRenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments, RenderPass::Attachment{}, dependencies);
 
 		ImGui_ImplGlfw_InitForVulkan(Window::Get().m_NativeHandle, true);
 

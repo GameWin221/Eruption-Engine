@@ -5,20 +5,12 @@
 namespace en
 {
 	Image::Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, bool genMipMaps) 
-		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_CreatedFromExisting(false)
+		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout)
 	{
 		if(genMipMaps)
 			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
 
 		Helpers::CreateImage(m_Image, m_Allocation, m_Size, m_Format, VK_IMAGE_TILING_OPTIMAL, m_UsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1U, m_MipLevels);
-		Helpers::CreateImageView(m_Image, m_ImageView, VK_IMAGE_VIEW_TYPE_2D, m_Format, m_AspectFlags, 0U, 1U, m_MipLevels);
-
-		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_MipLevels);
-		m_CurrentLayout = m_InitialLayout;
-	}
-	Image::Image(VkImage existingImage, VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout)
-		: m_Image(existingImage), m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_CreatedFromExisting(true)
-	{
 		Helpers::CreateImageView(m_Image, m_ImageView, VK_IMAGE_VIEW_TYPE_2D, m_Format, m_AspectFlags, 0U, 1U, m_MipLevels);
 
 		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_MipLevels);
@@ -31,7 +23,7 @@ namespace en
 		if (m_ImageView != VK_NULL_HANDLE)
 			vkDestroyImageView(ctx.m_LogicalDevice, m_ImageView, nullptr);
 
-		if (!m_CreatedFromExisting && m_Allocation != VK_NULL_HANDLE && m_Image != VK_NULL_HANDLE)
+		if (m_Allocation != VK_NULL_HANDLE && m_Image != VK_NULL_HANDLE)
 			vmaDestroyImage(ctx.m_Allocator, m_Image, m_Allocation);
 	}
 
@@ -72,7 +64,7 @@ namespace en
 			VMA_MEMORY_USAGE_CPU_TO_GPU
 		);
 		stagingBuffer.MapMemory(data, imageByteSize);
-		stagingBuffer.CopyTo(this);
+		stagingBuffer.CopyTo(m_Image, VkExtent3D{m_Size.width, m_Size.height, 1U});
 
 		if(UsesMipMaps())
 			GenMipMaps();
@@ -82,102 +74,7 @@ namespace en
 			m_CurrentLayout = m_InitialLayout;
 		}
 	}
-	/*
-	void Image::CopyTo(Image* dstImage, const VkCommandBuffer& cmd)
-	{
-#if defined(_DEBUG)
-		if (m_MipLevels != dstImage->m_MipLevels)
-		{
-			const std::string info("\nsrcImage m_MipLevels: " + std::to_string(m_MipLevels) + "\ndstImage m_MipLevels: " + std::to_string(dstImage->m_MipLevels));
 
-			EN_WARN("Image::CopyTo() - Failed to copy an image because srcImage and dstImage had different mip level counts!" + info);
-
-			return;
-		}
-		else if (m_Size.width != dstImage->m_Size.width || m_Size.height != dstImage->m_Size.height)
-		{
-			const std::string info("\nsrcImage m_Size: (x: " + std::to_string(m_Size.width) + ", y: " + std::to_string(m_Size.height) + ")\ndstImage m_Size: " + std::to_string(dstImage->m_Size.width) + ", y: " + std::to_string(dstImage->m_Size.height) + ")");
-
-			EN_WARN("Image::CopyTo() - Failed to copy an image because srcImage and dstImage had different sizes!" + info);
-			return;
-		}
-#endif
-
-		std::vector<VkImageCopy> imageCopyInfos(dstImage->m_MipLevels);
-
-		int32_t mipWidth  = static_cast<int32_t>(m_Size.width);
-		int32_t mipHeight = static_cast<int32_t>(m_Size.height);
-
-		for (uint32_t mipLevel = 0U; mipLevel < dstImage->m_MipLevels; mipLevel++)
-		{
-			const VkImageCopy imageCopy{
-				.srcSubresource{
-					.aspectMask = m_AspectFlags,
-					.mipLevel	= mipLevel,
-					.layerCount = 1U,
-
-				},
-
-				.dstSubresource{
-					.aspectMask = dstImage->m_AspectFlags,
-					.mipLevel	= mipLevel,
-					.layerCount = 1U
-				},
-
-				.extent = {dstImage->m_Size.width, dstImage->m_Size.height, 1U}
-			};
-
-			imageCopyInfos[mipLevel] = imageCopy;
-
-			if (mipWidth  > 1) mipWidth  /= 2;
-			if (mipHeight > 1) mipHeight /= 2;
-		}
-
-		vkCmdCopyImage(cmd, m_Image, m_CurrentLayout, dstImage->m_Image, dstImage->m_CurrentLayout, dstImage->m_MipLevels, imageCopyInfos.data());
-	}
-	
-	void Image::BlitTo(Image* dstImage, const VkFilter& filter, const VkCommandBuffer& cmd)
-	{
-		std::vector<VkImageBlit> imageBlitInfos(dstImage->m_MipLevels);
-
-		int32_t mipWidth  = static_cast<int32_t>(m_Size.width );
-		int32_t mipHeight = static_cast<int32_t>(m_Size.height);
-
-		for (uint32_t mipLevel = 0U; mipLevel < dstImage->m_MipLevels; mipLevel++)
-		{
-			const VkImageBlit imageBlit{
-				.srcSubresource{
-					.aspectMask = m_AspectFlags,
-					.mipLevel   = mipLevel,
-					.layerCount = 1U
-				},
-
-				.srcOffsets {
-					{0, 0, 0},
-					{mipWidth, mipHeight, 1}
-				},
-
-				.dstSubresource{
-					.aspectMask = dstImage->m_AspectFlags,
-					.mipLevel   = mipLevel,
-					.layerCount = 1U,
-				},
-
-				.dstOffsets {
-					{0, 0, 0},
-					{mipWidth, mipHeight, 1}
-				},
-			};
-
-			imageBlitInfos[mipLevel] = imageBlit;
-
-			if (mipWidth  > 1) mipWidth  /= 2;
-			if (mipHeight > 1) mipHeight /= 2;
-		}
-
-		vkCmdBlitImage(cmd, m_Image, m_CurrentLayout, dstImage->m_Image, dstImage->m_CurrentLayout, dstImage->m_MipLevels, imageBlitInfos.data(), filter);
-	}
-	*/
 	void Image::GenMipMaps()
 	{
 		UseContext();

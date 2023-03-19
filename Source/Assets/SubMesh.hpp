@@ -3,8 +3,8 @@
 #ifndef EN_SUBMESH_HPP
 #define EN_SUBMESH_HPP
 
-#include <Renderer/Buffers/VertexBuffer.hpp>
-#include <Renderer/Buffers/IndexBuffer.hpp>
+#include <Renderer/Buffers/MemoryBuffer.hpp>
+#include <Renderer/Buffers/Vertex.hpp>
 
 #include "Asset.hpp"
 
@@ -19,8 +19,11 @@ namespace en
 
 		Handle<Material> m_Material;
 
-		Handle<VertexBuffer> m_VertexBuffer;
-		Handle<IndexBuffer>  m_IndexBuffer;
+		Handle<MemoryBuffer> m_VertexBuffer;
+		Handle<MemoryBuffer> m_IndexBuffer;
+
+		const uint32_t m_VertexCount;
+		const uint32_t m_IndexCount;
 
 		bool m_Active = true;
 	};

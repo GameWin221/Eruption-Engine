@@ -1,6 +1,6 @@
 #include "GraphicsPipeline.hpp"
 
-#include <Renderer/Buffers/VertexBuffer.hpp>
+#include <Renderer/Buffers/Vertex.hpp>
 
 namespace en
 {
@@ -195,14 +195,18 @@ namespace en
 		vkCmdSetViewport(m_BoundCommandBuffer, 0U, 1U, &viewport);
 		vkCmdSetScissor(m_BoundCommandBuffer, 0U, 1U, &scissor);
 	}
-	void GraphicsPipeline::BindVertexBuffer(Handle<VertexBuffer> buffer, VkDeviceSize offset)
+	void GraphicsPipeline::BindVertexBuffer(Handle<MemoryBuffer> buffer, VkDeviceSize offset)
 	{
-		const VkBuffer vBuffer = buffer->m_Buffer->GetHandle();
+		VkBuffer vBuffer = buffer->GetHandle();
 		vkCmdBindVertexBuffers(m_BoundCommandBuffer, 0U, 1U, &vBuffer, &offset);
 	}
-	void GraphicsPipeline::BindIndexBuffer(Handle<IndexBuffer> buffer)
+	void GraphicsPipeline::BindIndexBuffer(Handle<MemoryBuffer> buffer)
 	{
-		vkCmdBindIndexBuffer(m_BoundCommandBuffer, buffer->m_Buffer->GetHandle(), 0U, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(m_BoundCommandBuffer, buffer->GetHandle(), 0U, VK_INDEX_TYPE_UINT32);
+	}
+	void GraphicsPipeline::DrawIndexedIndirect(Handle<MemoryBuffer> buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+	{
+		vkCmdDrawIndexedIndirect(m_BoundCommandBuffer, buffer->GetHandle(), offset, drawCount, stride);
 	}
 	void GraphicsPipeline::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t firstInstance)
 	{

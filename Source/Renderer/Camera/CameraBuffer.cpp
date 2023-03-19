@@ -14,28 +14,24 @@ namespace en
 			);
 		}
 
-
 		for (uint32_t i = 0U; i < FRAMES_IN_FLIGHT; i++)
 		{
 			m_DescriptorSets[i] = MakeHandle<DescriptorSet>(DescriptorInfo{
 				std::vector<DescriptorInfo::ImageInfo>{},
 				std::vector<DescriptorInfo::BufferInfo>{ {
-					.index = 0U,
+					.index  = 0U,
 					.buffer = m_Buffers[i]->GetHandle(),
-					.size = m_Buffers[i]->m_BufferSize,
-
-					.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-
-					.stage = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+					.size = m_Buffers[i]->GetSize(),
+					.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.stage  = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
 				}}}
 			);
 		}
-		
 	}
 
 	void CameraBuffer::MapBuffer(uint32_t frameIndex)
 	{
-		m_Buffers[frameIndex]->MapMemory(&m_CBOs[frameIndex], m_Buffers[frameIndex]->m_BufferSize);
+		m_Buffers[frameIndex]->MapMemory(&m_CBOs[frameIndex], m_Buffers[frameIndex]->GetSize());
 	}
 
 	void CameraBuffer::UpdateBuffer(uint32_t frameIndex, Handle<Camera> camera, VkExtent2D extent, int debugMode)

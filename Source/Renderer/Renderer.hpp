@@ -67,12 +67,11 @@ namespace en
 		Handle<Swapchain> m_Swapchain;
 		Handle<CameraBuffer> m_CameraBuffer;
 
-		VkSampler m_MainSampler;
-
 		Handle<RenderPass> m_ImGuiRenderPass;
 		Handle<RenderPass> m_RenderPass;
 
 		Handle<GraphicsPipeline> m_Pipeline;
+		Handle<Image> m_DepthBuffer;
 
 		Handle<Scene> m_Scene;
 
@@ -84,6 +83,8 @@ namespace en
 			VkSemaphore presentSemaphore;
 		} m_Frames[FRAMES_IN_FLIGHT];
 	
+		VkSampler m_MainSampler;
+
 		uint32_t m_FrameIndex = 0U;
 			
 		bool m_ReloadQueued		  = false;
@@ -107,6 +108,8 @@ namespace en
 		void ReloadBackendImpl();
 
 		void CreateBackend();
+
+		void CreateDepthBuffer();
 
 		void CreatePerFrameData();
 		void DestroyPerFrameData();

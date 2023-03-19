@@ -2,8 +2,6 @@
 
 namespace en
 {
-    Handle<SceneObject> g_EmptySceneObject;
-
     Handle<SceneObject> Scene::CreateSceneObject(const std::string& name, Handle<Mesh> mesh)
     {
         if (m_SceneObjects.contains(name))
@@ -126,15 +124,5 @@ namespace en
     {
         for (auto& [name, sceneObject] : m_SceneObjects)
             sceneObject->UpdateModelMatrix();
-    }
-
-    std::vector<Handle<SceneObject>> Scene::GetAllSceneObjects()
-    {
-        std::vector<Handle<SceneObject>> allSceneObjects(m_SceneObjects.size());
-
-        for (uint32_t i{}; const auto & [name, sceneObject] : m_SceneObjects)
-            allSceneObjects[i++] = sceneObject;
-
-        return allSceneObjects;
     }
 }

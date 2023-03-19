@@ -7,8 +7,7 @@
 
 #include <Renderer/DescriptorSet.hpp>
 #include <Renderer/RenderPass.hpp>
-#include <Renderer/Buffers/VertexBuffer.hpp>
-#include <Renderer/Buffers/IndexBuffer.hpp>
+#include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
 {
@@ -48,9 +47,10 @@ namespace en
 
 		void Bind(VkCommandBuffer commandBuffer, VkExtent2D extent, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT);
 
-		void BindVertexBuffer(Handle<VertexBuffer> buffer, VkDeviceSize offset = 0U);
-		void BindIndexBuffer(Handle<IndexBuffer> buffer);
-
+		void BindVertexBuffer(Handle<MemoryBuffer> buffer, VkDeviceSize offset = 0U);
+		void BindIndexBuffer(Handle<MemoryBuffer> buffer);
+		
+		void DrawIndexedIndirect(Handle<MemoryBuffer> buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride = sizeof(VkDrawIndexedIndirectCommand));
 		void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1U, uint32_t firstIndex = 0U, uint32_t firstInstance = 0U);
 		void Draw(uint32_t vertexCount, uint32_t instanceCount = 1U, uint32_t firstVertex = 0U, uint32_t firstInstance = 0U);
 	};
