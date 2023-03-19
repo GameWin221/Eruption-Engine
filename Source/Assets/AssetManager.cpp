@@ -139,11 +139,6 @@ namespace en
         }
     }
 
-    void AssetManager::UpdateAssets()
-    {
-        UpdateMaterials();
-    }
-
     Handle<Mesh> AssetManager::GetMesh(const std::string& nameID)
     {
         // If there's no `nameID` model:
@@ -228,12 +223,6 @@ namespace en
             m_DefaultMaterial = MakeHandle<Material>("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 0.0f, GetWhiteSRGBTexture(), GetWhiteNonSRGBTexture(), GetWhiteNonSRGBTexture(), GetWhiteNonSRGBTexture());
 
         return m_DefaultMaterial;
-    }
-
-    void AssetManager::UpdateMaterials()
-    {
-        for (const auto& [name, material] : m_Materials)
-            material->Update();
     }
 
     Handle<Mesh> AssetManager::LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties)

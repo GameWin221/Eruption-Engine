@@ -2,17 +2,25 @@
 
 namespace en
 {
-	void SceneObject::UpdateModelMatrix()
-	{
-		m_ModelMatrix = glm::translate(glm::mat4(1.0f), m_Position);
+    void SceneObject::SetPosition(const glm::vec3& position)
+    {
+        if (!m_TransformChanged && position != m_Position)
+            m_TransformChanged = true;
 
-		if (m_Rotation != glm::vec3(0.0f))
-		{
-			m_ModelMatrix = glm::rotate(m_ModelMatrix, glm::radians(m_Rotation.y), glm::vec3(0, 1, 0));
-			m_ModelMatrix = glm::rotate(m_ModelMatrix, glm::radians(m_Rotation.z), glm::vec3(0, 0, 1));
-			m_ModelMatrix = glm::rotate(m_ModelMatrix, glm::radians(m_Rotation.x), glm::vec3(1, 0, 0));
-		}
+        m_Position = position;
+    }
+    void SceneObject::SetRotation(const glm::vec3& rotation)
+    {
+        if (!m_TransformChanged && rotation != m_Rotation)
+            m_TransformChanged = true;
 
-		m_ModelMatrix = glm::scale(m_ModelMatrix, m_Scale);
-	}
+        m_Rotation = rotation;
+    }
+    void SceneObject::SetScale(const glm::vec3& scale)
+    {
+        if (!m_TransformChanged && scale != m_Scale)
+            m_TransformChanged = true;
+
+        m_Scale = scale;
+    }
 }

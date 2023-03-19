@@ -7,33 +7,36 @@ namespace en
 
 	DescriptorSet::DescriptorSet(const DescriptorInfo& info)
 	{
-		UseContext();
-
-		m_DescriptorLayout = ctx.m_DescriptorAllocator->MakeLayout(info);
-		m_DescriptorSet = ctx.m_DescriptorAllocator->MakeSet(info);
+		m_DescriptorLayout = DescriptorAllocator::Get().MakeLayout(info);
+		m_DescriptorSet = DescriptorAllocator::Get().MakeSet(info);
 
 		Update(info);
 	}
 	DescriptorSet::~DescriptorSet()
 	{
 		UseContext();
-		vkFreeDescriptorSets(ctx.m_LogicalDevice, ctx.m_DescriptorAllocator->GetPool(), 1U, &m_DescriptorSet);
+		vkFreeDescriptorSets(ctx.m_LogicalDevice, DescriptorAllocator::Get().GetPool(), 1U, &m_DescriptorSet);
 	}
 	
 	void DescriptorSet::Update(const DescriptorInfo& info)
 	{
 		UseContext();
 
-		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
+		std::vector<std::vector<VkDescriptorImageInfo>> descriptorImageInfos;
 		for (const auto& image : info.imageInfos)
 		{
-			VkDescriptorImageInfo info{
-				.sampler	 = image.imageSampler,
-				.imageView   = image.imageView,
-				.imageLayout = image.imageLayout
-			};
+			std::vector<VkDescriptorImageInfo> infos{};
 
-			descriptorImageInfos.emplace_back(info);
+			for (const auto& content : image.contents)
+			{
+				infos.emplace_back(VkDescriptorImageInfo {
+					.sampler     = content.imageSampler,
+					.imageView   = content.imageView,
+					.imageLayout = image.imageLayout
+				});
+			}
+
+			descriptorImageInfos.emplace_back(infos);
 		}
 
 		std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
@@ -56,9 +59,9 @@ namespace en
 				.dstSet			 = m_DescriptorSet,
 				.dstBinding		 = image.index,
 				.dstArrayElement = 0U,
-				.descriptorCount = 1U,
+				.descriptorCount = image.count,
 				.descriptorType  = image.type,
-				.pImageInfo		 = &descriptorImageInfos[i++]
+				.pImageInfo		 = descriptorImageInfos[i++].data()
 			};
 		}
 		for (uint32_t i = 0; const auto & buffer : info.bufferInfos)

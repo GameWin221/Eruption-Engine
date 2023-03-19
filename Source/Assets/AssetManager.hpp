@@ -59,8 +59,6 @@ namespace en
 		void RenameTexture (const std::string& oldNameID, const std::string& newNameID);
 		void RenameMaterial(const std::string& oldNameID, const std::string& newNameID);
 
-		void UpdateAssets();
-
 		Handle<Mesh>     GetMesh    (const std::string& nameID);
 		Handle<Texture>  GetTexture (const std::string& nameID);
 		Handle<Material> GetMaterial(const std::string& nameID);

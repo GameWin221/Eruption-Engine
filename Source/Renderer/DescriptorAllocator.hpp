@@ -12,21 +12,28 @@ namespace en
 {
 	struct DescriptorInfo 
 	{
+		struct ImageInfoContent
+		{
+			VkImageView   imageView    = VK_NULL_HANDLE;
+			VkSampler     imageSampler = VK_NULL_HANDLE;
+		};
 		struct ImageInfo
 		{
-			uint32_t      index = 0U;
-			VkImageView   imageView = VK_NULL_HANDLE;
-			VkSampler     imageSampler = VK_NULL_HANDLE;
-			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-			VkDescriptorType   type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			VkShaderStageFlags stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-
+			uint32_t index = 0U;
 			uint32_t count = 1U;
+
+			std::vector<ImageInfoContent> contents{};
+
+			VkDescriptorType   type		   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			VkShaderStageFlags stage	   = VK_SHADER_STAGE_FRAGMENT_BIT;
+			VkImageLayout	   imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			bool operator==(const ImageInfo& other) const
 			{
-				return index == other.index && imageView == other.imageView && imageSampler == other.imageSampler && imageLayout == other.imageLayout && type == other.type && stage == other.stage && count == other.count;
+				if (contents.size() != other.contents.size())
+					return false;
+				
+				return imageLayout == other.imageLayout && index == other.index && count == other.count && type == other.type && stage == other.stage;
 			}
 		};
 		struct BufferInfo
@@ -41,21 +48,21 @@ namespace en
 		
 			bool operator==(const BufferInfo& other) const
 			{
-				return index == other.index && buffer == other.buffer && size == other.size && type == other.type && stage == other.stage;
+				return index == other.index && type == other.type && stage == other.stage;
 			}
 		};
 
 		struct Hash
 		{
-			std::size_t operator()(en::DescriptorInfo const& info) const noexcept
+			std::size_t operator()(DescriptorInfo const& info) const noexcept
 			{
 				size_t resultBuffer = std::hash<size_t>()(info.bufferInfos.size());
-				for (const en::DescriptorInfo::BufferInfo& b : info.bufferInfos)
-					resultBuffer ^= std::hash<size_t>()(b.index | b.type << 8 | b.size << 16 | b.stage << 24);
+				for (const DescriptorInfo::BufferInfo& b : info.bufferInfos)
+					resultBuffer ^= std::hash<size_t>()(b.index | b.type << 16 | b.stage << 24);
 
 				size_t resultImage = std::hash<size_t>()(info.bufferInfos.size());
-				for (const en::DescriptorInfo::ImageInfo& i : info.imageInfos)
-					resultImage ^= std::hash<size_t>()(i.index | i.type << 8 | i.imageLayout << 16 | i.stage << 24);
+				for (const DescriptorInfo::ImageInfo& i : info.imageInfos)
+					resultImage ^= std::hash<size_t>()(i.index | i.type << 8 | i.imageLayout << 16 | i.stage << 24 | i.count << 36);
 
 				return resultBuffer ^ (resultImage << 1);
 			}
@@ -91,6 +98,8 @@ namespace en
 		VkDescriptorSet		  MakeSet(const DescriptorInfo& descriptorInfo);
 
 		const VkDescriptorPool GetPool() const { return m_DescriptorPool; }
+
+		static DescriptorAllocator& Get();
 
 	private:
 		VkDescriptorPool m_DescriptorPool;

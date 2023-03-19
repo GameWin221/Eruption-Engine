@@ -38,6 +38,9 @@ namespace en
 		void DeleteDirectionalLight(const uint32_t index);
 
 		void UpdateSceneObjects();
+		void UpdateRegisteredAssets();
+
+		static VkDescriptorSetLayout GetGlobalDescriptorLayout();
 
 		glm::vec3 m_AmbientColor = glm::vec3(0.0f);
 
@@ -47,7 +50,51 @@ namespace en
 
 		Handle<Camera> m_MainCamera;
 
+		Handle<DescriptorSet> m_GlobalDescriptorSet;
+
 		std::unordered_map<std::string, Handle<SceneObject>> m_SceneObjects;
+
+	private:
+		struct GPUMaterial {
+			glm::vec3 color = glm::vec3(1.0f);
+			float _padding0;
+			
+			float metalnessVal   = 0.00f;
+			float roughnessVal   = 0.75f;
+			float normalStrength = 1.00f;
+			float _padding1;
+
+			uint32_t albedoId{};
+			uint32_t roughnessId{};
+			uint32_t metalnessId{};
+			uint32_t normalId{};
+		};
+
+		uint32_t RegisterMaterial(Handle<Material> material);
+		uint32_t RegisterTexture(Handle<Texture> texture);
+
+		void UpdateMatrixBuffer		 (const std::vector<uint32_t>& changedMatrixIds);
+		void UpdateMaterialBuffer	 (const std::vector<uint32_t>& changedMaterialIds);
+		void UpdateGlobalDescriptor();
+
+		std::vector<glm::mat4  > m_Matrices;
+		std::vector<GPUMaterial> m_GPUMaterials;
+
+		std::vector<Handle<Material>> m_Materials;
+		std::vector<Handle<Texture> > m_Textures;
+
+		std::unordered_map<std::string, uint32_t> m_RegisteredTextures;
+		std::unordered_map<std::string, uint32_t> m_RegisteredMaterials;
+
+		Handle<MemoryBuffer> m_GlobalMaterialsBuffer;
+		Handle<MemoryBuffer> m_GlobalMaterialsStagingBuffer;
+		Handle<MemoryBuffer> m_SingleMaterialStagingBuffer;
+
+		Handle<MemoryBuffer> m_GlobalMatricesBuffer;
+		Handle<MemoryBuffer> m_GlobalMatricesStagingBuffer;
+		Handle<MemoryBuffer> m_SingleMatrixStagingBuffer;
+
+		bool m_TexturesChanged = true;
 	};
 }
 

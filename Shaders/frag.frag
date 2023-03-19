@@ -8,13 +8,36 @@ layout(location = 2) in vec2 fTexcoord;
 
 layout(location = 0) out vec4 FragColor;
 
-void main() 
-{
-    vec3 color = vec3(
-        (10 % int(fPosition.x*10.0))/10.0,
-        (10 % int(fPosition.y*10.0))/10.0,
-        (10 % int(fPosition.z*10.0))/10.0
-    );
+layout(set = 1, binding = 1) uniform sampler2D albedoTextures[MAX_TEXTURES];
+//layout(set = 1, binding = 2) uniform sampler2D roughnessTextures[MAX_TEXTURES];
+//layout(set = 1, binding = 3) uniform sampler2D metalnessTextures[MAX_TEXTURES];
+//layout(set = 1, binding = 4) uniform sampler2D normalTextures[MAX_TEXTURES];
 
-    FragColor = vec4(color, 1.0);
+struct Material {
+	vec3 color;
+	float _padding0;
+
+	float metalnessVal;
+	float roughnessVal;
+	float normalStrength;
+	float _padding1;
+
+	uint albedoId;
+	uint roughnessId;
+	uint metalnessId;
+	uint normalId;
+};
+
+layout (set = 1, std430, binding = 2) buffer Materials {
+	Material materials[];
+};
+
+layout(push_constant) uniform MaterialID {
+	layout(offset = 4) 
+	uint materialId;
+};
+
+void main()
+{
+    FragColor = vec4(texture(albedoTextures[materials[materialId].albedoId], fTexcoord).rgb, 1.0);
 }

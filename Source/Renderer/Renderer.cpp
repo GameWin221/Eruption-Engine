@@ -16,8 +16,6 @@ namespace en
 
 		g_CurrentBackend = this;
 
-		m_Scene = MakeHandle<Scene>();
-
 		Window::Get().SetResizeCallback(Renderer::FramebufferResizeCallback);
 
 		CreateBackend();
@@ -114,13 +112,16 @@ namespace en
 			m_Pipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent());
 
 			m_Pipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
+			m_Pipeline->BindDescriptorSet(m_Scene->m_GlobalDescriptorSet, 1U);
 
 			for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 			{
-				m_Pipeline->PushConstants(&sceneObject->GetModelMatrix(), sizeof(glm::mat4), 0U, VK_SHADER_STAGE_VERTEX_BIT);
-			
+				m_Pipeline->PushConstants(&sceneObject->GetMatrixIndex(), sizeof(uint32_t), 0U, VK_SHADER_STAGE_VERTEX_BIT);
+
 				for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
 				{
+					m_Pipeline->PushConstants(&subMesh.GetMaterialIndex(), sizeof(uint32_t), sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
+
 					m_Pipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
 					m_Pipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
 
@@ -334,10 +335,15 @@ namespace en
 	}
 	void Renderer::CreateForwardPipeline()
 	{
-		constexpr VkPushConstantRange pc {
+		constexpr VkPushConstantRange model {
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.offset = 0U,
-			.size = sizeof(glm::mat4),
+			.offset		= 0U,
+			.size		= sizeof(uint32_t),
+		};
+		constexpr VkPushConstantRange material {
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset		= sizeof(uint32_t),
+			.size		= sizeof(uint32_t),
 		};
 
 		GraphicsPipeline::CreateInfo info{
@@ -346,8 +352,8 @@ namespace en
 			.vShader = "Shaders/vert.spv",
 			.fShader = "Shaders/frag.spv",
 
-			.descriptorLayouts {m_CameraBuffer->GetLayout()},
-			.pushConstantRanges {pc},
+			.descriptorLayouts {m_CameraBuffer->GetLayout(), Scene::GetGlobalDescriptorLayout()},
+			.pushConstantRanges {model, material},
 
 			.useVertexBindings = true,
 			.enableDepthTest   = true,
