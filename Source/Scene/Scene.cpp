@@ -100,11 +100,10 @@ namespace en
         }
 
         m_SceneObjects[name] = MakeHandle<SceneObject>(mesh, name);
-        m_Matrices.emplace_back(glm::mat4(1.0f));
-
+        
         auto& newSceneObject = m_SceneObjects.at(name);
 
-        newSceneObject->m_MatrixIndex = static_cast<uint32_t>(m_Matrices.size()) - 1U;
+        newSceneObject->m_MatrixIndex = RegisterMatrix();
         for (auto& subMesh : newSceneObject->m_Mesh->m_SubMeshes)
             subMesh.m_MaterialIndex = RegisterMaterial(subMesh.m_Material);
 
@@ -212,6 +211,15 @@ namespace en
 
         for (auto& [name, sceneObject] : m_SceneObjects)
         {
+            for (auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
+            {
+                if (subMesh.m_MaterialChanged)
+                {
+                    subMesh.m_MaterialIndex = m_RegisteredMaterials.at(subMesh.m_Material->m_Name);
+                    subMesh.m_MaterialChanged = false;
+                }  
+            }
+
             if (sceneObject->m_TransformChanged)
             {
                 glm::mat4 newMatrix = glm::translate(glm::mat4(1.0f), sceneObject->m_Position);
@@ -252,6 +260,11 @@ namespace en
                 gpuMat.metalnessVal   = cpuMat->GetMetalness();
                 gpuMat.roughnessVal   = cpuMat->GetRoughness();
                 gpuMat.normalStrength = cpuMat->GetNormalStrength();
+
+                cpuMat->m_AlbedoIndex    = m_RegisteredTextures.at(cpuMat->GetAlbedoTexture()   ->GetName());
+                cpuMat->m_RoughnessIndex = m_RegisteredTextures.at(cpuMat->GetRoughnessTexture()->GetName());
+                cpuMat->m_MetalnessIndex = m_RegisteredTextures.at(cpuMat->GetMetalnessTexture()->GetName());
+                cpuMat->m_NormalIndex    = m_RegisteredTextures.at(cpuMat->GetNormalTexture()   ->GetName());
 
                 gpuMat.albedoId    = cpuMat->GetAlbedoIndex();
                 gpuMat.roughnessId = cpuMat->GetRoughnessIndex();
@@ -303,6 +316,11 @@ namespace en
         });
     }
 
+    uint32_t Scene::RegisterMatrix(const glm::mat4& matrix)
+    {
+        m_Matrices.emplace_back(matrix);
+        return static_cast<uint32_t>(m_Matrices.size()) - 1U;
+    }
     uint32_t Scene::RegisterMaterial(Handle<Material> material)
     {
         if (!m_RegisteredMaterials.contains(material->GetName()))
@@ -330,6 +348,19 @@ namespace en
         }
 
         return m_RegisteredTextures.at(texture->GetName());
+    }
+
+    void Scene::DeregisterMatrix(uint32_t index)
+    {
+
+    }
+    void Scene::DeregisterMaterial(uint32_t index)
+    {
+
+    }
+    void Scene::DeregisterTexture(uint32_t index)
+    {
+
     }
 
     void Scene::UpdateMatrixBuffer(const std::vector<uint32_t>& changedMatrixIds)

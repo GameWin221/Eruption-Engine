@@ -368,11 +368,8 @@ namespace en
 
 			glm::vec3 col = chosenMaterial->GetColor();
 
-			ImGui::ColorEdit3("Color: ", (float*)&col);
-
-			col = glm::clamp(col, glm::vec3(0.0f), glm::vec3(1.0f));
-
-			chosenMaterial->SetColor(col);
+			if (ImGui::ColorEdit3("Color: ", (float*)&col))
+				chosenMaterial->SetColor(glm::clamp(col, glm::vec3(0.0f), glm::vec3(1.0f)));
 
 			const std::vector<Handle<Texture>>& allTextures = m_AssetManager->GetAllTextures();
 
@@ -393,7 +390,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenAlbedoIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenAlbedoIndex == 0)
-					chosenMaterial->SetAlbedoTexture(Texture::GetWhiteSRGBTexture());
+					chosenMaterial->SetAlbedoTexture(AssetManager::Get().GetWhiteSRGBTexture());
 				else
 					chosenMaterial->SetAlbedoTexture(m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex - 1]->GetName()));
 			}
@@ -408,7 +405,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenRoughnessIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenRoughnessIndex == 0)
-					chosenMaterial->SetRoughnessTexture(Texture::GetWhiteNonSRGBTexture());
+					chosenMaterial->SetRoughnessTexture(AssetManager::Get().GetWhiteNonSRGBTexture());
 				else
 					chosenMaterial->SetRoughnessTexture(m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
 			}
@@ -431,7 +428,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenNormalIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenNormalIndex == 0)
-					chosenMaterial->SetNormalTexture(Texture::GetWhiteNonSRGBTexture());
+					chosenMaterial->SetNormalTexture(AssetManager::Get().GetWhiteNonSRGBTexture());
 				else
 					chosenMaterial->SetNormalTexture(m_AssetManager->GetTexture(allTextures[chosenNormalIndex - 1]->GetName()));
 			}
@@ -452,7 +449,7 @@ namespace en
 			if (ImGui::Combo("Textures", &chosenMetalnessIndex, textureNames.data(), textureNames.size()))
 			{
 				if (chosenMetalnessIndex == 0)
-					chosenMaterial->SetMetalnessTexture(Texture::GetWhiteNonSRGBTexture());
+					chosenMaterial->SetMetalnessTexture(AssetManager::Get().GetWhiteNonSRGBTexture());
 				else
 					chosenMaterial->SetMetalnessTexture(m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 			}
@@ -495,7 +492,7 @@ namespace en
 				for (int i = 0; i < chosenMesh->m_SubMeshes.size(); i++)
 				{
 					for (int matIndex = 0; matIndex < materials.size(); matIndex++)
-						if (materials[matIndex]->GetName() == chosenMesh->m_SubMeshes[i].m_Material->GetName())
+						if (materials[matIndex]->GetName() == chosenMesh->m_SubMeshes[i].GetMaterial()->GetName())
 						{
 							chosenMaterialIndices[i] = matIndex + 1;
 							break;
@@ -526,7 +523,8 @@ namespace en
 
 				if (ImGui::CollapsingHeader(("Submesh [" + std::to_string(id) + "]").c_str()))
 				{
-					ImGui::Text(("Indices: " + std::to_string(subMesh.m_VertexBuffer->m_VerticesCount)).c_str());
+					ImGui::Text(("Indices: " + std::to_string(subMesh.m_IndexCount)).c_str());
+					ImGui::Text(("Vertices: " + std::to_string(subMesh.m_VertexCount)).c_str());
 
 					SPACE();
 
@@ -543,9 +541,9 @@ namespace en
 					if (ImGui::Combo("Materials", &chosenMaterialIndices[id], materialNames.data(), materialNames.size()))
 					{
 						if (chosenMaterialIndices[id] == 0)
-							subMesh.m_Material = Material::GetDefaultMaterial();
+							subMesh.SetMaterial(AssetManager::Get().GetDefaultMaterial());
 						else
-							subMesh.m_Material = m_AssetManager->GetMaterial(allMaterials[chosenMaterialIndices[id] - 1]->GetName());
+							subMesh.SetMaterial(m_AssetManager->GetMaterial(allMaterials[chosenMaterialIndices[id] - 1]->GetName()));
 					}
 
 					SPACE();
@@ -685,15 +683,15 @@ namespace en
 					EN_WARN("Enter a valid material name!")
 				else
 				{
-					Handle<Texture> albedoTex    = ((chosenAlbedoIndex    == 0) ? Texture::GetWhiteSRGBTexture()	 : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
-					Handle<Texture> roughnessTex = ((chosenRoughnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
-					Handle<Texture> normalTex    = ((chosenNormalIndex    == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
-					Handle<Texture> metalnessTex = ((chosenMetalnessIndex == 0) ? Texture::GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
+					Handle<Texture> albedoTex    = ((chosenAlbedoIndex    == 0) ? AssetManager::Get().GetWhiteSRGBTexture()	 : m_AssetManager->GetTexture(allTextures[chosenAlbedoIndex    - 1]->GetName()));
+					Handle<Texture> roughnessTex = ((chosenRoughnessIndex == 0) ? AssetManager::Get().GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenRoughnessIndex - 1]->GetName()));
+					Handle<Texture> normalTex    = ((chosenNormalIndex    == 0) ? AssetManager::Get().GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenNormalIndex    - 1]->GetName()));
+					Handle<Texture> metalnessTex = ((chosenMetalnessIndex == 0) ? AssetManager::Get().GetWhiteNonSRGBTexture() : m_AssetManager->GetTexture(allTextures[chosenMetalnessIndex - 1]->GetName()));
 
-					if (roughnessTex != Texture::GetWhiteNonSRGBTexture())
+					if (roughnessTex != AssetManager::Get().GetWhiteNonSRGBTexture())
 						roughness = 1.0f;
 
-					if (metalnessTex != Texture::GetWhiteNonSRGBTexture())
+					if (metalnessTex != AssetManager::Get().GetWhiteNonSRGBTexture())
 						metalness = 1.0f;
 
 					m_AssetManager->CreateMaterial(nameStr, glm::vec3(col[0], col[1], col[2]), metalness, roughness, normalStrength, albedoTex, roughnessTex, normalTex, metalnessTex);
@@ -721,7 +719,7 @@ namespace en
 
 		ImGui::BeginChild("Material", ImVec2(size.x + 10.0f, size.y + 10.0f), false, ImGuiWindowFlags_NoCollapse);
 
-		const bool pressed = ImGui::ImageButton(m_Atlas->m_DescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
+		const bool pressed = ImGui::ImageButton(m_Atlas->m_ImGuiDescriptorSet, ImVec2(size.x, size.y), UVs.uv0, UVs.uv1);
 
 		EditorCommons::TextCentered(label);
 

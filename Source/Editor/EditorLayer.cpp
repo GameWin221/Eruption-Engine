@@ -16,14 +16,14 @@ namespace en
 
 		m_Renderer = renderer;
 
-		//m_Atlas = std::make_unique<EditorImageAtlas>("Models/Atlas.png", 4, 1);
+		m_Atlas = MakeScope<EditorImageAtlas>("Models/Atlas.png", VkExtent2D{ 4U, 1U });
 
 		m_Renderer->m_ImGuiRenderCallback = std::bind(&EditorLayer::OnUIDraw, this);
 
-		//m_AssetManagerPanel   = std::make_unique<AssetManagerPanel  >(assetManager, m_Atlas.get());
-		//m_SceneHierarchyPanel = std::make_unique<SceneHierarchyPanel>(m_Renderer);
-		//m_InspectorPanel	  = std::make_unique<InspectorPanel		>(m_SceneHierarchyPanel.get(), m_Renderer, assetManager);
-		m_SettingsPanel  	  = std::make_unique<SettingsPanel		>(m_Renderer);
+		m_AssetManagerPanel   = MakeScope<AssetManagerPanel  >(assetManager, m_Atlas.get());
+		m_SceneHierarchyPanel = MakeScope<SceneHierarchyPanel>(m_Renderer);
+		m_InspectorPanel	  = MakeScope<InspectorPanel	 >(m_SceneHierarchyPanel.get(), m_Renderer, assetManager);
+		m_SettingsPanel  	  = MakeScope<SettingsPanel		 >(m_Renderer);
 
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
@@ -86,14 +86,14 @@ namespace en
 		BeginRender();
 
 		DrawDockspace();
-		/*
+		
 		// UI Panels
 		if (m_ShowCameraMenu)
 			DrawCameraMenu();
-			*/
+			
 		if (m_ShowDebugMenu)
 			DrawDebugMenu();
-		/*
+		
 		if (m_ShowSceneMenu)
 			m_SceneHierarchyPanel->Render();
 
@@ -102,7 +102,7 @@ namespace en
 
 		if (m_ShowAssetMenu)
 			m_AssetManagerPanel->Render();
-			*/
+			
 		if (m_ShowSettingsMenu)
 			m_SettingsPanel->Render();
 			

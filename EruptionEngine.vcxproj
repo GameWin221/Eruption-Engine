@@ -194,6 +194,10 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
+    <ClCompile Include="Source\Editor\UIPanels\SceneHierarchyPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\SettingsPanel.cpp" />
     <ClCompile Include="Source\Renderer\DescriptorAllocator.cpp" />
     <ClCompile Include="External\CL\ColorfulLogging.cpp">
@@ -262,6 +266,10 @@
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
+    <ClInclude Include="Source\Editor\UIPanels\SceneHierarchyPanel.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\SettingsPanel.hpp" />
     <ClInclude Include="Source\Renderer\DescriptorAllocator.hpp" />
     <ClInclude Include="External\ImGui\imconfig.h" />

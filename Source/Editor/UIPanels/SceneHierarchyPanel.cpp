@@ -31,10 +31,10 @@ namespace en
 
 				Handle<SceneObject> object = m_Renderer->GetScene()->CreateSceneObject(chosenObject->GetName() + "(Copy)", chosenObject->m_Mesh);
 
-				object->m_Active   = chosenObject->m_Active;
-				object->m_Position = chosenObject->m_Position;
-				object->m_Rotation = chosenObject->m_Rotation;
-				object->m_Scale	   = chosenObject->m_Scale;
+				object->m_Active = chosenObject->m_Active;
+				object->SetPosition(chosenObject->GetPosition());
+				object->SetRotation(chosenObject->GetRotation());
+				object->SetScale   (chosenObject->GetScale   ());
 
 				m_ChosenSceneMember = object.get();
 			}
@@ -42,10 +42,10 @@ namespace en
 			SPACE();
 
 			ImGui::PushStyleColor(ImGuiCol_Button, m_ElementColor);
-			for (const auto& object : m_Renderer->GetScene()->GetAllSceneObjects())
+			for (const auto& [name, sceneObject] : m_Renderer->GetScene()->m_SceneObjects)
 			{
-				if (ImGui::Button(object->GetName().c_str(), ImVec2(ImGui::GetWindowWidth() - 15.0f, 20)))
-					m_ChosenSceneMember = m_Renderer->GetScene()->GetSceneObject(object->GetName()).get();
+				if (ImGui::Button(name.c_str(), ImVec2(ImGui::GetWindowWidth() - 15.0f, 20)))
+					m_ChosenSceneMember = sceneObject.get();
 				
 				ImGui::Spacing();
 			}

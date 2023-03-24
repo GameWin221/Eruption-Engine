@@ -70,12 +70,21 @@ namespace en
 			uint32_t normalId{};
 		};
 
+		uint32_t RegisterMatrix(const glm::mat4& matrix = glm::mat4(1.0f));
 		uint32_t RegisterMaterial(Handle<Material> material);
 		uint32_t RegisterTexture(Handle<Texture> texture);
+
+		void DeregisterMatrix(uint32_t index);
+		void DeregisterMaterial(uint32_t index);
+		void DeregisterTexture(uint32_t index);
 
 		void UpdateMatrixBuffer		 (const std::vector<uint32_t>& changedMatrixIds);
 		void UpdateMaterialBuffer	 (const std::vector<uint32_t>& changedMaterialIds);
 		void UpdateGlobalDescriptor();
+
+		std::vector<PointLight::Buffer		> m_GPUPointLights;
+		std::vector<SpotLight::Buffer		> m_GPUSpotLights;
+		std::vector<DirectionalLight::Buffer> m_GPUDirLights;
 
 		std::vector<glm::mat4  > m_Matrices;
 		std::vector<GPUMaterial> m_GPUMaterials;
@@ -85,6 +94,10 @@ namespace en
 
 		std::unordered_map<std::string, uint32_t> m_RegisteredTextures;
 		std::unordered_map<std::string, uint32_t> m_RegisteredMaterials;
+
+		Handle<MemoryBuffer> m_PointLightsBuffer;
+		Handle<MemoryBuffer> m_SpotLightsBuffer;
+		Handle<MemoryBuffer> m_DirLightsBuffer;
 
 		Handle<MemoryBuffer> m_GlobalMaterialsBuffer;
 		Handle<MemoryBuffer> m_GlobalMaterialsStagingBuffer;

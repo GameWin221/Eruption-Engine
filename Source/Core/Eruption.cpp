@@ -121,7 +121,7 @@ void Eruption::CreateExampleScene()
 	
 	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 0.0f, 0.65f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"),m_AssetManager->GetTexture("SkullRoughness"),m_AssetManager->GetTexture("SkullNormal"));
 
-	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].m_Material = m_AssetManager->GetMaterial("SkullMaterial");
+	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].SetMaterial(m_AssetManager->GetMaterial("SkullMaterial"));
 
 	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
 

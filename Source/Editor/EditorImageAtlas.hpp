@@ -6,33 +6,27 @@
 #include <Assets/Texture.hpp>
 
 #include <imgui.h>
+#include <imgui_impl_vulkan.h>
 
 namespace en
 {
 	struct ImageUVs
 	{
-		ImVec2 uv0;
-		ImVec2 uv1;
+		ImVec2 uv0{};
+		ImVec2 uv1{};
 	};
 
 	class EditorImageAtlas
 	{
 	public:
-		EditorImageAtlas(const std::string& atlasPath, const uint32_t& x, const uint32_t& y);
-		~EditorImageAtlas();
+		EditorImageAtlas(const std::string& atlasPath, VkExtent2D size);
 
-		ImageUVs GetImageUVs(const uint32_t& x, const uint32_t& y);
+		ImageUVs GetImageUVs(uint32_t x, uint32_t y);
 
-		VkDescriptorSet m_DescriptorSet;
+		VkDescriptorSet m_ImGuiDescriptorSet;
 
 	private:
-		std::unique_ptr<Texture> m_Texture;
-
-		VkDescriptorSetLayout m_DescriptorLayout;
-		VkDescriptorPool m_DescriptorPool;
-
-		void CreateDescriptorPool();
-		void CreateDescriptorSet();
+		Handle<Texture> m_Texture;
 
 		glm::vec2 m_ImageUVSize;
 	};

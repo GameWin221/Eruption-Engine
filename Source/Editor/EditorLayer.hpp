@@ -2,13 +2,12 @@
 
 #ifndef EN_UILAYER_HPP
 #define EN_UILAYER_HPP
-/*
+
 #include <Editor/EditorImageAtlas.hpp>
 
 #include "UIPanels/AssetManagerPanel.hpp"
 #include "UIPanels/SceneHierarchyPanel.hpp"
 #include "UIPanels/InspectorPanel.hpp"
-*/
 #include "UIPanels/SettingsPanel.hpp"
 
 #include <Editor/EditorCommons.hpp>
@@ -31,14 +30,13 @@ namespace en
 		Renderer* m_Renderer  = nullptr;
 
 		bool m_Visible = true;
-		/*
-		std::unique_ptr<EditorImageAtlas> m_Atlas;
+		
+		Scope<EditorImageAtlas> m_Atlas;
 
-		std::unique_ptr<AssetManagerPanel  > m_AssetManagerPanel;
-		std::unique_ptr<SceneHierarchyPanel> m_SceneHierarchyPanel;
-		std::unique_ptr<InspectorPanel	   > m_InspectorPanel;
-		*/
-		std::unique_ptr<SettingsPanel      > m_SettingsPanel;
+		Scope<AssetManagerPanel  > m_AssetManagerPanel;
+		Scope<SceneHierarchyPanel> m_SceneHierarchyPanel;
+		Scope<InspectorPanel	 > m_InspectorPanel;
+		Scope<SettingsPanel      > m_SettingsPanel;
 		
 		bool m_ShowLightsMenu	= true;
 		bool m_ShowAssetMenu	= false;

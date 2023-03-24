@@ -47,7 +47,7 @@ namespace en
 		Renderer*	       m_Renderer  = nullptr;
 		EditorImageAtlas*  m_Atlas	   = nullptr;
 						   
-		SceneMember* m_ChosenSceneMember;
+		SceneMember* m_ChosenSceneMember = nullptr;
 
 		uint32_t m_ChosenLightIndex = 0U;
 

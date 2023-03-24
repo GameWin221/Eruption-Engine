@@ -20,4 +20,9 @@ namespace en
 		m_VertexBuffer->CopyInto(vertices.data(), m_VertexBuffer->GetSize());
 		m_IndexBuffer->CopyInto(indices.data(), m_IndexBuffer->GetSize());
 	}
+	void SubMesh::SetMaterial(Handle<Material> material)
+	{
+		m_Material = material;
+		m_MaterialChanged = true;
+	}
 }
