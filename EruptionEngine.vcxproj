@@ -257,7 +257,6 @@
     <ClCompile Include="Source\Core\Eruption.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Lights\LightsBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\GraphicsPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
@@ -308,7 +307,6 @@
     <ClInclude Include="Source\Core\Eruption.hpp" />
     <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
-    <ClInclude Include="Source\Renderer\Lights\LightsBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\GraphicsPipeline.hpp" />

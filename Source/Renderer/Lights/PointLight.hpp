@@ -9,7 +9,7 @@ namespace en
 {
 	class PointLight : public SceneMember
 	{
-	friend class Renderer;
+	friend class Scene;
 
 	public:
 		constexpr PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active)
@@ -49,15 +49,16 @@ namespace en
 
 		struct Buffer
 		{
-			glm::vec3 position = glm::vec3(0.0);
+			glm::vec3 position = glm::vec3(0.0f);
 			float radius = 5.0f;
-			glm::vec3 color = glm::vec3(1.0);
 
+			glm::vec3 color = glm::vec3(1.0f);
 			int shadowmapIndex = -1;
-			float shadowSoftness = 1.0;
+
+			float shadowSoftness = 1.0f;
 			int pcfSampleRate = 1;
-			float bias;
-			float dummy2;
+			float bias = 0.0f;
+			float _padding0{};
 		};
 
 	private:

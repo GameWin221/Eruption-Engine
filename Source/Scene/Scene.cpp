@@ -49,6 +49,17 @@ namespace en
             VMA_MEMORY_USAGE_CPU_TO_GPU
         );
 
+        m_LightsBuffer = MakeHandle<MemoryBuffer>(
+            sizeof(GPULights),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VMA_MEMORY_USAGE_GPU_ONLY
+        );
+        m_LightsStagingBuffer = MakeHandle<MemoryBuffer>(
+            m_LightsBuffer->GetSize(),
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU
+        );
+
         std::vector<DescriptorInfo::ImageInfoContent> imageViews(MAX_TEXTURES);
         for (auto& view : imageViews)
         {
@@ -82,6 +93,13 @@ namespace en
                     .index  = 2U,
                     .buffer = m_GlobalMaterialsBuffer->GetHandle(),
                     .size   = m_GlobalMaterialsBuffer->GetSize(),
+                    .type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
+                },
+                DescriptorInfo::BufferInfo {
+                    .index  = 3U,
+                    .buffer = m_LightsBuffer->GetHandle(),
+                    .size   = m_LightsBuffer->GetSize(),
                     .type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
                 },
@@ -204,7 +222,7 @@ namespace en
         m_DirectionalLights.erase(m_DirectionalLights.begin() + index);
     }
 
-    void Scene::UpdateSceneObjects()
+    void Scene::UpdateScene()
     {
         std::vector<uint32_t> changedMatrixIds{};
         changedMatrixIds.reserve(64);
@@ -241,7 +259,137 @@ namespace en
             }
         }
 
+        bool lightsBufferChanged = false;
+
+        uint32_t oldActivePointLights = m_GPULights.activePointLights;
+        uint32_t oldActiveSpotLights = m_GPULights.activeSpotLights;
+        uint32_t oldActiveDirLights = m_GPULights.activeDirLights;
+
+        m_GPULights.activePointLights = 0U;
+        m_GPULights.activeSpotLights = 0U;
+        m_GPULights.activeDirLights = 0U;
+
+        if (m_GPULights.ambientLight != m_AmbientColor)
+        {
+            m_GPULights.ambientLight = m_AmbientColor;
+            lightsBufferChanged = true;
+        }
+
+        for (auto& l : m_PointLights)
+            l.m_ShadowmapIndex = -1;
+        for (auto& l : m_SpotLights)
+            l.m_ShadowmapIndex = -1;
+        for (auto& l : m_DirectionalLights)
+            l.m_ShadowmapIndex = -1;
+
+        for (const auto& light : m_PointLights)
+        {
+            PointLight::Buffer& buffer = m_GPULights.pointLights[m_GPULights.activePointLights];
+
+            glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+            float     lightRad = light.m_Radius * (float)light.m_Active;
+
+            if (lightCol == glm::vec3(0.0) || lightRad <= 0.0f)
+                continue;
+
+            if (buffer.position != light.m_Position ||
+                buffer.color != lightCol ||
+                buffer.radius != lightRad ||
+                buffer.shadowmapIndex != light.m_ShadowmapIndex ||
+                buffer.shadowSoftness != light.m_ShadowSoftness ||
+                buffer.pcfSampleRate != light.m_PCFSampleRate ||
+                buffer.bias != light.m_ShadowBias
+                ) lightsBufferChanged = true;
+
+            buffer.position = light.m_Position;
+            buffer.color = lightCol;
+            buffer.radius = lightRad;
+            buffer.shadowmapIndex = light.m_ShadowmapIndex;
+            buffer.shadowSoftness = light.m_ShadowSoftness;
+            buffer.pcfSampleRate = light.m_PCFSampleRate;
+            buffer.bias = light.m_ShadowBias;
+
+            m_GPULights.activePointLights++;
+        }
+        for (const auto& light : m_SpotLights)
+        {
+            SpotLight::Buffer& buffer = m_GPULights.spotLights[m_GPULights.activeSpotLights];
+
+            glm::vec3 lightColor = light.m_Color * (float)light.m_Active * light.m_Intensity;
+
+            if (light.m_Range == 0.0f || lightColor == glm::vec3(0.0) || light.m_OuterCutoff == 0.0f)
+                continue;
+
+            if (buffer.color != lightColor ||
+                buffer.range != light.m_Range ||
+                buffer.outerCutoff != light.m_OuterCutoff ||
+                buffer.position != light.m_Position ||
+                buffer.innerCutoff != light.m_InnerCutoff ||
+                buffer.direction != glm::normalize(light.m_Direction) ||
+                buffer.shadowmapIndex != light.m_ShadowmapIndex ||
+                buffer.shadowSoftness != light.m_ShadowSoftness ||
+                buffer.pcfSampleRate != light.m_PCFSampleRate ||
+                buffer.bias != light.m_ShadowBias
+                ) lightsBufferChanged = true;
+
+            buffer.color = lightColor;
+            buffer.range = light.m_Range;
+            buffer.outerCutoff = light.m_OuterCutoff;
+            buffer.position = light.m_Position;
+            buffer.innerCutoff = light.m_InnerCutoff;
+            buffer.direction = glm::normalize(light.m_Direction);
+            buffer.shadowmapIndex = light.m_ShadowmapIndex;
+            buffer.shadowSoftness = light.m_ShadowSoftness;
+            buffer.pcfSampleRate = light.m_PCFSampleRate;
+            buffer.bias = light.m_ShadowBias;
+
+            m_GPULights.activeSpotLights++;
+        }
+        for (uint32_t i = 0U; const auto & light : m_DirectionalLights)
+        {
+            DirectionalLight::Buffer& buffer = m_GPULights.dirLights[m_GPULights.activeDirLights];
+
+            glm::vec3 lightCol = light.m_Color * (float)light.m_Active * light.m_Intensity;
+
+            if (lightCol == glm::vec3(0.0f))
+                continue;
+
+            if (buffer.color != lightCol ||
+                buffer.shadowmapIndex != light.m_ShadowmapIndex ||
+                buffer.direction != glm::normalize(light.m_Direction) ||
+                buffer.shadowSoftness != light.m_ShadowSoftness ||
+                buffer.pcfSampleRate != light.m_PCFSampleRate ||
+                buffer.bias != light.m_ShadowBias
+                ) lightsBufferChanged = true;
+
+            buffer.color = lightCol;
+            buffer.shadowmapIndex = light.m_ShadowmapIndex;
+            buffer.direction = glm::normalize(light.m_Direction);
+            buffer.shadowSoftness = light.m_ShadowSoftness;
+            buffer.pcfSampleRate = light.m_PCFSampleRate;
+            buffer.bias = light.m_ShadowBias;
+
+            m_GPULights.activeDirLights++;
+        }
+
+        if (oldActivePointLights != m_GPULights.activePointLights ||
+            oldActiveSpotLights != m_GPULights.activeSpotLights ||
+            oldActiveDirLights != m_GPULights.activeDirLights
+            ) lightsBufferChanged = true;
+
+        // Reset last (point/spot)lights for clustered rendering
+        m_GPULights.pointLights[m_GPULights.activePointLights].color = glm::vec3(0.0f);
+        m_GPULights.pointLights[m_GPULights.activePointLights].radius = 0.0f;
+
+        m_GPULights.spotLights[m_GPULights.activeSpotLights].color = glm::vec3(0.0f);
+        m_GPULights.spotLights[m_GPULights.activeSpotLights].range = 0.0f;
+        m_GPULights.spotLights[m_GPULights.activeSpotLights].direction = glm::vec3(0.0f);
+        m_GPULights.spotLights[m_GPULights.activeSpotLights].outerCutoff = 0.0f;
+
         UpdateMatrixBuffer(changedMatrixIds);
+
+        if (lightsBufferChanged)
+            UpdateLightsBuffer();
     }
     void Scene::UpdateRegisteredAssets()
     {
@@ -257,14 +405,29 @@ namespace en
             {
                 gpuMat.color = cpuMat->m_Color;
 
-                gpuMat.metalnessVal   = cpuMat->GetMetalness();
-                gpuMat.roughnessVal   = cpuMat->GetRoughness();
-                gpuMat.normalStrength = cpuMat->GetNormalStrength();
+                const std::string& albedoName    = cpuMat->GetAlbedoTexture()   ->GetName();
+                const std::string& roughnessName = cpuMat->GetRoughnessTexture()->GetName();
+                const std::string& metalnessName = cpuMat->GetMetalnessTexture()->GetName();
+                const std::string& normalName    = cpuMat->GetNormalTexture()   ->GetName();
+                const std::string& defaultName   = AssetManager::Get().GetWhiteNonSRGBTexture()->GetName();
 
-                cpuMat->m_AlbedoIndex    = m_RegisteredTextures.at(cpuMat->GetAlbedoTexture()   ->GetName());
-                cpuMat->m_RoughnessIndex = m_RegisteredTextures.at(cpuMat->GetRoughnessTexture()->GetName());
-                cpuMat->m_MetalnessIndex = m_RegisteredTextures.at(cpuMat->GetMetalnessTexture()->GetName());
-                cpuMat->m_NormalIndex    = m_RegisteredTextures.at(cpuMat->GetNormalTexture()   ->GetName());
+                gpuMat.metalnessVal   = metalnessName == defaultName ? cpuMat->GetMetalness()      : 1.0f;
+                gpuMat.roughnessVal   = roughnessName == defaultName ? cpuMat->GetRoughness()      : 1.0f;
+                gpuMat.normalStrength = normalName    != defaultName ? cpuMat->GetNormalStrength() : 0.0f;
+
+                if (!m_RegisteredTextures.contains(albedoName))
+                    RegisterTexture(cpuMat->GetAlbedoTexture());
+                if (!m_RegisteredTextures.contains(roughnessName))
+                    RegisterTexture(cpuMat->GetRoughnessTexture());
+                if (!m_RegisteredTextures.contains(metalnessName))
+                    RegisterTexture(cpuMat->GetMetalnessTexture());
+                if (!m_RegisteredTextures.contains(normalName))
+                    RegisterTexture(cpuMat->GetNormalTexture());
+
+                cpuMat->m_AlbedoIndex    = m_RegisteredTextures.at(albedoName   );
+                cpuMat->m_RoughnessIndex = m_RegisteredTextures.at(roughnessName);
+                cpuMat->m_MetalnessIndex = m_RegisteredTextures.at(metalnessName);
+                cpuMat->m_NormalIndex    = m_RegisteredTextures.at(normalName   );
 
                 gpuMat.albedoId    = cpuMat->GetAlbedoIndex();
                 gpuMat.roughnessId = cpuMat->GetRoughnessIndex();
@@ -309,6 +472,11 @@ namespace en
                 },
                 DescriptorInfo::BufferInfo {
                     .index = 2U,
+                    .type  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                },
+                DescriptorInfo::BufferInfo {
+                    .index = 3U,
                     .type  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                 },
@@ -433,6 +601,12 @@ namespace en
             }
         }
     }
+    void Scene::UpdateLightsBuffer()
+    {
+        EN_LOG("TOTAL LIGHTS UPDATE");
+        m_LightsStagingBuffer->MapMemory(&m_GPULights, sizeof(GPULights));
+        m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(GPULights));
+    }
     void Scene::UpdateGlobalDescriptor()
     {
         std::vector<DescriptorInfo::ImageInfoContent> imageViews(MAX_TEXTURES);
@@ -474,6 +648,13 @@ namespace en
                     .index  = 2U,
                     .buffer = m_GlobalMaterialsBuffer->GetHandle(),
                     .size   = m_GlobalMaterialsBuffer->GetSize(),
+                    .type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
+                },
+                DescriptorInfo::BufferInfo {
+                    .index  = 3U,
+                    .buffer = m_LightsBuffer->GetHandle(),
+                    .size   = m_LightsBuffer->GetSize(),
                     .type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
                 },

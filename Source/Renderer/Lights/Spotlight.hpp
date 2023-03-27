@@ -9,7 +9,7 @@ namespace en
 {
 	class SpotLight : public SceneMember
 	{
-	friend class Renderer;
+	friend class Scene;
 
 	public:
 		constexpr SpotLight(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float innerCutoff, float outerCutoff, float range, float intensity, bool active)
@@ -65,7 +65,7 @@ namespace en
 			glm::vec3 color = glm::vec3(1.0);
 			float range = 8.0f;
 
-			glm::mat4 lightMat = glm::mat4(1.0);
+			//glm::mat4 lightMat = glm::mat4(1.0);
 
 			int shadowmapIndex = -1;
 			float shadowSoftness = 1.0;

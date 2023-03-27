@@ -37,7 +37,7 @@ namespace en
 		DirectionalLight* CreateDirectionalLight(const glm::vec3 direction, const glm::vec3 color = glm::vec3(1.0f), const float intensity = 2.5f, const bool active = true);
 		void DeleteDirectionalLight(const uint32_t index);
 
-		void UpdateSceneObjects();
+		void UpdateScene();
 		void UpdateRegisteredAssets();
 
 		static VkDescriptorSetLayout GetGlobalDescriptorLayout();
@@ -81,10 +81,21 @@ namespace en
 		void UpdateMatrixBuffer		 (const std::vector<uint32_t>& changedMatrixIds);
 		void UpdateMaterialBuffer	 (const std::vector<uint32_t>& changedMaterialIds);
 		void UpdateGlobalDescriptor();
+		void UpdateLightsBuffer();
 
-		std::vector<PointLight::Buffer		> m_GPUPointLights;
-		std::vector<SpotLight::Buffer		> m_GPUSpotLights;
-		std::vector<DirectionalLight::Buffer> m_GPUDirLights;
+		struct GPULights {
+			std::array<PointLight::Buffer	   , MAX_POINT_LIGHTS> pointLights{};
+			std::array<SpotLight::Buffer	   , MAX_SPOT_LIGHTS> spotLights{};
+			std::array<DirectionalLight::Buffer, MAX_DIR_LIGHTS> dirLights{};
+
+			uint32_t activePointLights = 0U;
+			uint32_t activeSpotLights = 0U;
+			uint32_t activeDirLights = 0U;
+			uint32_t _padding0{};
+
+			glm::vec3 ambientLight = glm::vec3(0.0f);
+			uint32_t _padding1{};
+		} m_GPULights;
 
 		std::vector<glm::mat4  > m_Matrices;
 		std::vector<GPUMaterial> m_GPUMaterials;
@@ -95,9 +106,8 @@ namespace en
 		std::unordered_map<std::string, uint32_t> m_RegisteredTextures;
 		std::unordered_map<std::string, uint32_t> m_RegisteredMaterials;
 
-		Handle<MemoryBuffer> m_PointLightsBuffer;
-		Handle<MemoryBuffer> m_SpotLightsBuffer;
-		Handle<MemoryBuffer> m_DirLightsBuffer;
+		Handle<MemoryBuffer> m_LightsBuffer;
+		Handle<MemoryBuffer> m_LightsStagingBuffer;
 
 		Handle<MemoryBuffer> m_GlobalMaterialsBuffer;
 		Handle<MemoryBuffer> m_GlobalMaterialsStagingBuffer;
