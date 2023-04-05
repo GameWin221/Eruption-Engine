@@ -28,8 +28,27 @@ namespace en
 		DestroyPerFrameData();
 	}
 
+	void Renderer::Update()
+	{
+		if(m_Scene)
+			m_Scene->UpdateSceneCPU();
+	}
+
 	void Renderer::PreRender()
 	{
+		if (m_Scene)
+		{
+			if (m_Scene->m_GlobalDescriptorChanged)
+				ResetAllFrames();
+			else
+				WaitForActiveFrame();
+		}
+		else 
+			WaitForActiveFrame();
+
+		if (m_Scene)
+			m_Scene->UpdateSceneGPU();
+
 		m_CameraBuffer->UpdateBuffer(m_FrameIndex, m_Scene->m_MainCamera, m_Swapchain->GetExtent(), m_DebugMode);
 		m_CameraBuffer->MapBuffer(m_FrameIndex);
 	}
@@ -56,9 +75,26 @@ namespace en
 		m_Scene = nullptr;
 	}
 
-	void Renderer::WaitForGPUIdle()
+	void Renderer::WaitForActiveFrame()
 	{
-		vkWaitForFences(g_Ctx->m_LogicalDevice, 1U, &m_Frames[m_FrameIndex].submitFence, VK_TRUE, UINT64_MAX);
+		vkWaitForFences(
+			g_Ctx->m_LogicalDevice, 
+			1U, &m_Frames[m_FrameIndex].submitFence, 
+			VK_TRUE, UINT64_MAX
+		);
+	}
+	void Renderer::ResetAllFrames()
+	{
+		for (const auto& frame : m_Frames)
+		{
+			vkWaitForFences(
+				g_Ctx->m_LogicalDevice,
+				1U, &frame.submitFence,
+				VK_TRUE, UINT64_MAX
+			);
+
+			vkResetCommandBuffer(frame.commandBuffer, 0U);
+		}
 	}
 
 	void Renderer::MeasureFrameTime()
@@ -116,10 +152,14 @@ namespace en
 
 			for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 			{
+				if(!sceneObject->m_Active || !sceneObject->m_Mesh->m_Active) continue;
+
 				m_Pipeline->PushConstants(&sceneObject->GetMatrixIndex(), sizeof(uint32_t), 0U, VK_SHADER_STAGE_VERTEX_BIT);
 
 				for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
 				{
+					if (!subMesh.m_Active) continue;
+
 					m_Pipeline->PushConstants(&subMesh.GetMaterialIndex(), sizeof(uint32_t), sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
 
 					m_Pipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
@@ -220,8 +260,7 @@ namespace en
 
 		CreateForwardPass();
 
-		DestroyImGuiContext();
-		CreateImGuiContext();
+		CreateImGuiRenderPass();
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain->m_ImageViews.size());
 
@@ -239,14 +278,13 @@ namespace en
 	{
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
-		DestroyImGuiContext();
 		DestroyPerFrameData();
 
-		CreateBackend();
+		CreateBackend(false);
 
 		m_ReloadQueued = false;
 	}
-	void Renderer::CreateBackend()
+	void Renderer::CreateBackend(bool newImGui)
 	{
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
@@ -277,11 +315,14 @@ namespace en
 
 		EN_SUCCESS("Created the forward pipeline!")
 
+		if (newImGui)
 			CreateImGuiContext();
-
+		else
+			CreateImGuiRenderPass();
+		
 		EN_SUCCESS("Created the ImGui context!")
 
-			EN_SUCCESS("Created the renderer Vulkan backend");
+		EN_SUCCESS("Created the renderer Vulkan backend");
 
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 	}
@@ -430,12 +471,8 @@ namespace en
 		EN_ERROR("ImGui Error:" + err);
 	}
 
-	void Renderer::CreateImGuiContext()
+	void Renderer::CreateImGuiRenderPass()
 	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGui::StyleColorsDark();
-
 		std::vector<VkSubpassDependency> dependencies{
 			VkSubpassDependency {
 				.srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -454,18 +491,26 @@ namespace en
 				.format = m_Swapchain->GetFormat(),
 
 				.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				.refLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 
-				.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 
-				.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			}
 		};
 
 		m_ImGuiRenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments, RenderPass::Attachment{}, dependencies);
+	}
+	void Renderer::CreateImGuiContext()
+	{
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGui::StyleColorsDark();
+
+		CreateImGuiRenderPass();
 
 		ImGui_ImplGlfw_InitForVulkan(Window::Get().m_NativeHandle, true);
 

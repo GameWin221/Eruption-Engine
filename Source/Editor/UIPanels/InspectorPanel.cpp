@@ -53,12 +53,13 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Properties", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::InputText("Name: ", name, 86);
+			ImGui::Text("Name: %s", name);
+			//ImGui::InputText("Name: ", name, 86);
 
-			ImGui::SameLine();
+			//ImGui::SameLine();
 
-			if (ImGui::Button("Save Name"))
-				m_Renderer->GetScene()->RenameSceneObject(chosenSceneObject->GetName(), name);
+			//if (ImGui::Button("Save Name"))
+				//m_Renderer->GetScene()->RenameSceneObject(chosenSceneObject->GetName(), name);
 
 			SPACE();
 

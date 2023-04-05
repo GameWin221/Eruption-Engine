@@ -55,9 +55,9 @@ namespace en
 		bool ContainsTexture (const std::string& nameID) { return m_Textures .contains(nameID); };
 		bool ContainsMaterial(const std::string& nameID) { return m_Materials.contains(nameID); };
 
-		void RenameMesh    (const std::string& oldNameID, const std::string& newNameID);
-		void RenameTexture (const std::string& oldNameID, const std::string& newNameID);
-		void RenameMaterial(const std::string& oldNameID, const std::string& newNameID);
+		//void RenameMesh    (const std::string& oldNameID, const std::string& newNameID);
+		//void RenameTexture (const std::string& oldNameID, const std::string& newNameID);
+		//void RenameMaterial(const std::string& oldNameID, const std::string& newNameID);
 
 		Handle<Mesh>     GetMesh    (const std::string& nameID);
 		Handle<Texture>  GetTexture (const std::string& nameID);

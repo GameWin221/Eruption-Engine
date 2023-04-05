@@ -30,7 +30,7 @@ namespace en
 
 		VkDescriptorPoolCreateInfo poolInfo{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
 			.maxSets = poolSize * poolCount,
 			.poolSizeCount = poolCount,
 			.pPoolSizes = poolSizes.data()
@@ -84,10 +84,21 @@ namespace en
 				};
 			}
 
-			VkDescriptorSetLayoutCreateInfo layoutInfo{
+			std::vector<VkDescriptorBindingFlags> flags{};
+			flags.resize(bindings.size(), descriptorInfo.bindingFlags);
+
+			VkDescriptorSetLayoutBindingFlagsCreateInfo flagsCreateInfo {
+				.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+				.bindingCount  = static_cast<uint32_t>(flags.size()),
+				.pBindingFlags = flags.data(),
+			};
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo {
 				.sType		  = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+				.pNext		  = &flagsCreateInfo,
+				.flags		  = descriptorInfo.layoutFlags,
 				.bindingCount = static_cast<uint32_t>(bindings.size()),
-				.pBindings	  = bindings.data()
+				.pBindings	  = bindings.data(),
 			};
 
 			if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &newLayout) != VK_SUCCESS)

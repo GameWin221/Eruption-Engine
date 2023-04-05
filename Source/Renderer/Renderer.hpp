@@ -48,10 +48,9 @@ namespace en
 
 		void SetVSync(bool vSync);
 
-		void WaitForGPUIdle();
-
 		void ReloadBackend();
 
+		void Update();
 		void PreRender();
 		void Render();
 
@@ -94,6 +93,9 @@ namespace en
 
 		double m_FrameTime{};
 
+		void WaitForActiveFrame();
+		void ResetAllFrames();
+
 		void MeasureFrameTime();
 		void BeginRender();
 		void ForwardPass();
@@ -107,13 +109,14 @@ namespace en
 		void RecreateFramebuffer();
 		void ReloadBackendImpl();
 
-		void CreateBackend();
+		void CreateBackend(bool newImGui = true);
 
 		void CreateDepthBuffer();
 
 		void CreatePerFrameData();
 		void DestroyPerFrameData();
 
+		void CreateImGuiRenderPass();
 		void CreateImGuiContext();
 		void DestroyImGuiContext();
 	};

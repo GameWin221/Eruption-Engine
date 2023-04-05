@@ -57,7 +57,7 @@ namespace en
     }
     void MemoryBuffer::CopyTo(Handle<MemoryBuffer> dstBuffer, VkDeviceSize sizeBytes, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkCommandBuffer cmd)
     {
-        CopyTo(dstBuffer->GetHandle(), m_BufferSize, srcOffset, dstOffset, cmd);
+        CopyTo(dstBuffer->GetHandle(), sizeBytes, srcOffset, dstOffset, cmd);
     }
     void MemoryBuffer::CopyTo(Handle<Image> dstImage, VkCommandBuffer cmd)
     {

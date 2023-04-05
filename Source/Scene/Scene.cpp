@@ -2,11 +2,15 @@
 
 namespace en
 {
-    constexpr float MATRICES_UPDATE_THRESHOLD = 0.25f;
+    constexpr float MATRICES_UPDATE_THRESHOLD  = 0.25f;
     constexpr float MATERIALS_UPDATE_THRESHOLD = 0.25f;
 
-    constexpr float MATRICES_OVERFLOW_MULTIPLIER = 1.25f;
-    constexpr float MATERIALS_OVERFLOW_MULTIPLIER = 1.25f;
+    constexpr float POINT_LIGHTS_UPDATE_THRESHOLD = 0.25f;
+    constexpr float SPOT_LIGHTS_UPDATE_THRESHOLD  = 0.25f;
+    constexpr float DIR_LIGHTS_UPDATE_THRESHOLD   = 0.25f;
+
+    constexpr float MATRICES_OVERFLOW_MULTIPLIER = 1.2f;
+    constexpr float MATERIALS_OVERFLOW_MULTIPLIER = 1.2f;
 
     Scene::Scene()
     {
@@ -14,8 +18,11 @@ namespace en
         m_PointLights      .reserve(64);
         m_SpotLights       .reserve(64);
         m_DirectionalLights.reserve(64);
-        m_Matrices         .reserve(64);
-        m_GPUMaterials     .reserve(64);
+
+        m_Matrices    .resize(64);
+        m_Textures    .resize(64);
+        m_Materials   .resize(64);
+        m_GPUMaterials.resize(64);
 
         m_GlobalMatricesBuffer = MakeHandle<MemoryBuffer>(
             256U * sizeof(glm::mat4),
@@ -24,28 +31,18 @@ namespace en
         );
         m_GlobalMatricesStagingBuffer = MakeHandle<MemoryBuffer>(
             m_GlobalMatricesBuffer->GetSize(),
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VMA_MEMORY_USAGE_CPU_TO_GPU
-        );
-        m_SingleMatrixStagingBuffer = MakeHandle<MemoryBuffer>(
-            sizeof(glm::mat4),
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VMA_MEMORY_USAGE_CPU_TO_GPU
         );
 
         m_GlobalMaterialsBuffer = MakeHandle<MemoryBuffer>(
-            128U * sizeof(GPUMaterial),
+            256U * sizeof(GPUMaterial),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VMA_MEMORY_USAGE_GPU_ONLY
         );
         m_GlobalMaterialsStagingBuffer = MakeHandle<MemoryBuffer>(
             m_GlobalMaterialsBuffer->GetSize(),
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VMA_MEMORY_USAGE_CPU_TO_GPU
-        );
-        m_SingleMaterialStagingBuffer = MakeHandle<MemoryBuffer>(
-            sizeof(GPUMaterial),
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VMA_MEMORY_USAGE_CPU_TO_GPU
         );
 
@@ -111,23 +108,25 @@ namespace en
     
     Handle<SceneObject> Scene::CreateSceneObject(const std::string& name, Handle<Mesh> mesh)
     {
-        if (m_SceneObjects.contains(name))
+        std::string finalName = name;
+
+        if (m_SceneObjects.contains(finalName))
         {
             EN_WARN("Scene::CreateSceneObject() - Failed to create a SceneObject because a SceneObject called \"" + name + "\" already exists!");
             return nullptr;
         }
 
-        m_SceneObjects[name] = MakeHandle<SceneObject>(mesh, name);
+        m_SceneObjects[finalName] = MakeHandle<SceneObject>(mesh, finalName);
         
-        auto& newSceneObject = m_SceneObjects.at(name);
+        auto& newSceneObject = m_SceneObjects.at(finalName);
 
         newSceneObject->m_MatrixIndex = RegisterMatrix();
         for (auto& subMesh : newSceneObject->m_Mesh->m_SubMeshes)
             subMesh.m_MaterialIndex = RegisterMaterial(subMesh.m_Material);
 
-        EN_LOG("Created a SceneObject called \"" + name + "\"");
+        EN_LOG("Created a SceneObject called \"" + finalName + "\"");
 
-        return m_SceneObjects.at(name);
+        return m_SceneObjects.at(finalName);
     }
     void Scene::DeleteSceneObject(const std::string& name)
     {
@@ -139,6 +138,7 @@ namespace en
 
         EN_LOG("Deleted a SceneObject called \"" + name + "\"");
 
+        DeregisterMatrix(m_SceneObjects.at(name)->GetMatrixIndex());
         m_SceneObjects.erase(name);
     }
 
@@ -153,7 +153,7 @@ namespace en
 
         return m_SceneObjects.at(name);
     }
-
+    /*
     void Scene::RenameSceneObject(const std::string& oldName, const std::string& newName)
     {
         if (m_SceneObjects.contains(newName))
@@ -170,7 +170,7 @@ namespace en
                 EN_WARN("Failed to rename " + oldName + " because a SceneObject with that name doesn't exist!")
         }
     }
-
+    */
     PointLight* Scene::CreatePointLight(const glm::vec3 position, const glm::vec3 color, const float intensity, const float radius, const bool active)
     {
         if (m_PointLights.size() + 1 >= MAX_POINT_LIGHTS)
@@ -222,10 +222,10 @@ namespace en
         m_DirectionalLights.erase(m_DirectionalLights.begin() + index);
     }
 
-    void Scene::UpdateScene()
+    void Scene::UpdateSceneCPU()
     {
-        std::vector<uint32_t> changedMatrixIds{};
-        changedMatrixIds.reserve(64);
+        m_ChangedMatrixIDs.clear();
+        m_ChangedMaterialIDs.clear();
 
         for (auto& [name, sceneObject] : m_SceneObjects)
         {
@@ -233,7 +233,11 @@ namespace en
             {
                 if (subMesh.m_MaterialChanged)
                 {
-                    subMesh.m_MaterialIndex = m_RegisteredMaterials.at(subMesh.m_Material->m_Name);
+                    if (m_RegisteredMaterials.contains(subMesh.m_Material->m_Name))
+                        subMesh.m_MaterialIndex = m_RegisteredMaterials.at(subMesh.m_Material->m_Name);
+                    else
+                        subMesh.m_MaterialIndex = RegisterMaterial(subMesh.m_Material);
+
                     subMesh.m_MaterialChanged = false;
                 }  
             }
@@ -254,12 +258,59 @@ namespace en
 
                 m_Matrices[changedMatrixId] = newMatrix;
 
-                changedMatrixIds.push_back(changedMatrixId);
+                m_ChangedMatrixIDs.push_back(changedMatrixId);
                 sceneObject->m_TransformChanged = false;
             }
         }
 
-        bool lightsBufferChanged = false;
+        for (const auto& i : m_OccupiedMaterials)
+        {
+            auto& cpuMat = m_Materials[i];
+            auto& gpuMat = m_GPUMaterials[i];
+
+            if (cpuMat->m_Changed)
+            {
+                gpuMat.color = cpuMat->m_Color;
+
+                const std::string& albedoName = cpuMat->GetAlbedoTexture()->GetName();
+                const std::string& roughnessName = cpuMat->GetRoughnessTexture()->GetName();
+                const std::string& metalnessName = cpuMat->GetMetalnessTexture()->GetName();
+                const std::string& normalName = cpuMat->GetNormalTexture()->GetName();
+                const std::string& defaultSRGBName = AssetManager::Get().GetWhiteSRGBTexture()->GetName();
+                const std::string& defaultNonSRGBName = AssetManager::Get().GetWhiteNonSRGBTexture()->GetName();
+
+                gpuMat.metalnessVal = metalnessName == defaultNonSRGBName ? cpuMat->GetMetalness() : 1.0f;
+                gpuMat.roughnessVal = roughnessName == defaultNonSRGBName ? cpuMat->GetRoughness() : 1.0f;
+                gpuMat.normalStrength = normalName != defaultNonSRGBName ? cpuMat->GetNormalStrength() : 0.0f;
+
+                if (!m_RegisteredTextures.contains(albedoName))
+                    RegisterTexture(cpuMat->GetAlbedoTexture());
+                if (!m_RegisteredTextures.contains(roughnessName))
+                    RegisterTexture(cpuMat->GetRoughnessTexture());
+                if (!m_RegisteredTextures.contains(metalnessName))
+                    RegisterTexture(cpuMat->GetMetalnessTexture());
+                if (!m_RegisteredTextures.contains(normalName))
+                    RegisterTexture(cpuMat->GetNormalTexture());
+
+                cpuMat->m_AlbedoIndex = m_RegisteredTextures.at(albedoName);
+                cpuMat->m_RoughnessIndex = m_RegisteredTextures.at(roughnessName);
+                cpuMat->m_MetalnessIndex = m_RegisteredTextures.at(metalnessName);
+                cpuMat->m_NormalIndex = m_RegisteredTextures.at(normalName);
+
+                gpuMat.albedoId = cpuMat->GetAlbedoIndex();
+                gpuMat.roughnessId = cpuMat->GetRoughnessIndex();
+                gpuMat.metalnessId = cpuMat->GetMetalnessIndex();
+                gpuMat.normalId = cpuMat->GetNormalIndex();
+
+                m_ChangedMaterialIDs.push_back(i);
+                cpuMat->m_Changed = false;
+            }
+        }
+
+        m_SceneLightingChanged = false;
+        m_ChangedPointLightsIDs.clear();
+        m_ChangedSpotLightsIDs .clear();
+        m_ChangedDirLightsIDs  .clear();
 
         uint32_t oldActivePointLights = m_GPULights.activePointLights;
         uint32_t oldActiveSpotLights = m_GPULights.activeSpotLights;
@@ -272,7 +323,7 @@ namespace en
         if (m_GPULights.ambientLight != m_AmbientColor)
         {
             m_GPULights.ambientLight = m_AmbientColor;
-            lightsBufferChanged = true;
+            m_SceneLightingChanged = true;
         }
 
         for (auto& l : m_PointLights)
@@ -299,7 +350,7 @@ namespace en
                 buffer.shadowSoftness != light.m_ShadowSoftness ||
                 buffer.pcfSampleRate != light.m_PCFSampleRate ||
                 buffer.bias != light.m_ShadowBias
-                ) lightsBufferChanged = true;
+                ) m_ChangedPointLightsIDs.push_back(m_GPULights.activePointLights);
 
             buffer.position = light.m_Position;
             buffer.color = lightCol;
@@ -330,7 +381,7 @@ namespace en
                 buffer.shadowSoftness != light.m_ShadowSoftness ||
                 buffer.pcfSampleRate != light.m_PCFSampleRate ||
                 buffer.bias != light.m_ShadowBias
-                ) lightsBufferChanged = true;
+                ) m_ChangedSpotLightsIDs.push_back(m_GPULights.activeSpotLights);
 
             buffer.color = lightColor;
             buffer.range = light.m_Range;
@@ -360,7 +411,7 @@ namespace en
                 buffer.shadowSoftness != light.m_ShadowSoftness ||
                 buffer.pcfSampleRate != light.m_PCFSampleRate ||
                 buffer.bias != light.m_ShadowBias
-                ) lightsBufferChanged = true;
+                ) m_ChangedDirLightsIDs.push_back(m_GPULights.activeDirLights);
 
             buffer.color = lightCol;
             buffer.shadowmapIndex = light.m_ShadowmapIndex;
@@ -375,7 +426,7 @@ namespace en
         if (oldActivePointLights != m_GPULights.activePointLights ||
             oldActiveSpotLights != m_GPULights.activeSpotLights ||
             oldActiveDirLights != m_GPULights.activeDirLights
-            ) lightsBufferChanged = true;
+            ) m_SceneLightingChanged = true;
 
         // Reset last (point/spot)lights for clustered rendering
         m_GPULights.pointLights[m_GPULights.activePointLights].color = glm::vec3(0.0f);
@@ -385,66 +436,19 @@ namespace en
         m_GPULights.spotLights[m_GPULights.activeSpotLights].range = 0.0f;
         m_GPULights.spotLights[m_GPULights.activeSpotLights].direction = glm::vec3(0.0f);
         m_GPULights.spotLights[m_GPULights.activeSpotLights].outerCutoff = 0.0f;
-
-        UpdateMatrixBuffer(changedMatrixIds);
-
-        if (lightsBufferChanged)
-            UpdateLightsBuffer();
     }
-    void Scene::UpdateRegisteredAssets()
+    void Scene::UpdateSceneGPU()
     {
-        std::vector<uint32_t> changedMaterialIds{};
-        changedMaterialIds.reserve(64);
+        UpdateMatrixBuffer(m_ChangedMatrixIDs);
 
-        for (uint32_t i = 0U; i < m_Materials.size(); i++)
-        {
-            auto& cpuMat = m_Materials[i];
-            auto& gpuMat = m_GPUMaterials[i];
+        UpdateLightsBuffer(m_ChangedPointLightsIDs, m_ChangedSpotLightsIDs, m_ChangedDirLightsIDs);
 
-            if (cpuMat->m_Changed)
-            {
-                gpuMat.color = cpuMat->m_Color;
+        UpdateMaterialBuffer(m_ChangedMaterialIDs);
 
-                const std::string& albedoName    = cpuMat->GetAlbedoTexture()   ->GetName();
-                const std::string& roughnessName = cpuMat->GetRoughnessTexture()->GetName();
-                const std::string& metalnessName = cpuMat->GetMetalnessTexture()->GetName();
-                const std::string& normalName    = cpuMat->GetNormalTexture()   ->GetName();
-                const std::string& defaultName   = AssetManager::Get().GetWhiteNonSRGBTexture()->GetName();
-
-                gpuMat.metalnessVal   = metalnessName == defaultName ? cpuMat->GetMetalness()      : 1.0f;
-                gpuMat.roughnessVal   = roughnessName == defaultName ? cpuMat->GetRoughness()      : 1.0f;
-                gpuMat.normalStrength = normalName    != defaultName ? cpuMat->GetNormalStrength() : 0.0f;
-
-                if (!m_RegisteredTextures.contains(albedoName))
-                    RegisterTexture(cpuMat->GetAlbedoTexture());
-                if (!m_RegisteredTextures.contains(roughnessName))
-                    RegisterTexture(cpuMat->GetRoughnessTexture());
-                if (!m_RegisteredTextures.contains(metalnessName))
-                    RegisterTexture(cpuMat->GetMetalnessTexture());
-                if (!m_RegisteredTextures.contains(normalName))
-                    RegisterTexture(cpuMat->GetNormalTexture());
-
-                cpuMat->m_AlbedoIndex    = m_RegisteredTextures.at(albedoName   );
-                cpuMat->m_RoughnessIndex = m_RegisteredTextures.at(roughnessName);
-                cpuMat->m_MetalnessIndex = m_RegisteredTextures.at(metalnessName);
-                cpuMat->m_NormalIndex    = m_RegisteredTextures.at(normalName   );
-
-                gpuMat.albedoId    = cpuMat->GetAlbedoIndex();
-                gpuMat.roughnessId = cpuMat->GetRoughnessIndex();
-                gpuMat.metalnessId = cpuMat->GetMetalnessIndex();
-                gpuMat.normalId    = cpuMat->GetNormalIndex();
-
-                changedMaterialIds.push_back(i);
-                cpuMat->m_Changed = false;
-            }
-        }
-
-        UpdateMaterialBuffer(changedMaterialIds);
-    
-        if (m_TexturesChanged)
+        if (m_GlobalDescriptorChanged)
         {
             UpdateGlobalDescriptor();
-            m_TexturesChanged = false;
+            m_GlobalDescriptorChanged = false;
         }
     }
     VkDescriptorSetLayout Scene::GetGlobalDescriptorLayout()
@@ -481,27 +485,50 @@ namespace en
                     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                 },
             },
+            //0,
+            //VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT
         });
     }
 
     uint32_t Scene::RegisterMatrix(const glm::mat4& matrix)
     {
-        m_Matrices.emplace_back(matrix);
-        return static_cast<uint32_t>(m_Matrices.size()) - 1U;
+        uint32_t index = 0U;
+        while (m_OccupiedMatrices.contains(index))
+            index++;
+
+        if (index > m_Matrices.size() - 1)
+            m_Matrices.resize(m_Matrices.size() * 2);
+
+        m_OccupiedMatrices.insert(index);
+        m_Matrices[index] = matrix;
+        
+        return index;
     }
     uint32_t Scene::RegisterMaterial(Handle<Material> material)
     {
         if (!m_RegisteredMaterials.contains(material->GetName()))
         {
+            uint32_t index = 0U;
+            while (m_OccupiedMaterials.contains(index))
+                index++;
+
+            if (index > m_Materials.size() - 1)
+            {
+                m_Materials.resize(m_Materials.size() * 2);
+                m_GPUMaterials.resize(m_GPUMaterials.size() * 2);
+            }
+
+            m_OccupiedMaterials.insert(index);
+
             material->m_AlbedoIndex    = RegisterTexture(material->GetAlbedoTexture());
             material->m_RoughnessIndex = RegisterTexture(material->GetRoughnessTexture());
             material->m_MetalnessIndex = RegisterTexture(material->GetMetalnessTexture());
             material->m_NormalIndex    = RegisterTexture(material->GetNormalTexture());
 
-            m_GPUMaterials.emplace_back(GPUMaterial{});
-            m_Materials.emplace_back(material);
+            m_GPUMaterials[index] = GPUMaterial{};
+            m_Materials[index] = material;
 
-            m_RegisteredMaterials[material->GetName()] = static_cast<uint32_t>(m_Materials.size()) - 1U;
+            m_RegisteredMaterials[material->GetName()] = index;
         }
 
         return m_RegisteredMaterials.at(material->GetName());
@@ -510,9 +537,18 @@ namespace en
     {
         if (!m_RegisteredTextures.contains(texture->GetName()))
         {
-            m_Textures.emplace_back(texture);
-            m_RegisteredTextures[texture->GetName()] = static_cast<uint32_t>(m_Textures.size()) - 1U;
-            m_TexturesChanged = true;
+            uint32_t index = 0U;
+            while (m_OccupiedTextures.contains(index))
+                index++;
+
+            if (index > m_Textures.size()-1)
+                m_Textures.resize(m_Textures.size() * 2);
+
+            m_OccupiedTextures.insert(index);
+
+            m_Textures[index] = texture;
+            m_RegisteredTextures[texture->GetName()] = index;
+            m_GlobalDescriptorChanged = true;
         }
 
         return m_RegisteredTextures.at(texture->GetName());
@@ -520,15 +556,19 @@ namespace en
 
     void Scene::DeregisterMatrix(uint32_t index)
     {
-
+        m_OccupiedMatrices.erase(index);
+        m_Matrices[index] = glm::mat4(1.0f);
     }
     void Scene::DeregisterMaterial(uint32_t index)
     {
-
+        m_RegisteredMaterials.erase(m_Materials[index]->GetName());
+        m_GPUMaterials[index] = GPUMaterial{};
+        m_Materials[index]    = nullptr;
     }
     void Scene::DeregisterTexture(uint32_t index)
     {
-
+        m_RegisteredTextures.erase(m_Textures[index]->GetName());
+        m_Textures[index] = nullptr;
     }
 
     void Scene::UpdateMatrixBuffer(const std::vector<uint32_t>& changedMatrixIds)
@@ -543,7 +583,8 @@ namespace en
             uint32_t overflow = sizeof(glm::mat4) * m_Matrices.size() - m_GlobalMatricesBuffer->GetSize();
 
             m_GlobalMatricesBuffer->Resize((m_GlobalMatricesBuffer->GetSize() + overflow)*MATRICES_OVERFLOW_MULTIPLIER);
-            UpdateGlobalDescriptor();
+            m_GlobalMatricesStagingBuffer->Resize(m_GlobalMatricesBuffer->GetSize());
+            m_GlobalDescriptorChanged = true;
         }
 
         uint32_t totalMatrices   = m_Matrices.size();
@@ -561,8 +602,8 @@ namespace en
             for (const auto& changedMatrixId : changedMatrixIds)
             {
                 EN_LOG("SINGLE MATRIX UPDATE");
-                m_SingleMatrixStagingBuffer->MapMemory(&m_Matrices[changedMatrixId], sizeof(glm::mat4));
-                m_SingleMatrixStagingBuffer->CopyTo(m_GlobalMatricesBuffer, sizeof(glm::mat4), 0U, changedMatrixId * sizeof(glm::mat4));
+                m_GlobalMatricesStagingBuffer->MapMemory(&m_Matrices[changedMatrixId], sizeof(glm::mat4));
+                m_GlobalMatricesStagingBuffer->CopyTo(m_GlobalMatricesBuffer, sizeof(glm::mat4), 0U, changedMatrixId * sizeof(glm::mat4));
             }
         }
     }
@@ -578,7 +619,8 @@ namespace en
             uint32_t overflow = sizeof(GPUMaterial) * m_Materials.size() - m_GlobalMaterialsBuffer->GetSize();
 
             m_GlobalMaterialsBuffer->Resize((m_GlobalMaterialsBuffer->GetSize() + overflow) * MATERIALS_OVERFLOW_MULTIPLIER);
-            UpdateGlobalDescriptor();
+            m_GlobalMaterialsStagingBuffer->Resize(m_GlobalMaterialsBuffer->GetSize());
+            m_GlobalDescriptorChanged = true;
         }
 
         uint32_t totalMaterials   = m_Materials.size();
@@ -596,31 +638,102 @@ namespace en
             for (const auto& changedMaterialId : changedMaterialIds)
             {
                 EN_LOG("SINGLE MATERIAL UPDATE");
-                m_SingleMaterialStagingBuffer->MapMemory(&m_GPUMaterials[changedMaterialId], sizeof(GPUMaterial));
-                m_SingleMaterialStagingBuffer->CopyTo(m_GlobalMaterialsBuffer, sizeof(GPUMaterial), 0U, changedMaterialId * sizeof(GPUMaterial));
+                m_GlobalMaterialsStagingBuffer->MapMemory(&m_GPUMaterials[changedMaterialId], sizeof(GPUMaterial));
+                m_GlobalMaterialsStagingBuffer->CopyTo(m_GlobalMaterialsBuffer, sizeof(GPUMaterial), 0U, changedMaterialId * sizeof(GPUMaterial));
             }
         }
     }
-    void Scene::UpdateLightsBuffer()
+    void Scene::UpdateLightsBuffer(const std::vector<uint32_t>& changedPointLightsIDs, const std::vector<uint32_t>& changedSpotLightsIDs, const std::vector<uint32_t>& changedDirLightsIDs)
     {
-        EN_LOG("TOTAL LIGHTS UPDATE");
-        m_LightsStagingBuffer->MapMemory(&m_GPULights, sizeof(GPULights));
-        m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(GPULights));
+        uint32_t totalPointLights = MAX_POINT_LIGHTS;
+        uint32_t changedPointLights = changedPointLightsIDs.size();
+
+        if ((float)changedPointLights / totalPointLights > POINT_LIGHTS_UPDATE_THRESHOLD)
+        {
+            EN_LOG("TOTAL POINT LIGHTS UPDATE");
+            m_LightsStagingBuffer->MapMemory(m_GPULights.pointLights.data(), sizeof(m_GPULights.pointLights));
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.pointLights), 0U,  (size_t)&m_GPULights.pointLights - (size_t)&m_GPULights);
+        }
+        else
+        {
+            for (const auto& changedId : changedPointLightsIDs)
+            {
+                EN_LOG("SINGLE POINT LIGHT UPDATE");
+                m_LightsStagingBuffer->MapMemory(&m_GPULights.pointLights[changedId], sizeof(PointLight::Buffer));
+                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(PointLight::Buffer), 0U, (size_t)&m_GPULights.pointLights[changedId] - (size_t)&m_GPULights);
+            }
+        }
+
+        uint32_t totalSpotLights = MAX_SPOT_LIGHTS;
+        uint32_t changedSpotLights = changedSpotLightsIDs.size();
+
+        if ((float)changedSpotLights / totalSpotLights > SPOT_LIGHTS_UPDATE_THRESHOLD)
+        {
+            EN_LOG("TOTAL SPOT LIGHTS UPDATE");
+            m_LightsStagingBuffer->MapMemory(m_GPULights.spotLights.data(), sizeof(m_GPULights.spotLights));
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.spotLights), 0U, (size_t)&m_GPULights.spotLights - (size_t)&m_GPULights);
+        }
+        else
+        {
+            for (const auto& changedId : changedSpotLightsIDs)
+            {
+                EN_LOG("SINGLE SPOT LIGHT UPDATE");
+                m_LightsStagingBuffer->MapMemory(&m_GPULights.spotLights[changedId], sizeof(SpotLight::Buffer));
+                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(SpotLight::Buffer), 0U, (size_t)&m_GPULights.spotLights[changedId] - (size_t)&m_GPULights);
+            }
+        }
+
+        uint32_t totalDirLights = MAX_DIR_LIGHTS;
+        uint32_t changedDirLights = changedDirLightsIDs.size();
+
+        if ((float)changedDirLights / totalDirLights > DIR_LIGHTS_UPDATE_THRESHOLD)
+        {
+            EN_LOG("TOTAL DIR LIGHTS UPDATE");
+            m_LightsStagingBuffer->MapMemory(m_GPULights.dirLights.data(), sizeof(m_GPULights.dirLights));
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.dirLights), 0U, (size_t)&m_GPULights.dirLights - (size_t)&m_GPULights);
+        }
+        else
+        {
+            for (const auto& changedId : changedDirLightsIDs)
+            {
+                EN_LOG("SINGLE DIR LIGHT UPDATE");
+                m_LightsStagingBuffer->MapMemory(&m_GPULights.dirLights[changedId], sizeof(DirectionalLight::Buffer));
+                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(DirectionalLight::Buffer), 0U, (size_t)&m_GPULights.dirLights[changedId] - (size_t)&m_GPULights);
+            }
+        }
+
+        auto pointLightsSize = sizeof(m_GPULights.pointLights);
+        auto spotLightsSize = sizeof(m_GPULights.spotLights);
+        auto dirLightsSize = sizeof(m_GPULights.dirLights);
+        auto allLightsSize = pointLightsSize + spotLightsSize + dirLightsSize;
+
+        if (m_SceneLightingChanged)
+        {
+            EN_LOG("SCENE LIGHTING UPDATE");
+            
+            auto sceneLightingSize = sizeof(GPULights) - allLightsSize;
+           
+            m_LightsStagingBuffer->MapMemory(&m_GPULights.activePointLights, sceneLightingSize);
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sceneLightingSize, 0U, allLightsSize);
+        }
+
+        //EN_LOG("TOTAL LIGHTS UPDATE");
+        //m_LightsStagingBuffer->MapMemory(&m_GPULights, sizeof(GPULights));
+        //m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(GPULights));
     }
     void Scene::UpdateGlobalDescriptor()
     {
-        std::vector<DescriptorInfo::ImageInfoContent> imageViews(MAX_TEXTURES);
+        EN_LOG("TOTAL GLOBAL DESCRIPTOR UPDATE");
 
-        uint32_t i = 0U;
-        for (; i < m_Textures.size(); i++)
+        std::vector<DescriptorInfo::ImageInfoContent> imageViews(MAX_TEXTURES, DescriptorInfo::ImageInfoContent{
+            AssetManager::Get().GetWhiteNonSRGBTexture()->m_Image->GetViewHandle(),
+            AssetManager::Get().GetWhiteNonSRGBTexture()->m_ImageSampler
+        });
+
+        for (const auto& i : m_OccupiedTextures)
         {
             imageViews[i].imageView    = m_Textures[i]->m_Image->GetViewHandle();
             imageViews[i].imageSampler = m_Textures[i]->m_ImageSampler;
-        }
-        for (; i < MAX_TEXTURES; i++)
-        {
-            imageViews[i].imageView    = AssetManager::Get().GetWhiteNonSRGBTexture()->m_Image->GetViewHandle();
-            imageViews[i].imageSampler = AssetManager::Get().GetWhiteNonSRGBTexture()->m_ImageSampler;
         }
 
         m_GlobalDescriptorSet->Update(DescriptorInfo{
@@ -658,7 +771,7 @@ namespace en
                     .type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .stage  = VK_SHADER_STAGE_FRAGMENT_BIT,
                 },
-            },
+            }
         });
     }
 }

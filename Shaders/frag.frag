@@ -258,21 +258,23 @@ void main()
             result = vec3(metalness);
             break;
         case 6:
+            result = fTBN[0];
             //result = ambient + vec3(float(pointLightCount) / (lightsBuffer.activePointLights+1), float(spotLightCount) / (lightsBuffer.activeSpotLights+1), 0);
             break;
         case 7:
-            const vec3 depthSplitColors[8] = vec3[](
-                vec3(0, 0, 0), vec3( 0, 0, 1), vec3(0, 1, 0), vec3(0, 1, 1),
-                vec3(1, 0, 0), vec3( 1, 0, 1), vec3(1, 1, 0), vec3(1, 1, 1)
-            );
+            result = fTBN[1];
+            //const vec3 depthSplitColors[8] = vec3[](
+            //    vec3(0, 0, 0), vec3( 0, 0, 1), vec3(0, 1, 0), vec3(0, 1, 1),
+            //    vec3(1, 0, 0), vec3( 1, 0, 1), vec3(1, 1, 0), vec3(1, 1, 1)
+            //);
 
             //result = lighting + ambient + depthSplitColors[uint(zTile - (8.0 * floor(zTile/8.0)))] * 0.18;
             break;
         case 8:
-            const vec3 cascadeColors[4] = vec3[](
-                vec3(1, 0, 0), vec3( 0, 1, 0), vec3(0, 0, 1), vec3(0, 1, 1)
-            );
-
+            //const vec3 cascadeColors[4] = vec3[](
+            //    vec3(1, 0, 0), vec3( 0, 1, 0), vec3(0, 0, 1), vec3(0, 1, 1)
+            //);
+            result = vec3(fTexcoord, 0.0);
             //result = lighting + ambient + cascadeColors[uint(cascade - (4.0 * floor(cascade/4.0)))] * 0.18;
             break;
     }

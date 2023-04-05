@@ -22,8 +22,16 @@ namespace en
 		{
 			ImGui::Spacing();
 
+			static char name[86] = "New SceneObject";
+
+			ImGui::InputText("Name: ", name, 86);
+
 			if (ImGui::Button("Add a SceneObject", ImVec2(ImGui::GetWindowWidth() - 15.0f, 40)))
-				m_Renderer->GetScene()->CreateSceneObject("New SceneObject", Mesh::GetEmptyMesh());
+			{
+				std::string strName(name);
+				if(strName.length() > 0)
+					m_Renderer->GetScene()->CreateSceneObject(std::string(name), Mesh::GetEmptyMesh());
+			}
 
 			else if (TriesToCopyType<SceneObject>())
 			{

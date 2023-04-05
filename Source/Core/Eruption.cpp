@@ -93,16 +93,9 @@ void Eruption::Update()
 	m_Camera->m_Yaw = glm::mix(m_Camera->m_Yaw, targetYaw, std::fmin(30.0 * deltaTime, 1.0));
 	m_Camera->m_Pitch = glm::mix(m_Camera->m_Pitch, targetPitch, std::fmin(30.0 * deltaTime, 1.0));
 
-	m_ExampleScene->UpdateScene();
-
 	m_Input->UpdateInput();
 	
-	//m_Renderer->UpdateLights();
-
-	m_Renderer->WaitForGPUIdle();
-
-	m_ExampleScene->UpdateRegisteredAssets();
-
+	m_Renderer->Update();
 }
 void Eruption::Render()
 {

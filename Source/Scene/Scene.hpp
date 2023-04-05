@@ -4,6 +4,7 @@
 #define EN_SCENE_HPP
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include <Scene/SceneObject.hpp>
 #include <Renderer/Lights/PointLight.hpp>
@@ -26,7 +27,7 @@ namespace en
 		Handle<SceneObject> CreateSceneObject(const std::string& name, Handle <Mesh> mesh);
 		void DeleteSceneObject(const std::string& name);
 
-		void RenameSceneObject(const std::string& oldName, const std::string& newName);
+		//void RenameSceneObject(const std::string& oldName, const std::string& newName);
 
 		PointLight* CreatePointLight(const glm::vec3 position, const glm::vec3 color = glm::vec3(1.0f), const float intensity = 2.5f, const float radius = 10.0f, const bool active = true);
 		void DeletePointLight(const uint32_t index);
@@ -36,9 +37,6 @@ namespace en
 
 		DirectionalLight* CreateDirectionalLight(const glm::vec3 direction, const glm::vec3 color = glm::vec3(1.0f), const float intensity = 2.5f, const bool active = true);
 		void DeleteDirectionalLight(const uint32_t index);
-
-		void UpdateScene();
-		void UpdateRegisteredAssets();
 
 		static VkDescriptorSetLayout GetGlobalDescriptorLayout();
 
@@ -70,18 +68,21 @@ namespace en
 			uint32_t normalId{};
 		};
 
+		void UpdateSceneCPU();
+		void UpdateSceneGPU();
+
 		uint32_t RegisterMatrix(const glm::mat4& matrix = glm::mat4(1.0f));
 		uint32_t RegisterMaterial(Handle<Material> material);
 		uint32_t RegisterTexture(Handle<Texture> texture);
-
+		
 		void DeregisterMatrix(uint32_t index);
 		void DeregisterMaterial(uint32_t index);
 		void DeregisterTexture(uint32_t index);
 
-		void UpdateMatrixBuffer		 (const std::vector<uint32_t>& changedMatrixIds);
-		void UpdateMaterialBuffer	 (const std::vector<uint32_t>& changedMaterialIds);
+		void UpdateMatrixBuffer	   (const std::vector<uint32_t>& changedMatrixIds);
+		void UpdateMaterialBuffer  (const std::vector<uint32_t>& changedMaterialIds);
 		void UpdateGlobalDescriptor();
-		void UpdateLightsBuffer();
+		void UpdateLightsBuffer    (const std::vector<uint32_t>& changedPointLightsIDs, const std::vector<uint32_t>& changedSpotLightsIDs, const std::vector<uint32_t>& changedDirLightsIDs);
 
 		struct GPULights {
 			std::array<PointLight::Buffer	   , MAX_POINT_LIGHTS> pointLights{};
@@ -103,6 +104,10 @@ namespace en
 		std::vector<Handle<Material>> m_Materials;
 		std::vector<Handle<Texture> > m_Textures;
 
+		std::unordered_set<uint32_t> m_OccupiedMatrices;
+		std::unordered_set<uint32_t> m_OccupiedMaterials;
+		std::unordered_set<uint32_t> m_OccupiedTextures;
+
 		std::unordered_map<std::string, uint32_t> m_RegisteredTextures;
 		std::unordered_map<std::string, uint32_t> m_RegisteredMaterials;
 
@@ -111,13 +116,20 @@ namespace en
 
 		Handle<MemoryBuffer> m_GlobalMaterialsBuffer;
 		Handle<MemoryBuffer> m_GlobalMaterialsStagingBuffer;
-		Handle<MemoryBuffer> m_SingleMaterialStagingBuffer;
 
 		Handle<MemoryBuffer> m_GlobalMatricesBuffer;
 		Handle<MemoryBuffer> m_GlobalMatricesStagingBuffer;
-		Handle<MemoryBuffer> m_SingleMatrixStagingBuffer;
 
-		bool m_TexturesChanged = true;
+		std::vector<uint32_t> m_ChangedMatrixIDs;
+		std::vector<uint32_t> m_ChangedMaterialIDs;
+
+		std::vector<uint32_t> m_ChangedPointLightsIDs;
+		std::vector<uint32_t> m_ChangedSpotLightsIDs;
+		std::vector<uint32_t> m_ChangedDirLightsIDs;
+
+		bool m_SceneLightingChanged = true;
+
+		bool m_GlobalDescriptorChanged = true;
 	};
 }
 

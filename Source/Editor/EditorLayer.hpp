@@ -23,6 +23,8 @@ namespace en
 
 		void OnUIDraw();
 
+		void UpdateStyle();
+
 		void SetVisibility(const bool& visibility);
 		const bool& GetVisibility() const { return m_Visible; };
 

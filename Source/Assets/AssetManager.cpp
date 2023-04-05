@@ -89,7 +89,7 @@ namespace en
     {
         EN_WARN("AssetManager::DeleteMaterial() - This feature is disabled for now!");
     }
-
+    /*
     void AssetManager::RenameMesh(const std::string& oldNameID, const std::string& newNameID)
     {
         if (m_Meshes.contains(newNameID))
@@ -138,7 +138,7 @@ namespace en
                 EN_WARN("Failed to rename " + oldNameID + " because a material with that name doesn't exist.")
         }
     }
-
+    */
     Handle<Mesh> AssetManager::GetMesh(const std::string& nameID)
     {
         // If there's no `nameID` model:
@@ -233,7 +233,7 @@ namespace en
         
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(filePath,
-            aiProcess_CalcTangentSpace         |
+            aiProcess_CalcTangentSpace   |
             aiProcess_GenSmoothNormals         |
             aiProcess_JoinIdenticalVertices    |
             aiProcess_ImproveCacheLocality     |
@@ -362,7 +362,7 @@ namespace en
             EN_WARN("Failed to get vertices data from \"" + name + "\"!");
             return;
         }
-
+        
         if(mesh->HasTextureCoords(0))
             for (unsigned int i = 0; i < mesh->mNumVertices; i++)
                 vertices.emplace_back
@@ -386,10 +386,10 @@ namespace en
     {
         for (unsigned int i = 0; i < mesh->mNumFaces; i++)
         {
-            aiFace face = mesh->mFaces[i];
+            aiFace& face = mesh->mFaces[i];
 
             for (unsigned int j = 0; j < face.mNumIndices; j++)
-                indices.emplace_back(face.mIndices[j]);
+                indices.push_back(face.mIndices[j]);
         }
     }
 }

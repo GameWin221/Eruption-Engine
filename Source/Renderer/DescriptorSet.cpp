@@ -73,7 +73,8 @@ namespace en
 				.dstArrayElement = 0U,
 				.descriptorCount = 1U,
 				.descriptorType  = buffer.type,
-				.pBufferInfo	 = &descriptorBufferInfos[i++]
+				.pBufferInfo	 = &descriptorBufferInfos[i++],
+
 			};
 		}
 

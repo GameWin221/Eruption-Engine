@@ -84,8 +84,11 @@ namespace en
 			return true;
 		}
 
-		std::vector<ImageInfo> imageInfos;
+		std::vector<ImageInfo>  imageInfos;
 		std::vector<BufferInfo> bufferInfos;
+
+		VkDescriptorSetLayoutCreateFlags layoutFlags{};
+		VkDescriptorBindingFlags		 bindingFlags{};
 	};
 
 	class DescriptorAllocator

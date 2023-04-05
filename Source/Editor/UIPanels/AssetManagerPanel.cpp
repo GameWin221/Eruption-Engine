@@ -280,7 +280,7 @@ namespace en
 
 			ImGui::Checkbox("Load Flipped", &properties.flipped);
 
-			if (ImGui::Button("Choose textures to importer...", ImVec2(200, 100)))
+			if (ImGui::Button("Choose textures to import...", ImVec2(200, 100)))
 			{
 				auto file = pfd::open_file("Choose textures to import...", DEFAULT_ASSET_PATH, { "Supported Texture Formats", "*.png *.jpg *.jpeg" }, pfd::opt::multiselect);
 
@@ -359,12 +359,13 @@ namespace en
 				m_AssetEditorInit = false;
 			}
 
-			ImGui::InputText("Name: ", name, 86);
+			ImGui::Text("Name: %s", name);
+			//ImGui::InputText("Name: ", name, 86);
 
-			ImGui::SameLine();
+			//ImGui::SameLine();
 
-			if (ImGui::Button("Save Name"))
-				m_AssetManager->RenameMaterial(chosenMaterial->GetName(), name);
+			//if (ImGui::Button("Save Name"))
+				//m_AssetManager->RenameMaterial(chosenMaterial->GetName(), name);
 
 			glm::vec3 col = chosenMaterial->GetColor();
 
@@ -502,12 +503,13 @@ namespace en
 				m_AssetEditorInit = false;
 			}
 
-			ImGui::InputText("Name: ", name, 86);
+			ImGui::Text("Name: %s", name);
+			//ImGui::InputText("Name: ", name, 86);
 
-			ImGui::SameLine();
+			//ImGui::SameLine();
 
-			if (ImGui::Button("Save Name"))
-				m_AssetManager->RenameMesh(chosenMesh->GetName(), name);
+			//if (ImGui::Button("Save Name"))
+				//m_AssetManager->RenameMesh(chosenMesh->GetName(), name);
 
 			ImGui::Text(("Path: " + chosenMesh->GetFilePath()).c_str());
 
@@ -579,12 +581,13 @@ namespace en
 				m_AssetEditorInit = false;
 			}
 
-			ImGui::InputText("Name: ", name, 86);
+			ImGui::Text("Name: %s", name);
+			//ImGui::InputText("Name: ", name, 86);
 
-			ImGui::SameLine();
+			//ImGui::SameLine();
 
-			if (ImGui::Button("Save Name"))
-				m_AssetManager->RenameTexture(chosenTexture->GetName(), name);
+			//if (ImGui::Button("Save Name"))
+				//m_AssetManager->RenameTexture(chosenTexture->GetName(), name);
 
 			ImGui::Text(("Path: " + chosenTexture->GetFilePath()).c_str());
 		}
