@@ -213,7 +213,7 @@ void main()
 
         vec3 lightDir = normalize(light.direction); 
 
-        vec3 lightToSurfaceDir = normalize(position - light.position);
+        vec3 lightToSurfaceDir = normalize(light.position - position);
         
         float innerCutoff = light.innerCutoff / 2.0 * PI;
         float outerCutoff = light.outerCutoff / 2.0 * PI;
