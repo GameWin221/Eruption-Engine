@@ -9,7 +9,7 @@ namespace en
 		m_ImageUVSize = glm::vec2(1.0f) / glm::vec2(size.width, size.height);
 
 		m_ImGuiDescriptorSet = ImGui_ImplVulkan_AddTexture(
-			m_Texture->m_ImageSampler,
+			m_Texture->m_Sampler->GetHandle(),
 			m_Texture->m_Image->GetViewHandle(),
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		);

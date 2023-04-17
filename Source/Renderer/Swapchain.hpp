@@ -17,7 +17,6 @@ namespace en
 
 		std::vector<VkImage>	   m_Images;
 		std::vector<VkImageView>   m_ImageViews;
-		std::vector<VkFramebuffer> m_Framebuffers;
 
 		uint32_t m_ImageIndex{};
 

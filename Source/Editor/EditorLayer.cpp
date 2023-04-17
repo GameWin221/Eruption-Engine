@@ -2,8 +2,6 @@
 
 namespace en
 {
-#define SPACE() ImGui::Spacing();ImGui::Separator();ImGui::Spacing()
-
 	void EditorLayer::AttachTo(Renderer* renderer, AssetManager* assetManager)
 	{
 		if (!renderer || !assetManager)

@@ -194,6 +194,8 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Renderer\Sampler.cpp" />
+    <ClCompile Include="Source\Renderer\Framebuffer.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
@@ -256,7 +258,6 @@
     <ClCompile Include="Source\Renderer\Context.cpp" />
     <ClCompile Include="Source\Core\Eruption.cpp" />
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\GraphicsPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
@@ -265,6 +266,8 @@
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\Sampler.hpp" />
+    <ClInclude Include="Source\Renderer\Framebuffer.hpp" />
     <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
@@ -305,7 +308,6 @@
     <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp" />
     <ClInclude Include="Source\Renderer\Context.hpp" />
     <ClInclude Include="Source\Core\Eruption.hpp" />
-    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
@@ -323,13 +325,17 @@
     <None Include="Shaders\AMD\AMDTonemapping.comp" />
     <None Include="Shaders\camera.glsl" />
     <None Include="Shaders\Depth.frag" />
-    <None Include="Shaders\ForwardFrag.frag" />
-    <None Include="Shaders\ForwardVert.vert" />
+    <None Include="Shaders\Depth.vert" />
+    <None Include="Shaders\DirShadowVert.vert" />
     <None Include="Shaders\frag.frag" />
+    <None Include="Shaders\lights.glsl" />
     <None Include="Shaders\Move.frag" />
     <None Include="Shaders\NVIDIA\NVFXAA.comp" />
     <None Include="Shaders\NVIDIA\NVTonemapping.comp" />
+    <None Include="Shaders\ShadowFrag.frag" />
+    <None Include="Shaders\PointShadowVert.vert" />
     <None Include="Shaders\SMAA.frag" />
+    <None Include="Shaders\SpotShadowVert.vert" />
     <None Include="Shaders\TonemapComp.comp" />
     <None Include="Shaders\vert.vert" />
   </ItemGroup>

@@ -34,8 +34,15 @@ namespace en
 		m_Buffers[frameIndex]->MapMemory(&m_CBOs[frameIndex], m_Buffers[frameIndex]->GetSize());
 	}
 
-	void CameraBuffer::UpdateBuffer(uint32_t frameIndex, Handle<Camera> camera, VkExtent2D extent, int debugMode)
-	{
+	void CameraBuffer::UpdateBuffer(
+		uint32_t frameIndex,
+		Handle<Camera> camera,
+		std::array<float, SHADOW_CASCADES>& cascadeSplitDistances,
+		std::array<float, SHADOW_CASCADES>& cascadeFrustumSizeRatios,
+		std::array<std::array<glm::mat4, SHADOW_CASCADES>, MAX_DIR_LIGHT_SHADOWS>& cascadeMatrices,
+		VkExtent2D extent,
+		int debugMode
+	) {
 		m_CBOs[frameIndex].debugMode = debugMode;
 
 		m_CBOs[frameIndex].position = camera->m_Position;
@@ -52,6 +59,15 @@ namespace en
 		m_CBOs[frameIndex].zNear = camera->m_NearPlane;
 		m_CBOs[frameIndex].zFar = camera->m_FarPlane;
 
+		for (uint32_t i = 0U; i < SHADOW_CASCADES; i++)
+		{
+			m_CBOs[frameIndex].cascadeSplitDistances[i].x = cascadeSplitDistances[i];
+			m_CBOs[frameIndex].cascadeFrustumSizeRatios[i].x = cascadeFrustumSizeRatios[i];
+
+			for (uint32_t j = 0U; j < MAX_DIR_LIGHT_SHADOWS; j++)
+				m_CBOs[frameIndex].cascadeMatrices[j][i] = cascadeMatrices[j][i];
+		}
+
 		uint32_t sizeX = (uint32_t)std::ceilf((float)extent.width / CLUSTERED_TILES_X);
 		uint32_t sizeY = (uint32_t)std::ceilf((float)extent.height / CLUSTERED_TILES_Y);
 
@@ -64,7 +80,14 @@ namespace en
 
 	VkDescriptorSetLayout CameraBuffer::GetLayout()
 	{
-		return m_DescriptorSets[0]->GetLayout();
+		return Context::Get().m_DescriptorAllocator->MakeLayout(DescriptorInfo{
+			std::vector<DescriptorInfo::ImageInfo>{},
+			std::vector<DescriptorInfo::BufferInfo>{{
+				.index = 0U,
+				.type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.stage = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+			}}
+		});
 	}
 	Handle<DescriptorSet> CameraBuffer::GetDescriptorHandle(uint32_t frameIndex)
 	{

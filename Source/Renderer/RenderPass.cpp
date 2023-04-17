@@ -2,35 +2,29 @@
 
 namespace en
 {
-    RenderPass::RenderPass(const VkExtent2D extent, const std::vector<RenderPass::Attachment>& attachments, const RenderPass::Attachment& depthStencilAttachment, const std::vector<VkSubpassDependency>& dependencies)
-        : m_Extent(extent), m_AttachmentCount(attachments.size())
+    RenderPass::RenderPass(const RenderPassAttachment& colorAttachment, const RenderPassAttachment& depthStencilAttachment, const std::vector<VkSubpassDependency>& dependencies)
+        : m_UsesDepthAttachment(depthStencilAttachment.format != VK_FORMAT_UNDEFINED),
+          m_UsesColorAttachment(colorAttachment.format != VK_FORMAT_UNDEFINED)
     {
         UseContext();
 
-        bool usesDepthStencilAttachment = depthStencilAttachment.imageViews.size() > 0;
-
-        std::vector<VkAttachmentDescription> descriptions(attachments.size());
-        for (uint32_t i = 0U; i < attachments.size(); i++)
-            descriptions[i] = VkAttachmentDescription{
-                .format         = attachments[i].format,
-                .samples        = VK_SAMPLE_COUNT_1_BIT,
-                .loadOp         = attachments[i].loadOp,
-                .storeOp        = attachments[i].storeOp,
-                .stencilLoadOp  = attachments[i].stencilLoadOp,
-                .stencilStoreOp = attachments[i].stencilStoreOp,
-                .initialLayout  = attachments[i].initialLayout,
-                .finalLayout    = attachments[i].finalLayout,
+        VkAttachmentDescription colorDescription{
+            .format         = colorAttachment.format,
+            .samples        = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp         = colorAttachment.loadOp,
+            .storeOp        = colorAttachment.storeOp,
+            .stencilLoadOp  = colorAttachment.stencilLoadOp,
+            .stencilStoreOp = colorAttachment.stencilStoreOp,
+            .initialLayout  = colorAttachment.initialLayout,
+            .finalLayout    = colorAttachment.finalLayout,
         };
 
-        std::vector<VkAttachmentReference> references(attachments.size());
+        VkAttachmentReference colorReference{
+            .attachment = 0U,
+            .layout     = colorAttachment.refLayout,
+        };
 
-        for (uint32_t i = 0U; i < references.size(); i++)
-            references[i] = VkAttachmentReference{
-                .attachment = i,
-                .layout     = attachments[i].refLayout,
-            };
-
-        VkAttachmentDescription depthAttachmentDescription {
+        VkAttachmentDescription depthDescription {
             .format         = depthStencilAttachment.format,
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = depthStencilAttachment.loadOp,
@@ -42,18 +36,22 @@ namespace en
         };
 
         VkAttachmentReference depthReference {
-            .attachment = static_cast<uint32_t>(descriptions.size()),
+            .attachment = static_cast<uint32_t>(m_UsesColorAttachment),
             .layout     = depthStencilAttachment.refLayout
         };
 
-        if (usesDepthStencilAttachment)
-            descriptions.emplace_back(depthAttachmentDescription);
+        std::vector<VkAttachmentDescription> descriptions{};
+
+        if (m_UsesColorAttachment)
+            descriptions.emplace_back(colorDescription);
+        if (m_UsesDepthAttachment)
+            descriptions.emplace_back(depthDescription);
 
         VkSubpassDescription subpass {
             .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .colorAttachmentCount = static_cast<uint32_t>(references.size()),
-            .pColorAttachments    = references.data(),
-            .pDepthStencilAttachment = usesDepthStencilAttachment ? &depthReference : nullptr,
+            .colorAttachmentCount = static_cast<uint32_t>(m_UsesColorAttachment),
+            .pColorAttachments    = m_UsesColorAttachment ? &colorReference : nullptr,
+            .pDepthStencilAttachment = m_UsesDepthAttachment ? &depthReference : nullptr,
         };
 
         VkRenderPassCreateInfo renderPassInfo{
@@ -68,66 +66,43 @@ namespace en
 
         if (vkCreateRenderPass(ctx.m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
             EN_ERROR("RenderPass::RenderPass() - Failed to create a RenderPass!");
-
-        uint32_t maxFramebuffers = 0U;
-        for (const auto& attachment : attachments)
-            if (attachment.imageViews.size() > maxFramebuffers)
-                maxFramebuffers = attachment.imageViews.size();
-
-        m_Framebuffers.resize(maxFramebuffers);
-        m_ClearColors.resize(attachments.size()+usesDepthStencilAttachment, VkClearValue{{0.0f, 0.0f, 0.0f, 1.0f}});
-
-        for (int32_t i = 0U; i < maxFramebuffers; i++)
-        {
-            std::vector<VkImageView> imageViews{};
-            for (const auto& attachment : attachments)
-                imageViews.emplace_back(attachment.imageViews[i]);
-
-            if (usesDepthStencilAttachment)
-            {
-                imageViews.emplace_back(depthStencilAttachment.imageViews.front());
-                m_ClearColors.back().depthStencil = { 1.0f, 0 };
-            }
-
-            VkFramebufferCreateInfo framebufferInfo{
-                .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                .renderPass      = m_RenderPass,
-                .attachmentCount = static_cast<uint32_t>(imageViews.size()),
-                .pAttachments    = imageViews.data(),
-                .width  = m_Extent.width,
-                .height = m_Extent.height,
-                .layers = 1U,
-            };
-
-            if (vkCreateFramebuffer(ctx.m_LogicalDevice, &framebufferInfo, nullptr, &m_Framebuffers[i]) != VK_SUCCESS)
-                EN_ERROR("RenderPass::RenderPass() - Failed to create a Framebuffer!");
-        }
     }
 
     RenderPass::~RenderPass()
     {
-        UseContext();
-
-        for(const auto& framebuffer : m_Framebuffers)
-            vkDestroyFramebuffer(ctx.m_LogicalDevice, framebuffer, nullptr);
-
-        vkDestroyRenderPass(ctx.m_LogicalDevice, m_RenderPass, nullptr);
+        vkDestroyRenderPass(Context::Get().m_LogicalDevice, m_RenderPass, nullptr);
     }
-    void RenderPass::Begin(VkCommandBuffer cmd, uint32_t framebufferIndex)
+    void RenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent, glm::vec4 clearColor, float depthClearValue, uint32_t stencilClearValue)
     {
         m_BoundCMD = cmd;
+
+        VkClearValue colorClearValue{};
+        colorClearValue.color = VkClearColorValue {
+            clearColor.r, clearColor.g, clearColor.b, clearColor.a
+        };
+
+        VkClearValue depthStencilClearValue{};
+        depthStencilClearValue.depthStencil = VkClearDepthStencilValue{
+            depthClearValue, stencilClearValue
+        };
+
+        std::vector<VkClearValue> clearValues{};
+        if (m_UsesColorAttachment)
+            clearValues.emplace_back(colorClearValue);
+        if (m_UsesDepthAttachment)
+            clearValues.emplace_back(depthStencilClearValue);
 
         VkRenderPassBeginInfo renderPassInfo{
             .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .renderPass  = m_RenderPass,
-            .framebuffer = m_Framebuffers[framebufferIndex],
+            .framebuffer = framebuffer,
             .renderArea  = {
                 .offset  = { 0U, 0U },
-                .extent  = m_Extent
+                .extent  = extent
             },
-
-            .clearValueCount = static_cast<uint32_t>(m_ClearColors.size()),
-            .pClearValues    = m_ClearColors.data(),
+       
+            .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+            .pClearValues    = clearValues.data(),
         };
 
         vkCmdBeginRenderPass(m_BoundCMD, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);

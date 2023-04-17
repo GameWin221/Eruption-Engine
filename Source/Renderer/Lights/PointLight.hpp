@@ -10,6 +10,7 @@ namespace en
 	class PointLight : public SceneMember
 	{
 	friend class Scene;
+	friend class Renderer;
 
 	public:
 		constexpr PointLight(glm::vec3 position, glm::vec3 color, float intensity, float radius, bool active)
@@ -59,6 +60,8 @@ namespace en
 			int pcfSampleRate = 1;
 			float bias = 0.0f;
 			float _padding0{};
+
+			std::array<glm::mat4, 6> viewProj{};
 		};
 
 	private:

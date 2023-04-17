@@ -2,6 +2,7 @@
 
 #include "../EruptionEngine.ini"
 #include "camera.glsl"
+#include "lights.glsl"
 
 layout(location = 0) in vec4 fPosition;
 layout(location = 1) in vec3 fNormal;
@@ -15,6 +16,25 @@ layout(set = 1, binding = 1) uniform sampler2D textures[MAX_TEXTURES];
 //layout(set = 1, binding = 2) uniform sampler2D roughnessTextures[MAX_TEXTURES];
 //layout(set = 1, binding = 3) uniform sampler2D metalnessTextures[MAX_TEXTURES];
 //layout(set = 1, binding = 4) uniform sampler2D normalTextures[MAX_TEXTURES];
+
+layout(set = 1, binding = 4) uniform samplerCube pointShadowMaps[MAX_POINT_LIGHT_SHADOWS];
+layout(set = 1, binding = 5) uniform sampler2D spotShadowMaps[MAX_SPOT_LIGHT_SHADOWS];
+layout(set = 1, binding = 6) uniform sampler2D dirShadowMaps[MAX_DIR_LIGHT_SHADOWS*SHADOW_CASCADES];
+
+const mat4 biasMat = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0
+);
+
+vec3 pcfSampleOffsets[20] = vec3[](
+   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+);   
 
 layout(set = 0, binding = 0) uniform CameraBuffer {
 	CameraBufferObject camera;
@@ -44,51 +64,6 @@ layout(push_constant) uniform MaterialID {
 	uint materialId;
 };
 
-struct PointLight
-{
-    vec3 position;
-    float radius;
-
-    vec3 color;
-	int shadowmapIndex;
-
-	float shadowSoftness;
-    int pcfSampleRate; 
-    float bias;
-    float _padding0;
-};
-struct SpotLight
-{
-    vec3 position;
-    float innerCutoff;
-
-    vec3 direction;
-    float outerCutoff;
-
-    vec3 color;
-    float range;
-
-    //mat4 projView;
-
-    int shadowmapIndex;
-    float shadowSoftness;
-    int pcfSampleRate; 
-    float bias;
-};
-struct DirLight
-{
-    vec3 direction;
-    int shadowmapIndex;
-
-    vec3 color;
-    float shadowSoftness;
-
-    int pcfSampleRate;
-    float bias;
-    float _padding0;
-    float _padding1;
-};
-
 layout(std430, set = 1, binding = 3) buffer Lights
 {
     PointLight pointLights[MAX_POINT_LIGHTS];
@@ -102,6 +77,9 @@ layout(std430, set = 1, binding = 3) buffer Lights
 
     vec3 ambientLight;
     float _padding1;
+
+    vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
 };
 
 #define PI 3.14159265359
@@ -165,6 +143,67 @@ vec3 PBRLighting(vec3 lightDir, vec3 lightColor, vec3 albedo, float roughness, f
     return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
+float CalculateShadow(vec4 fPosLightSpace, sampler2D shadowmap, int sampleCount, float bias, float softness)
+{
+    vec3 projCoords = fPosLightSpace.xyz / fPosLightSpace.w;
+
+    if(projCoords.z > 1.0)
+        return 0.0;
+
+    float shadow = 0.0;
+
+#if SOFT_SHADOWS
+    vec2 texelSize = vec2(1.0) / textureSize(shadowmap, 0) * softness;
+    for(int x = -sampleCount; x <= sampleCount; ++x)
+    {
+        for(int y = -sampleCount; y <= sampleCount; ++y)
+        {
+            float pcfDepth = texture(shadowmap, projCoords.xy + vec2(float(x)/sampleCount, float(y)/sampleCount) * texelSize).r; 
+            shadow += projCoords.z - bias > pcfDepth ? 1.0 : 0.0;        
+        }    
+    }
+
+    float divider = sampleCount * 2.0 + 1.0;
+
+    shadow /= divider * divider;
+#else
+    float closestDepth = texture(shadowmap, projCoords.xy).r;    
+    shadow = projCoords.z - bias > closestDepth ? 1.0 : 0.0;
+#endif
+
+    return shadow;
+}
+
+float CalculateOmniShadows(PointLight light, vec3 fragToLightDiff, float viewToFragDist)
+{
+    float currentDepth = length(fragToLightDiff);
+
+    if(currentDepth > light.radius)
+        return 0.0;
+
+    float shadow = 0.0;
+
+    #if SOFT_SHADOWS
+        for(int i = 0; i < 20; ++i)
+        {
+            for(int j = 1; j <= light.pcfSampleRate; j++)
+            {
+                float interpolator = float(j) / light.pcfSampleRate;
+                float closestDepth = texture(pointShadowMaps[light.shadowmapIndex], fragToLightDiff + pcfSampleOffsets[i] * light.shadowSoftness * interpolator * 0.01).r * light.radius;
+
+                shadow += currentDepth - light.bias > closestDepth ? 1.0 : 0.0;
+            }
+        }
+        shadow /= 20.0 * light.pcfSampleRate;  
+    #else
+        float closestDepth = texture(pointShadowMaps[light.shadowmapIndex], fragToLightDiff).r * light.radius;
+
+        shadow = currentDepth - light.bias > closestDepth ? 1.0 : 0.0;
+    #endif
+    
+    return shadow;
+}
+
 vec3 NormalMapping(uint textureId, float multiplier)
 {
     vec3 normalMap = texture(textures[textureId], fTexcoord).xyz;
@@ -175,6 +214,7 @@ vec3 NormalMapping(uint textureId, float multiplier)
 
     return result;
 }
+
 void main()
 {
 	Material material = materials[materialId];
@@ -190,6 +230,12 @@ void main()
 
     float linearDepth = fPosition.w;
 
+    int cascade = 0;
+
+    for(int i = 0; i < SHADOW_CASCADES-1; i++)
+        if (linearDepth > camera.cascadeSplitDistances[i].x)
+		    cascade = i+1;
+
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
 
     vec3 viewDir   = normalize(camera.position - position);
@@ -199,22 +245,30 @@ void main()
     {
         PointLight light = pointLights[i];
 
-        float lightDist = length(position - light.position);
-        vec3 lightDir = normalize(light.position - position); 
+        vec3 diff = light.position - position;
+        float lightDist = length(diff);
+        vec3 lightDir = normalize(diff); 
 
         float attenuation = max(1.0 - lightDist*lightDist/(light.radius*light.radius), 0.0); 
         attenuation *= attenuation;
 
-        lighting += PBRLighting(lightDir, light.color, albedo, roughness, metalness, normal, position, viewDir, F0) * attenuation;
+        float shadow = 0.0;
+        if(light.shadowmapIndex != -1)
+            shadow = CalculateOmniShadows(light, -diff, viewDist);
+
+        lighting += PBRLighting(lightDir, light.color, albedo, roughness, metalness, normal, position, viewDir, F0) * attenuation * (1.0 - shadow);
     }
     for(uint i = 0; i < activeSpotLights; i++)
     {
         SpotLight light = spotLights[i];
 
-        vec3 lightDir = normalize(light.direction); 
+        vec3 diff = light.position - position;
+        vec3 lightToSurfaceDir = normalize(diff);
+        float dist = length(diff);
 
-        vec3 lightToSurfaceDir = normalize(light.position - position);
-        
+        float attenuation = max(1.0 - dist*dist/(light.range*light.range), 0.0); 
+        attenuation *= attenuation;
+
         float innerCutoff = light.innerCutoff / 2.0 * PI;
         float outerCutoff = light.outerCutoff / 2.0 * PI;
         
@@ -223,8 +277,15 @@ void main()
 
         float angleDiff = min(angleToSurface, outerCutoff);
         float intensity = pow(min(1.0 - (angleDiff-innerCutoff) / (outerCutoff-innerCutoff), 1.0), 2.0);
+        intensity *= attenuation;
 
-        lighting += PBRLighting(lightDir, light.color, albedo, roughness, metalness, normal, position, viewDir, F0) * intensity;
+        vec4 fPosLightSpace = biasMat * light.viewProj * vec4(position, 1.0);
+        float shadow = 0.0;
+
+         if(light.shadowmapIndex != -1)
+            shadow = CalculateShadow(fPosLightSpace, spotShadowMaps[light.shadowmapIndex], light.pcfSampleRate, light.bias, light.shadowSoftness);
+
+        lighting += PBRLighting(lightToSurfaceDir, light.color, albedo, roughness, metalness, normal, position, viewDir, F0) * intensity * (1.0 - shadow);
     }
     for(uint i = 0; i < activeDirLights; i++)
     {
@@ -232,7 +293,14 @@ void main()
 
         vec3 lightDir = normalize(light.direction); 
 
-        lighting += PBRLighting(lightDir, light.color, albedo, roughness, metalness, normal, position, viewDir, F0);
+        vec4 fPosLightSpace = biasMat * camera.cascadeMatrices[i][cascade] * vec4(position, 1.0);
+        float softness = light.shadowSoftness / camera.cascadeFrustumSizeRatios[cascade].x;
+        float shadow = 0.0;
+
+         if(light.shadowmapIndex != -1)
+            shadow = CalculateShadow(fPosLightSpace, dirShadowMaps[light.shadowmapIndex*3+cascade], light.pcfSampleRate, light.bias, softness);
+
+        lighting += PBRLighting(lightDir, light.color, albedo, roughness, metalness, normal, position, viewDir, F0) * (1.0 - shadow);
     }
 
     vec3 result = vec3(0.0);

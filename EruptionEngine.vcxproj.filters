@@ -60,9 +60,6 @@
     <ClCompile Include="Source\Scene\SceneObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Lights\CSMBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Renderer\Camera\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -141,6 +138,12 @@
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Framebuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Sampler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -198,9 +201,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\SceneMember.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\Lights\CSMBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp">
@@ -296,6 +296,12 @@
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\Framebuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Sampler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -310,7 +316,11 @@
     <None Include="Shaders\vert.vert" />
     <None Include="Shaders\frag.frag" />
     <None Include="Shaders\camera.glsl" />
-    <None Include="Shaders\ForwardFrag.frag" />
-    <None Include="Shaders\ForwardVert.vert" />
+    <None Include="Shaders\PointShadowVert.vert" />
+    <None Include="Shaders\ShadowFrag.frag" />
+    <None Include="Shaders\lights.glsl" />
+    <None Include="Shaders\SpotShadowVert.vert" />
+    <None Include="Shaders\DirShadowVert.vert" />
+    <None Include="Shaders\Depth.vert" />
   </ItemGroup>
 </Project>

@@ -78,17 +78,12 @@ namespace en
 			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
 		};
 
-		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(pipeline.renderPass->m_AttachmentCount);
-
-		for (auto& colorBlend : colorBlendAttachments)
-			colorBlend = colorBlendAttachment;
-
 		VkPipelineColorBlendStateCreateInfo colorBlending{
 			.sType		     = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 			.logicOpEnable   = VK_FALSE,
 			.logicOp	     = VK_LOGIC_OP_COPY,
-			.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size()),
-			.pAttachments	 = colorBlendAttachments.data(),
+			.attachmentCount = 1U,
+			.pAttachments	 = &colorBlendAttachment,
 			.blendConstants  = {0.0f, 0.0f, 0.0f, 0.0f}
 		};
 
@@ -163,7 +158,7 @@ namespace en
 			.pDynamicState		 = &dynamicState,
 
 			.layout		= m_Layout,
-			.renderPass = pipeline.renderPass->m_RenderPass,
+			.renderPass = pipeline.renderPass->GetHandle(),
 			.subpass	= 0U,
 
 			.basePipelineHandle = VK_NULL_HANDLE,

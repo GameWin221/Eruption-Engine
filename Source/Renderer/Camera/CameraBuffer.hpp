@@ -17,9 +17,17 @@ namespace en
 
 		void MapBuffer(uint32_t frameIndex);
 
-		void UpdateBuffer(uint32_t frameIndex, Handle<Camera> camera, VkExtent2D extent, int debugMode);
+		void UpdateBuffer(
+			uint32_t frameIndex,
+			Handle<Camera> camera,
+			std::array<float, SHADOW_CASCADES>& cascadeSplitDistances,
+			std::array<float, SHADOW_CASCADES>& cascadeFrustumSizeRatios,
+			std::array<std::array<glm::mat4, SHADOW_CASCADES>, MAX_DIR_LIGHT_SHADOWS>& cascadeMatrices,
+			VkExtent2D extent,
+			int debugMode
+		);
 
-		VkDescriptorSetLayout GetLayout();
+		static VkDescriptorSetLayout GetLayout();
 
 		Handle<DescriptorSet> GetDescriptorHandle(uint32_t frameIndex);
 
@@ -38,6 +46,11 @@ namespace en
 
 			glm::uvec4 clusterTileCount = glm::uvec4(0U);
 			glm::uvec4 clusterTileSizes = glm::uvec4(0U);
+
+			glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
+			glm::vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES]{};
+
+			glm::mat4 cascadeMatrices[MAX_DIR_LIGHT_SHADOWS][SHADOW_CASCADES]{};
 
 			float clusterScale = 0.0f;
 			float clusterBias = 0.0f;

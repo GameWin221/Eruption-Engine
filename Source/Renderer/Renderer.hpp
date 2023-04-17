@@ -20,6 +20,8 @@
 #include <Renderer/Pipelines/ComputePipeline.hpp>
 
 #include <Renderer/RenderPass.hpp>
+#include <Renderer/Framebuffer.hpp>
+#include <Renderer/Sampler.hpp>
 
 #include <Renderer/Lights/PointLight.hpp>
 #include <Renderer/Lights/DirectionalLight.hpp>
@@ -63,16 +65,24 @@ namespace en
 		std::function<void()> m_ImGuiRenderCallback;
 
 	private:
+		Handle<Scene> m_Scene;
+
 		Handle<Swapchain> m_Swapchain;
 		Handle<CameraBuffer> m_CameraBuffer;
 
 		Handle<RenderPass> m_ImGuiRenderPass;
 		Handle<RenderPass> m_RenderPass;
+		Handle<RenderPass> m_DepthRenderPass;
+
+		std::vector<Handle<Framebuffer>> m_ImGuiFramebuffers;
+		std::vector<Handle<Framebuffer>> m_RenderFramebuffers;
+
+		Handle<Framebuffer> m_DepthFramebuffer;
 
 		Handle<GraphicsPipeline> m_Pipeline;
-		Handle<Image> m_DepthBuffer;
+		Handle<GraphicsPipeline> m_DepthPipeline;
 
-		Handle<Scene> m_Scene;
+		Handle<Image> m_DepthBuffer;
 
 		struct Frame {
 			VkCommandBuffer commandBuffer;
@@ -82,8 +92,6 @@ namespace en
 			VkSemaphore presentSemaphore;
 		} m_Frames[FRAMES_IN_FLIGHT];
 	
-		VkSampler m_MainSampler;
-
 		uint32_t m_FrameIndex = 0U;
 			
 		bool m_ReloadQueued		  = false;
@@ -98,9 +106,14 @@ namespace en
 
 		void MeasureFrameTime();
 		void BeginRender();
+		void ShadowPass();
+		void DepthPass();
 		void ForwardPass();
 		void ImGuiPass();
 		void EndRender();
+
+		void CreateDepthPass();
+		void CreateDepthPipeline();
 
 		void CreateForwardPass();
 		void CreateForwardPipeline();

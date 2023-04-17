@@ -58,11 +58,21 @@ namespace en
 			{
 				size_t resultBuffer = std::hash<size_t>()(info.bufferInfos.size());
 				for (const DescriptorInfo::BufferInfo& b : info.bufferInfos)
-					resultBuffer ^= std::hash<size_t>()(b.index | b.type << 16 | b.stage << 24);
+					resultBuffer ^= std::hash<size_t>()(
+						(size_t)b.index | 
+						(size_t)b.type << 16 | 
+						(size_t)b.stage << 24
+					);
 
 				size_t resultImage = std::hash<size_t>()(info.bufferInfos.size());
 				for (const DescriptorInfo::ImageInfo& i : info.imageInfos)
-					resultImage ^= std::hash<size_t>()(i.index | i.type << 8 | i.imageLayout << 16 | i.stage << 24 | i.count << 36);
+					resultImage ^= std::hash<size_t>()(
+						(size_t)i.index | 
+						(size_t)i.type << 8 | 
+						(size_t)i.imageLayout << 16 | 
+						(size_t)i.stage << 24 | 
+						(size_t)i.count << 36
+					);
 
 				return resultBuffer ^ (resultImage << 1);
 			}

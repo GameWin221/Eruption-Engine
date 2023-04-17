@@ -86,38 +86,6 @@ namespace en
             vkFreeCommandBuffers(ctx.m_LogicalDevice, ctx.m_TransferCommandPool, 1U, &commandBuffer);
         }
 
-        void CreateImage(VkImage& image, VmaAllocation& imageAllocation, const VkExtent2D size, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage, const VkMemoryPropertyFlags properties, const uint32_t layers, const uint32_t mipLevels, const VkImageCreateFlags flags)
-        {
-            UseContext();
-
-            VkImageCreateInfo imageInfo{
-                .sType     = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-                .flags     = flags,
-                .imageType = VK_IMAGE_TYPE_2D,
-                .format    = format,
-
-                .extent {
-                    .width  = size.width,
-                    .height = size.height,
-                    .depth  = 1U,
-                },
-
-                .mipLevels     = mipLevels,
-                .arrayLayers   = layers,
-                .samples       = VK_SAMPLE_COUNT_1_BIT,
-                .tiling        = tiling,
-                .usage         = usage,
-                .sharingMode   = VK_SHARING_MODE_EXCLUSIVE,
-                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            };
-
-            const VmaAllocationCreateInfo allocationInfo{
-                .usage = VMA_MEMORY_USAGE_GPU_ONLY
-            };
-
-            if (vmaCreateImage(ctx.m_Allocator, &imageInfo, &allocationInfo, &image, &imageAllocation, nullptr) != VK_SUCCESS)
-                EN_ERROR("Helpers::CreateImage() - Failed to create an image!")
-        }
         void CreateImageView(const VkImage image, VkImageView& imageView, const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspectFlags, const uint32_t layer, const uint32_t layerCount, const uint32_t mipLevels)
         {
             VkImageViewCreateInfo viewInfo {
@@ -139,7 +107,7 @@ namespace en
                 EN_ERROR("Helpers::CreateImageView() - Failed to create texture image view!");
         }
         
-        void SimpleTransitionImageLayout(const VkImage image, const VkFormat format, const VkImageAspectFlags aspectFlags, const VkImageLayout oldLayout, const VkImageLayout newLayout, const uint32_t mipLevels, const VkCommandBuffer cmdBuffer)
+        void SimpleTransitionImageLayout(const VkImage image, const VkFormat format, const VkImageAspectFlags aspectFlags, const VkImageLayout oldLayout, const VkImageLayout newLayout, const uint32_t layerCount, const uint32_t mipLevels, const VkCommandBuffer cmdBuffer)
         {
             UseContext();
 
@@ -161,7 +129,7 @@ namespace en
                     .baseMipLevel = 0U,
                     .levelCount = mipLevels,
                     .baseArrayLayer = 0U,
-                    .layerCount = 1U,
+                    .layerCount = layerCount,
                 },
             };
 
@@ -329,51 +297,6 @@ namespace en
                 else
                     EndSingleTimeGraphicsCommands(commandBuffer);
             }
-        }
-
-        void DestroyImage(const VkImage image, const VmaAllocation imageAllocation)
-        {
-            UseContext();
-
-            vmaDestroyImage(ctx.m_Allocator, image, imageAllocation);
-        }
-
-        void CreateSampler(VkSampler& sampler, const VkFilter filtering, const uint32_t anisotropy, const float maxLod, const float mipLodBias)
-        {
-            UseContext();
-
-            VkPhysicalDeviceProperties properties{};
-            vkGetPhysicalDeviceProperties(ctx.m_PhysicalDevice, &properties);
-
-            VkSamplerCreateInfo samplerInfo{
-                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-
-                .magFilter = filtering,
-                .minFilter = filtering,
-
-                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-
-                .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-
-                .mipLodBias = mipLodBias,
-
-                .anisotropyEnable = (anisotropy > 0),
-                .maxAnisotropy = std::fminf(anisotropy, properties.limits.maxSamplerAnisotropy),
-
-                .compareEnable = VK_FALSE,
-                .compareOp = VK_COMPARE_OP_ALWAYS,
-
-                .minLod = 0.0f,
-                .maxLod = maxLod,
-
-                .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-                .unnormalizedCoordinates = VK_FALSE,
-            };
-
-            if (vkCreateSampler(ctx.m_LogicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
-                EN_ERROR("Helpers::CreateSampler() - Failed to create texture sampler!");
         }
     }
 }

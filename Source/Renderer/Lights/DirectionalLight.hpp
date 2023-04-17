@@ -11,6 +11,7 @@ namespace en
 	class DirectionalLight : public SceneMember
 	{
 	friend class Scene;
+	friend class Renderer;
 
 	public:
 		DirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity, bool active)

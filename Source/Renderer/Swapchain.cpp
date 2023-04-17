@@ -76,9 +76,6 @@ namespace en
 		for (auto& imageView : m_ImageViews)
 			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
 
-		for (auto& framebuffer : m_Framebuffers)
-			vkDestroyFramebuffer(ctx.m_LogicalDevice, framebuffer, nullptr);
-
 		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
 
 		m_CurrentLayouts.clear();

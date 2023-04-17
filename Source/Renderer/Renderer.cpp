@@ -4,9 +4,6 @@
 
 namespace en
 {
-	constexpr uint32_t MAX_INSTANCES = 16U * 1024U;
-	constexpr uint32_t MAX_INDIRECT_DRAWS = 1024U;
-
 	Renderer* g_CurrentBackend{};
 	Context*  g_Ctx{};
 
@@ -33,7 +30,6 @@ namespace en
 		if(m_Scene)
 			m_Scene->UpdateSceneCPU();
 	}
-
 	void Renderer::PreRender()
 	{
 		if (m_Scene)
@@ -48,18 +44,32 @@ namespace en
 
 		if (m_Scene)
 			m_Scene->UpdateSceneGPU();
-
-		m_CameraBuffer->UpdateBuffer(m_FrameIndex, m_Scene->m_MainCamera, m_Swapchain->GetExtent(), m_DebugMode);
+		
+		m_CameraBuffer->UpdateBuffer(
+			m_FrameIndex,
+			m_Scene->m_MainCamera,
+			m_Scene->m_CSM.cascadeSplitDistances,
+			m_Scene->m_CSM.cascadeFrustumSizeRatios,
+			m_Scene->m_CSM.cascadeMatrices,
+			m_Swapchain->GetExtent(),
+			m_DebugMode
+		);
 		m_CameraBuffer->MapBuffer(m_FrameIndex);
 	}
-
 	void Renderer::Render()
 	{
 		MeasureFrameTime();
 
 		BeginRender();
 
-		ForwardPass();
+		if (m_Scene)
+		{
+			ShadowPass();
+
+			DepthPass();
+
+			ForwardPass();
+		}
 
 		ImGuiPass();
 
@@ -139,11 +149,220 @@ namespace en
 		if (vkBeginCommandBuffer(m_Frames[m_FrameIndex].commandBuffer, &beginInfo) != VK_SUCCESS)
 			EN_ERROR("Renderer::BeginRender() - Failed to begin recording command buffer!");
 	}
+	void Renderer::ShadowPass()
+	{
+		if (m_SkipFrame) return;
+
+		for (auto& light : m_Scene->m_PointLights)
+		{
+			if (light.m_ShadowmapIndex == -1)
+				continue;
+
+			m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].image->ChangeLayout(
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				m_Frames[m_FrameIndex].commandBuffer
+			);
+
+			for (uint32_t cubeSide = 0U; cubeSide < 6U; cubeSide++)
+			{
+				m_Scene->m_PerspectiveShadowsRenderPass->Begin(
+					m_Frames[m_FrameIndex].commandBuffer,
+					m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->GetHandle(),
+					m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->m_Extent
+				);
+
+				m_Scene->m_PointShadowPipeline->Bind(
+					m_Frames[m_FrameIndex].commandBuffer,
+					m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->m_Extent,
+					VK_CULL_MODE_FRONT_BIT
+				);
+
+				m_Scene->m_PointShadowPipeline->BindDescriptorSet(m_Scene->m_ShadowsDescriptorSet->GetHandle());
+
+				for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
+				{
+					if (!sceneObject->m_Active || !sceneObject->m_Mesh->m_Active) continue;
+
+					uint32_t pushConstant[3]{ sceneObject->GetMatrixIndex(), light.m_ShadowmapIndex, cubeSide };
+
+					m_Scene->m_PointShadowPipeline->PushConstants(
+						pushConstant,
+						sizeof(uint32_t) * 3,
+						0U,
+						VK_SHADER_STAGE_VERTEX_BIT
+					);
+
+					for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
+					{
+						if (!subMesh.m_Active) continue;
+
+						m_Scene->m_PointShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+						m_Scene->m_PointShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+
+						m_Scene->m_PointShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
+					}
+				}
+
+				m_Scene->m_PerspectiveShadowsRenderPass->End();
+			}
+			m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		for (auto& light : m_Scene->m_SpotLights)
+		{
+			if (light.m_ShadowmapIndex == -1)
+				continue;
+
+			m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].image->ChangeLayout(
+				VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+				m_Frames[m_FrameIndex].commandBuffer
+			);
+
+			m_Scene->m_DirShadowsRenderPass->Begin(
+				m_Frames[m_FrameIndex].commandBuffer,
+				m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->GetHandle(),
+				m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->m_Extent
+			);
+
+			m_Scene->m_SpotShadowPipeline->Bind(
+				m_Frames[m_FrameIndex].commandBuffer,
+				m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->m_Extent,
+				VK_CULL_MODE_FRONT_BIT
+			);
+
+			m_Scene->m_SpotShadowPipeline->BindDescriptorSet(m_Scene->m_ShadowsDescriptorSet->GetHandle());
+
+			for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
+			{
+				if (!sceneObject->m_Active || !sceneObject->m_Mesh->m_Active) continue;
+
+				uint32_t pushConstant[2]{ sceneObject->GetMatrixIndex(), light.m_ShadowmapIndex };
+
+				m_Scene->m_SpotShadowPipeline->PushConstants(
+					pushConstant,
+					sizeof(uint32_t) * 2,
+					0U,
+					VK_SHADER_STAGE_VERTEX_BIT
+				);
+
+				for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
+				{
+					if (!subMesh.m_Active) continue;
+
+					m_Scene->m_SpotShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+					m_Scene->m_SpotShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+
+					m_Scene->m_SpotShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
+				}
+			}
+
+			m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			m_Scene->m_DirShadowsRenderPass->End();
+		}
+		for (auto& light : m_Scene->m_DirectionalLights)
+		{
+			if (light.m_ShadowmapIndex == -1)
+				continue;
+
+			for (uint32_t cascadeIndex = 0U; cascadeIndex < SHADOW_CASCADES; cascadeIndex++)
+			{
+				m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].image->ChangeLayout(
+					VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+					VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+					m_Frames[m_FrameIndex].commandBuffer
+				);
+
+				m_Scene->m_DirShadowsRenderPass->Begin(
+					m_Frames[m_FrameIndex].commandBuffer,
+					m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->GetHandle(),
+					m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->m_Extent
+				);
+
+				m_Scene->m_DirShadowPipeline->Bind(
+					m_Frames[m_FrameIndex].commandBuffer,
+					m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->m_Extent,
+					VK_CULL_MODE_FRONT_BIT
+				);
+
+				m_Scene->m_DirShadowPipeline->BindDescriptorSet(m_Scene->m_ShadowsDescriptorSet->GetHandle(), 0U);
+				m_Scene->m_DirShadowPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U);
+
+				for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
+				{
+					if (!sceneObject->m_Active || !sceneObject->m_Mesh->m_Active) continue;
+
+					uint32_t pushConstant[3] { sceneObject->GetMatrixIndex(), light.m_ShadowmapIndex, cascadeIndex };
+
+					m_Scene->m_DirShadowPipeline->PushConstants(
+						pushConstant,
+						sizeof(uint32_t)*3,
+						0U,
+						VK_SHADER_STAGE_VERTEX_BIT
+					);
+
+					for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
+					{
+						if (!subMesh.m_Active) continue;
+
+						m_Scene->m_DirShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+						m_Scene->m_DirShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+
+						m_Scene->m_DirShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
+					}
+				}
+
+				m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				m_Scene->m_DirShadowsRenderPass->End();
+			}
+		}
+	}
+	void Renderer::DepthPass()
+	{
+		if (m_SkipFrame) return;
+
+		m_DepthRenderPass->Begin(
+			m_Frames[m_FrameIndex].commandBuffer,
+			m_DepthFramebuffer->GetHandle(),
+			m_DepthFramebuffer->m_Extent
+		);
+
+		m_DepthPipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent());
+
+		m_DepthPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
+		m_DepthPipeline->BindDescriptorSet(m_Scene->m_GlobalDescriptorSet, 1U);
+
+		for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
+		{
+			if (!sceneObject->m_Active || !sceneObject->m_Mesh->m_Active) continue;
+
+			m_DepthPipeline->PushConstants(&sceneObject->GetMatrixIndex(), sizeof(uint32_t), 0U, VK_SHADER_STAGE_VERTEX_BIT);
+
+			for (const auto& subMesh : sceneObject->m_Mesh->m_SubMeshes)
+			{
+				if (!subMesh.m_Active) continue;
+
+				m_DepthPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+				m_DepthPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+
+				m_DepthPipeline->DrawIndexed(subMesh.m_IndexCount);
+			}
+		}
+
+		m_DepthRenderPass->End();
+	}
 	void Renderer::ForwardPass()
 	{
 		if (m_SkipFrame) return;
 
-		m_RenderPass->Begin(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->m_ImageIndex);
+		m_RenderPass->Begin(
+			m_Frames[m_FrameIndex].commandBuffer,
+			m_RenderFramebuffers[m_Swapchain->m_ImageIndex]->GetHandle(),
+			m_RenderFramebuffers[m_Swapchain->m_ImageIndex]->m_Extent
+		);
 
 			m_Pipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent());
 
@@ -177,7 +396,11 @@ namespace en
 
 		m_ImGuiRenderCallback();
 
-		m_ImGuiRenderPass->Begin(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->m_ImageIndex);
+		m_ImGuiRenderPass->Begin(
+			m_Frames[m_FrameIndex].commandBuffer,
+			m_ImGuiFramebuffers[m_Swapchain->m_ImageIndex]->GetHandle(),
+			m_ImGuiFramebuffers[m_Swapchain->m_ImageIndex]->m_Extent
+		);
 
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_Frames[m_FrameIndex].commandBuffer);
 
@@ -258,6 +481,8 @@ namespace en
 
 		CreateDepthBuffer();
 
+		CreateDepthPass();
+
 		CreateForwardPass();
 
 		CreateImGuiRenderPass();
@@ -307,6 +532,14 @@ namespace en
 
 		EN_SUCCESS("Created depth buffer!")
 
+			CreateDepthPass();
+
+		EN_SUCCESS("Created the depth pass!")
+
+			CreateDepthPipeline();
+
+		EN_SUCCESS("Created the depth pipeline!")
+
 			CreateForwardPass();
 
 		EN_SUCCESS("Created the forward pass!")
@@ -314,6 +547,16 @@ namespace en
 			CreateForwardPipeline();
 
 		EN_SUCCESS("Created the forward pipeline!")
+
+			//CreateShadowPass();
+
+		//EN_SUCCESS("Created the shadow pass!")
+
+		//	CreatePointShadowPipeline();
+		//	CreateSpotShadowPipeline();
+		//	CreateDirShadowPipeline();
+		//
+		//EN_SUCCESS("Created the shadow pipelines (point, spot, dir)!")
 
 		if (newImGui)
 			CreateImGuiContext();
@@ -325,6 +568,52 @@ namespace en
 		EN_SUCCESS("Created the renderer Vulkan backend");
 
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
+	}
+
+	void Renderer::CreateDepthPass()
+	{
+		RenderPassAttachment depthAttachment{
+			.imageView = m_DepthBuffer->GetViewHandle(),
+
+			.format = m_DepthBuffer->m_Format,
+
+			.refLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		};
+
+		m_DepthRenderPass = MakeHandle<RenderPass>(RenderPassAttachment{}, depthAttachment);
+
+		m_DepthFramebuffer = MakeHandle<Framebuffer>(m_DepthRenderPass, m_Swapchain->GetExtent(), RenderPassAttachment{}, depthAttachment);
+	}
+	void Renderer::CreateDepthPipeline()
+	{
+		constexpr VkPushConstantRange model{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0U,
+			.size = sizeof(uint32_t),
+		};
+
+		GraphicsPipeline::CreateInfo info{
+			.renderPass = m_DepthRenderPass,
+
+			.vShader = "Shaders/Depth.spv",
+
+			.descriptorLayouts {CameraBuffer::GetLayout(), Scene::GetGlobalDescriptorLayout()},
+			.pushConstantRanges {model},
+
+			.useVertexBindings = true,
+			.enableDepthTest = true,
+			.enableDepthWrite = true,
+			.blendEnable = false,
+
+			.compareOp = VK_COMPARE_OP_LESS,
+			.polygonMode = VK_POLYGON_MODE_FILL,
+		};
+
+		m_DepthPipeline = MakeHandle<GraphicsPipeline>(info);
 	}
 
 	void Renderer::CreateForwardPass()
@@ -340,39 +629,44 @@ namespace en
 			}
 		};
 
-		std::vector<RenderPass::Attachment> attachments{
-			RenderPass::Attachment {
-				.imageViews = m_Swapchain->m_ImageViews,
+		std::vector<RenderPassAttachment> attachments{};
+		for (int i = 0; i < m_Swapchain->m_ImageViews.size(); i++)
+		{
+			attachments.emplace_back(RenderPassAttachment{
+				.imageView = m_Swapchain->m_ImageViews[i],
 
 				.format = m_Swapchain->GetFormat(),
 
-				.refLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 
-				.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 
-				.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			}
-		};
+			});
+		}
 
-		RenderPass::Attachment depthAttachment{
-			.imageViews = {m_DepthBuffer->GetViewHandle()},
+		RenderPassAttachment depthAttachment{
+			.imageView = m_DepthBuffer->GetViewHandle(),
 
 			.format = m_DepthBuffer->m_Format,
 
+			.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			.refLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 
-			.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-
-			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		};
 
-		m_RenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments, depthAttachment, dependencies);
+		m_RenderPass = MakeHandle<RenderPass>(attachments[0], depthAttachment, dependencies);
+
+		m_RenderFramebuffers.resize(m_Swapchain->m_ImageViews.size());
+		for (uint32_t i = 0U; i < m_Swapchain->m_ImageViews.size(); i++)
+			m_RenderFramebuffers[i] = MakeHandle<Framebuffer>(m_RenderPass, m_Swapchain->GetExtent(), attachments[i], depthAttachment);
 	}
 	void Renderer::CreateForwardPipeline()
 	{
@@ -393,15 +687,15 @@ namespace en
 			.vShader = "Shaders/vert.spv",
 			.fShader = "Shaders/frag.spv",
 
-			.descriptorLayouts {m_CameraBuffer->GetLayout(), Scene::GetGlobalDescriptorLayout()},
+			.descriptorLayouts {CameraBuffer::GetLayout(), Scene::GetGlobalDescriptorLayout()},
 			.pushConstantRanges {model, material},
 
 			.useVertexBindings = true,
 			.enableDepthTest   = true,
-			.enableDepthWrite  = true,
+			.enableDepthWrite  = false,
 			.blendEnable	   = false,
 
-			.compareOp	 = VK_COMPARE_OP_LESS,
+			.compareOp	 = VK_COMPARE_OP_LESS_OR_EQUAL,
 			.polygonMode = VK_POLYGON_MODE_FILL,
 		};
 
@@ -415,6 +709,7 @@ namespace en
 			VK_FORMAT_D32_SFLOAT,
 			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT,
+			0U,
 			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
 		);
 	}
@@ -484,9 +779,11 @@ namespace en
 			}
 		};
 
-		std::vector<RenderPass::Attachment> attachments{
-			RenderPass::Attachment {
-				.imageViews = m_Swapchain->m_ImageViews,
+		std::vector<RenderPassAttachment> attachments{};
+		for (int i = 0; i < m_Swapchain->m_ImageViews.size(); i++)
+		{
+			attachments.emplace_back(RenderPassAttachment{
+				.imageView = m_Swapchain->m_ImageViews[i],
 
 				.format = m_Swapchain->GetFormat(),
 
@@ -499,10 +796,14 @@ namespace en
 
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			}
-		};
+			});
+		}
 
-		m_ImGuiRenderPass = MakeHandle<RenderPass>(m_Swapchain->GetExtent(), attachments, RenderPass::Attachment{}, dependencies);
+		m_ImGuiRenderPass = MakeHandle<RenderPass>(attachments[0], RenderPassAttachment{}, dependencies);
+		
+		m_ImGuiFramebuffers.resize(m_Swapchain->m_ImageViews.size());
+		for (uint32_t i = 0U; i < m_Swapchain->m_ImageViews.size(); i++)
+			m_ImGuiFramebuffers[i] = MakeHandle<Framebuffer>(m_ImGuiRenderPass, m_Swapchain->GetExtent(), attachments[i]);
 	}
 	void Renderer::CreateImGuiContext()
 	{
@@ -526,7 +827,7 @@ namespace en
 			.CheckVkResultFn = ImGuiCheckResult
 		};
 
-		ImGui_ImplVulkan_Init(&initInfo, m_ImGuiRenderPass->m_RenderPass);
+		ImGui_ImplVulkan_Init(&initInfo, m_ImGuiRenderPass->GetHandle());
 
 		VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands();
 		ImGui_ImplVulkan_CreateFontsTexture(cmd);
