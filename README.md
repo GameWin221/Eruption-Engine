@@ -2,22 +2,22 @@
 
 ![](https://forthebadge.com/images/badges/made-with-c-plus-plus.svg)
 
-This is my own rendering engine using Vulkan as its graphical API. I started this project in late March of 2022 because I wanted to learn more about modern computer graphics and I'm still working on it to this day. Note that the engine is in a early stage of development.
+This is my own rendering engine using Vulkan as its graphical API. I started this project in late March of 2022 because I wanted to learn more about modern computer graphics and I'm still working on it to this day.
 
 ### [Eruption Engine Milanote Board](https://app.milanote.com/1NmtuU1jo13IbQ?p=vUC5d3l4PKq)
 
 ## Implemented major features:
-- Deferred renderer.
+- Clustered Forward Renderer
 - Cascaded Shadows
 - PBR Materials.
 - Point, Spot and Directional lights.
 - Soft PCF shadows.
-- Dynamic rendering (VK_KHR_dynamic_rendering and pipeline dynamic states).
+- Partly Bindless Rendering
 - Depth pre-pass.
 - FXAA antialiasing.
-- Reinhard (exposure) tonemapping.
+- HDR tonemapping.
 - Simple asset manager.
-- [Assimp](https://github.com/assimp/assimp) model loader.
+- Custom GLTF model loader.
 - Runtime modifiable and assignable materials.
 - Simple scene editor.
 - ImGui UI.
