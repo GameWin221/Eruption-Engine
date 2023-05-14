@@ -1,17 +1,24 @@
 #version 450
 
-layout(location = 0) in vec3 vPos;
-layout(location = 1) in vec3 vNormal;
-layout(location = 2) in vec3 vTangent;
-layout(location = 3) in vec2 vTexcoord;
+#include "camera.glsl"
 
-layout(push_constant) uniform DepthInfo
-{
-	mat4 model;
-	mat4 viewProj;
-} info;
+layout(location = 0) in vec3 vPosition;
+layout(location = 1) in vec3 vNormal;
+layout(location = 2) in vec2 vTexcoord;
+
+layout(set = 0, binding = 0) uniform CameraBuffer {
+	CameraBufferObject camera;
+};
+
+layout (set = 1, std430, binding = 0) buffer ModelMatrices {
+    mat4 modelMatrix[];
+};
+
+layout(push_constant) uniform ModelMatrixID {
+	uint modelMatrixID;
+};
 
 void main() 
 {
-    gl_Position = info.viewProj * info.model * vec4(vPos, 1.0);
+    gl_Position = camera.projView * modelMatrix[modelMatrixID] * vec4(vPosition, 1.0);
 }

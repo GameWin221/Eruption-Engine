@@ -25,7 +25,7 @@ This is my own rendering engine using Vulkan as its graphical API. I started thi
 
 # Dependencies
 - Visual Studio 2022
-- Vulkan SDK 1.3+
+- Vulkan SDK 1.2+
 
 # How to compile?
 1. Download [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows) and install it wherever you want.

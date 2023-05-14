@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "SceneHierarchyPanel.hpp"
 
 namespace en
@@ -23,30 +22,38 @@ namespace en
 		{
 			ImGui::Spacing();
 
+			static char name[86] = "New SceneObject";
+
+			ImGui::InputText("Name: ", name, 86);
+
 			if (ImGui::Button("Add a SceneObject", ImVec2(ImGui::GetWindowWidth() - 15.0f, 40)))
-				m_Renderer->GetScene()->CreateSceneObject("New SceneObject", Mesh::GetEmptyMesh());
+			{
+				std::string strName(name);
+				if(strName.length() > 0)
+					m_Renderer->GetScene()->CreateSceneObject(std::string(name), Mesh::GetEmptyMesh());
+			}
 
 			else if (TriesToCopyType<SceneObject>())
 			{
 				const SceneObject* chosenObject = m_ChosenSceneMember->CastTo<SceneObject>();
 
-				SceneObject* object = m_Renderer->GetScene()->CreateSceneObject(chosenObject->GetName() + "(Copy)", chosenObject->m_Mesh);
+				Handle<SceneObject> object = m_Renderer->GetScene()->CreateSceneObject(chosenObject->GetName() + "(Copy)", chosenObject->m_Mesh);
 
-				object->m_Active   = chosenObject->m_Active;
-				object->m_Position = chosenObject->m_Position;
-				object->m_Rotation = chosenObject->m_Rotation;
-				object->m_Scale	   = chosenObject->m_Scale;
+				object->m_Active = chosenObject->m_Active;
+				object->SetPosition(chosenObject->GetPosition());
+				object->SetRotation(chosenObject->GetRotation());
+				object->SetScale   (chosenObject->GetScale   ());
 
-				m_ChosenSceneMember = object;
+				m_ChosenSceneMember = object.get();
 			}
 
 			SPACE();
 
 			ImGui::PushStyleColor(ImGuiCol_Button, m_ElementColor);
-			for (const auto& object : m_Renderer->GetScene()->GetAllSceneObjects())
+			for (const auto& [name, sceneObject] : m_Renderer->GetScene()->m_SceneObjects)
 			{
-				if (ImGui::Button(object->GetName().c_str(), ImVec2(ImGui::GetWindowWidth() - 15.0f, 20)))
-					m_ChosenSceneMember = m_Renderer->GetScene()->GetSceneObject(object->GetName());
+				if (ImGui::Button(name.c_str(), ImVec2(ImGui::GetWindowWidth() - 15.0f, 20)))
+					m_ChosenSceneMember = sceneObject.get();
 				
 				ImGui::Spacing();
 			}

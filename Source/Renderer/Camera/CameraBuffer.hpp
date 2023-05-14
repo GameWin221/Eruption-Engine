@@ -17,11 +17,19 @@ namespace en
 
 		void MapBuffer(uint32_t frameIndex);
 
-		void UpdateBuffer(uint32_t frameIndex, Camera* camera, VkExtent2D extent, int debugMode);
+		void UpdateBuffer(
+			uint32_t frameIndex,
+			Handle<Camera> camera,
+			std::array<float, SHADOW_CASCADES>& cascadeSplitDistances,
+			std::array<float, SHADOW_CASCADES>& cascadeFrustumSizeRatios,
+			std::array<std::array<glm::mat4, SHADOW_CASCADES>, MAX_DIR_LIGHT_SHADOWS>& cascadeMatrices,
+			VkExtent2D extent,
+			int debugMode
+		);
 
-		VkDescriptorSetLayout GetLayout();
+		static VkDescriptorSetLayout GetLayout();
 
-		DescriptorSet* GetDescriptorHandle(uint32_t frameIndex);
+		Handle<DescriptorSet> GetDescriptorHandle(uint32_t frameIndex);
 
 		struct CameraBufferObject
 		{
@@ -29,17 +37,23 @@ namespace en
 			glm::mat4 invView = glm::mat4(1.0f);
 			glm::mat4 proj = glm::mat4(1.0f);
 			glm::mat4 invProj = glm::mat4(1.0f);
+			glm::mat4 invProjView = glm::mat4(1.0f);
 			glm::mat4 projView = glm::mat4(1.0f);
 
 			glm::vec3 position = glm::vec3(0.0f);
 
 			int debugMode = 0;
 
-			glm::uvec4 clusterTileCount;
-			glm::uvec4 clusterTileSizes;
+			glm::uvec4 clusterTileCount = glm::uvec4(0U);
+			glm::uvec4 clusterTileSizes = glm::uvec4(0U);
 
-			float clusterScale;
-			float clusterBias;
+			glm::vec4 cascadeSplitDistances[SHADOW_CASCADES]{};
+			glm::vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES]{};
+
+			glm::mat4 cascadeMatrices[MAX_DIR_LIGHT_SHADOWS][SHADOW_CASCADES]{};
+
+			float clusterScale = 0.0f;
+			float clusterBias = 0.0f;
 
 			float zNear = 0.0f;
 			float zFar = 1.0f;
@@ -48,8 +62,8 @@ namespace en
 		std::array<CameraBufferObject, FRAMES_IN_FLIGHT> m_CBOs;
 
 	private:
-		std::array<std::unique_ptr<DescriptorSet>, FRAMES_IN_FLIGHT> m_DescriptorSets;
-		std::array<std::unique_ptr<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
+		std::array<Handle<DescriptorSet>, FRAMES_IN_FLIGHT> m_DescriptorSets;
+		std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_Buffers;
 	};
 }
 #endif

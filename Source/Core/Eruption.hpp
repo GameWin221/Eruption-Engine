@@ -5,6 +5,7 @@
 
 #include <Renderer/Window.hpp>
 #include <Renderer/Context.hpp>
+#include <Core/Types.hpp>
 #include <Renderer/Renderer.hpp>
 #include <Assets/AssetManager.hpp>
 #include <Input/InputManager.hpp>
@@ -22,17 +23,15 @@ private:
 
 	void CreateExampleScene();
 
-	en::EditorLayer*   m_Editor = nullptr;
-	en::Window*		   m_Window  = nullptr;
-	en::Context*	   m_Context = nullptr;
-	en::AssetManager*  m_AssetManager = nullptr;
-	en::InputManager*  m_Input    = nullptr;
-	en::Renderer*	   m_Renderer = nullptr;
-	en::Camera*		   m_Camera   = nullptr;
+	en::Scope<en::EditorLayer>  m_Editor;
+	en::Scope<en::Window>		m_Window;
+	en::Scope<en::Context>		m_Context;
+	en::Scope<en::AssetManager> m_AssetManager;
+	en::Scope<en::InputManager> m_Input;
+	en::Scope<en::Renderer>	    m_Renderer;
 
-	en::Scene* m_ExampleScene;
-
-	double m_DeltaTime;
+	en::Handle<en::Camera> m_Camera;
+	en::Handle<en::Scene>  m_ExampleScene;
 };
 
 #endif

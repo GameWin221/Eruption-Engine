@@ -3,11 +3,6 @@
 #ifndef EN_MESH_HPP
 #define EN_MESH_HPP
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/pbrmaterial.h>
-
 #include "Asset.hpp"
 
 #include <Assets/SubMesh.hpp>
@@ -19,14 +14,15 @@ namespace en
 		friend class AssetManager;
 
 	public:
-		Mesh() : Asset{ AssetType::Mesh } {};
+		Mesh(const std::string& name, const std::string& filePath) 
+			: Asset{ AssetType::Mesh }, m_Name(name), m_FilePath(filePath) {};
 
 		std::vector<SubMesh> m_SubMeshes;
 
 		const std::string& GetName()	 const { return m_Name;     };
 		const std::string& GetFilePath() const { return m_FilePath; };
 
-		static Mesh* GetEmptyMesh();
+		static Handle<Mesh> GetEmptyMesh();
 
 		bool m_Active = true;
 

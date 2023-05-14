@@ -3,31 +3,21 @@
 #ifndef EN_CAMERA_HPP
 #define EN_CAMERA_HPP
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <Renderer/Window.hpp>
 #include <Common/Helpers.hpp>
 
+#include <gtc/matrix_transform.hpp>
+
 namespace en
 {
-	struct CameraInfo
-	{
-		float fov = 60.0f;
-
-		float farPlane = 200.0f;
-		float nearPlane = 0.01f;
-
-		glm::vec2 size = glm::vec2(1920, 1080);
-
-		glm::vec3 position = glm::vec3(0);
-
-		float exposure = 1.0f;
-
-		bool dynamicallyScaled = false;
-	};
-
 	class Camera
 	{
 	public:
-		Camera(const CameraInfo& cameraInfo);
+		Camera(float fov = 60.0f, float nearPlane = 0.01f, float farPlane = 200.0f, glm::vec3 position = glm::vec3(0.0f));
 
 		void LookAt(const glm::vec3 target);
 
@@ -35,16 +25,16 @@ namespace en
 		float m_NearPlane;
 
 		glm::vec3 m_Position;
-		glm::vec2 m_Size;
+		glm::vec2 m_Size = glm::vec3(0.0f);
 
-		float m_Pitch;
-		float m_Yaw;
+		float m_Pitch = 0.0f;
+		float m_Yaw = 0.0f;
 
 		float m_Fov;
 
-		float m_Exposure;
+		float m_Exposure = 2.0f;
 
-		bool m_DynamicallyScaled;
+		bool m_DynamicallyScaled = true;
 
 		const glm::mat4& GetProjMatrix() { UpdateProjMatrix(); return m_Proj; };
 		const glm::mat4& GetViewMatrix() { UpdateViewMatrix(); return m_View; };

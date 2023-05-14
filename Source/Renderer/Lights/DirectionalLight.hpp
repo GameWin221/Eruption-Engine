@@ -10,7 +10,8 @@ namespace en
 {
 	class DirectionalLight : public SceneMember
 	{
-	friend class RendererBackend;
+	friend class Scene;
+	friend class Renderer;
 
 	public:
 		DirectionalLight(glm::vec3 direction, glm::vec3 color, float intensity, bool active)
@@ -57,8 +58,8 @@ namespace en
 
 			int pcfSampleRate = 1;
 			float bias;
-			int dummy1;
-			int dummy2;
+			int _padding0{};
+			int _padding1{};
 		};
 
 	private:

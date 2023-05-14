@@ -1,5 +1,7 @@
 #version 450
 
+#include "camera.glsl"
+
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 struct AABB {
@@ -11,27 +13,9 @@ layout (set = 0, std430, binding = 0) buffer AABBClustersBuffer {
     AABB clusters[];
 };
 
-layout(set = 1, binding = 0) uniform CameraBufferObject
-{
-    mat4 view;
-	mat4 invView;
-	mat4 proj;
-	mat4 invProj;
-	mat4 projView;
-
-	vec3 position;
-
-	int debugMode;
-
-	uvec4 clusterTileCount;
-	uvec4 clusterTileSizes;
-
-	float clusterScale;
-	float clusterBias;
-
-    float zNear;
-	float zFar;
-} camera;
+layout(set = 1, binding = 0) uniform CameraBuffer {
+	CameraBufferObject camera;
+};
 
 layout(push_constant) uniform ScreenSizeConstant 
 {
@@ -45,7 +29,6 @@ vec4 ScreenToView(vec4 screenPos)
     vec4 clip = vec4(NDC, screenPos.z, screenPos.w);
 
     // Construct an inverse projection matrix out of the original rows
-
     vec4 view = camera.invProj * clip;
 
     return view / view.w;
@@ -53,13 +36,10 @@ vec4 ScreenToView(vec4 screenPos)
 
 vec3 LineViewPlaneIntersection(vec3 P, float zDistance)
 {
-    // The view plane is always pointing in the positive Z direction
-    const vec3 viewPlaneDirection = vec3(0.0, 0.0, 1.0);
-
     // Length of the intersection between the line and the view plane
-    float t = zDistance / dot(viewPlaneDirection, P);
+    //float t = zDistance / dot(viewPlaneDirection, P);
+    float t = zDistance / P.z; // Short version simplifying the dot product
 
-    // Returning the real intersection point
     return t * P;
 }
 

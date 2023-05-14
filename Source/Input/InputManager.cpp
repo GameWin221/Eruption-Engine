@@ -1,11 +1,10 @@
-#include <Core/EnPch.hpp>
 #include "InputManager.hpp"
 
 namespace en
 {
 	InputManager::InputManager()
 	{
-		m_Window = Window::Get().m_GLFWWindow;
+		m_Window = Window::Get().m_NativeHandle;
 
 		m_LastMousePos = GetMousePosition();
 
@@ -37,12 +36,12 @@ namespace en
 
 	void InputManager::UpdateInput()
 	{
-		// GLFW_KEYs range from 32 to 348
-		for (int key = 32; key <= 348; key++)
+		// GLFW_KEYs range from Space (32) to Menu (348)
+		for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_MENU; key++)
 			m_LastKeyStates.at(key) = glfwGetKey(m_Window, key);
-
-		// GLFW_MOUSE_BUTTONs range from 0 to 7
-		for (int button = 0; button <= 7; button++)
+		
+		// GLFW_MOUSE_BUTTONs range from GLFW_MOUSE_BUTTON_1 to GLFW_MOUSE_BUTTON_8
+		for (int button = GLFW_MOUSE_BUTTON_1; button <= GLFW_MOUSE_BUTTON_8; button++)
 			m_LastButtonStates[button] = glfwGetMouseButton(m_Window, button);
 	}
 

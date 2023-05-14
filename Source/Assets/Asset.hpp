@@ -3,6 +3,8 @@
 #ifndef EN_ASSET_HPP
 #define EN_ASSET_HPP
 
+#include <concepts>
+
 namespace en
 {
 	enum struct AssetType

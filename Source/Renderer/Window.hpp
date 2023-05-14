@@ -3,41 +3,65 @@
 #ifndef EN_WINDOW_HPP
 #define EN_WINDOW_HPP
 
+#include <Core/Log.hpp>
+
+#define GLFW_INCLUDE_VULKAN
+#include <glfw3.h>
+
+#include <string>
+#include <iostream>
+#include <glm.hpp>
+
 namespace en
 {
-	struct WindowInfo
-	{
-		std::string title = "Unnamed Default Window";
-
-		glm::ivec2 size = glm::ivec2(1024, 720);
-
-		bool fullscreen = false;
-
-		// Works only if `fullscreen = false`
-		bool resizable = false;
-	};
-
 	class Window
 	{
+		friend class Context;
+		friend class Renderer;
+		friend class InputManager;
+
 	public:
-		Window(const WindowInfo& windowInfo);
+		Window(
+			const std::string& title = "Unnamed Default Window",
+			const glm::ivec2& size = glm::ivec2(1024, 720),
+			const bool fullscreen = false,
+			const bool resizable = false
+		);
+
 		~Window();
+
+		static Window& Get();
 
 		void Close();
 		void PollEvents();
 
-		GLFWwindow* m_GLFWWindow;
+		void SetTitle(const std::string& title);
+		void SetSize(const glm::ivec2& size);
 
-		static Window&     Get();
-		const  WindowInfo& GetInfo() const { return m_WindowInfo; };
+		void SetFullscreen(const bool fullscreen);
+	
+		void SetResizeCallback(GLFWframebuffersizefun callback);
 
-		const bool IsOpen() const { return !glfwWindowShouldClose(m_GLFWWindow); };
+		glm::ivec2 GetFramebufferSize();
 
-		Window(const Window&) = delete;
-		Window& operator=(const Window&) = delete;
+		const bool IsOpen() const;
+
+		const std::string& GetTitle() const;
+		const glm::ivec2& GetSize();
+
+		const bool GetIsFullscreen() const;
+		const bool GetIsResizable() const;
+
+		GLFWwindow* GetNativeHandle() const { return m_NativeHandle; };
 
 	private:
-		WindowInfo m_WindowInfo;
+		GLFWwindow* m_NativeHandle;
+
+		std::string m_Title;
+		glm::ivec2 m_Size;
+
+		bool m_IsFullscreen;
+		bool m_IsResizable;
 	};
 }
 #endif

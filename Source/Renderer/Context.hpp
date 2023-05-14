@@ -3,7 +3,15 @@
 #ifndef EN_CONTEXT_HPP
 #define EN_CONTEXT_HPP
 
+#include <Renderer/DescriptorAllocator.hpp>
 #include <Renderer/Window.hpp>
+#include <Core/Types.hpp>
+
+#include <VMA.h>
+
+#include <set>
+#include <array>
+#include <vector>
 
 namespace en
 {
@@ -20,21 +28,23 @@ namespace en
 		Context();
 		~Context();
 
-		// Vulkan Core
 		VkInstance				 m_Instance;
 		VkDevice				 m_LogicalDevice;
 		VkDebugUtilsMessengerEXT m_DebugMessenger;
 
-		// Graphics
 		VkSurfaceKHR	 m_WindowSurface;
 		VkPhysicalDevice m_PhysicalDevice;
-		VkCommandPool    m_CommandPool;
 
+		VkCommandPool m_GraphicsCommandPool;
 		VkCommandPool m_TransferCommandPool;
 
 		VkQueue	m_GraphicsQueue;
 		VkQueue	m_TransferQueue;
 		VkQueue	m_PresentQueue;
+
+		Scope<DescriptorAllocator> m_DescriptorAllocator;
+
+		VmaAllocator m_Allocator;
 
 		struct QueueFamilyIndices
 		{
@@ -50,30 +60,28 @@ namespace en
 
 		static Context& Get();
 
-		Context(const Context&) = delete;
-		Context& operator=(const Context&) = delete;
-
 		const std::string& GetPhysicalDeviceName() const { return m_PhysicalDeviceName; };
 
 	private:
-		// Vulkan Initialisation
 		void CreateInstance();
 		void CreateDebugMessenger();
 		void CreateWindowSurface();
 		void PickPhysicalDevice();
 		void FindQueueFamilies(VkPhysicalDevice& device);
 		void CreateLogicalDevice();
+		void InitVMA();
 		void CreateCommandPool();
+		void CreateDescriptorAllocator();
+
 
 		std::string m_PhysicalDeviceName;
 
-		// Validation Layers and Extensions
 		bool AreValidationLayerSupported();
 		std::vector<const char*> GetRequiredExtensions();
 
-		// Debug Messenger
 		VkResult CreateDebugUtilsMessengerEXT(const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo);
-		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+		VkDebugUtilsMessengerCreateInfoEXT CreateDebugMessengerCreateInfo();
+
 		void DestroyDebugUtilsMessengerEXT();
 		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 

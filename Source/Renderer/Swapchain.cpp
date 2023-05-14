@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "Swapchain.hpp"
 
 #include <Common/Helpers.hpp>
@@ -52,7 +51,7 @@ namespace en
 		}
 
 		if (vkCreateSwapchainKHR(ctx.m_LogicalDevice, &createInfo, nullptr, &m_Swapchain) != VK_SUCCESS)
-			EN_ERROR("RendererBackend::CreateSwapChain() - Failed to create swap chain!");
+			EN_ERROR("Renderer::CreateSwapChain() - Failed to create swap chain!");
 
 		vkGetSwapchainImagesKHR(ctx.m_LogicalDevice, m_Swapchain, &imageCount, nullptr);
 		m_Images.resize(imageCount);
@@ -67,46 +66,29 @@ namespace en
 		for (int i = 0; i < m_ImageViews.size(); i++)
 		{
 			Helpers::CreateImageView(m_Images[i], m_ImageViews[i], VK_IMAGE_VIEW_TYPE_2D, m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
-			ChangeLayout(i, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 0U, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+			ChangeLayout(
+				i, 
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 
+				0U, 
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+			);
 		}
 	}
 	Swapchain::~Swapchain()
 	{
 		UseContext();
 
-		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
-
 		for (auto& imageView : m_ImageViews)
 			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
 
-		for (auto& framebuffer : m_Framebuffers)
-			vkDestroyFramebuffer(ctx.m_LogicalDevice, framebuffer, nullptr);
+		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);
 
 		m_CurrentLayouts.clear();
 	}
-	
-	void Swapchain::CreateSwapchainFramebuffers(VkRenderPass inputRenderpass)
-	{
-		m_Framebuffers.resize(m_ImageViews.size());
 
-		for (int i = 0; i < m_Framebuffers.size(); i++)
-		{
-			const VkFramebufferCreateInfo framebufferInfo{
-				.sType			 = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				.renderPass		 = inputRenderpass,
-				.attachmentCount = 1U,
-				.pAttachments	 = &m_ImageViews[i],
-				.width			 = m_Extent.width,
-				.height			 = m_Extent.height,
-				.layers			 = 1U
-			};
-
-			if (vkCreateFramebuffer(Context::Get().m_LogicalDevice, &framebufferInfo, nullptr, &m_Framebuffers[i]) != VK_SUCCESS)
-				EN_ERROR("RendererBackend::CreateSwapchainFramebuffers() - Failed to create framebuffers!");
-		}
-	}
-	
-	void Swapchain::ChangeLayout(int index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd)
+	void Swapchain::ChangeLayout(uint32_t index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd)
 	{
 		Helpers::TransitionImageLayout(m_Images[index], m_ImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_CurrentLayouts[index], newLayout, srcAccessMask, dstAccessMask, srcStage, dstStage, 0U, 1U, 1U, cmd);
 		m_CurrentLayouts[index] = newLayout;
@@ -158,12 +140,11 @@ namespace en
 			return capabilities.currentExtent;
 		else
 		{
-			int width, height;
-			glfwGetFramebufferSize(Window::Get().m_GLFWWindow, &width, &height);
+			glm::ivec2 size = Window::Get().GetFramebufferSize();
 
 			VkExtent2D actualExtent = {
-				static_cast<uint32_t>(width),
-				static_cast<uint32_t>(height)
+				static_cast<uint32_t>(size.x),
+				static_cast<uint32_t>(size.y)
 			};
 
 			actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);

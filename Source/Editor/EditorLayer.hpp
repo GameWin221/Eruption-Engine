@@ -10,31 +10,36 @@
 #include "UIPanels/InspectorPanel.hpp"
 #include "UIPanels/SettingsPanel.hpp"
 
+#include <Editor/EditorCommons.hpp>
+#include <Renderer/Renderer.hpp>
+#include <Assets/AssetManager.hpp>
+
 namespace en
 {
 	class EditorLayer
 	{
 	public:
-		void AttachTo(Renderer* renderer, AssetManager* assetManager, double* deltaTimeVar);
+		void AttachTo(Renderer* renderer, AssetManager* assetManager);
 
 		void OnUIDraw();
+
+		void UpdateStyle();
 
 		void SetVisibility(const bool& visibility);
 		const bool& GetVisibility() const { return m_Visible; };
 
 	private:
 		Renderer* m_Renderer  = nullptr;
-		double*	  m_DeltaTime = nullptr;
 
 		bool m_Visible = true;
+		
+		Scope<EditorImageAtlas> m_Atlas;
 
-		std::unique_ptr<EditorImageAtlas> m_Atlas;
-
-		std::unique_ptr<AssetManagerPanel  > m_AssetManagerPanel;
-		std::unique_ptr<SceneHierarchyPanel> m_SceneHierarchyPanel;
-		std::unique_ptr<InspectorPanel	   > m_InspectorPanel;
-		std::unique_ptr<SettingsPanel      > m_SettingsPanel;
-
+		Scope<AssetManagerPanel  > m_AssetManagerPanel;
+		Scope<SceneHierarchyPanel> m_SceneHierarchyPanel;
+		Scope<InspectorPanel	 > m_InspectorPanel;
+		Scope<SettingsPanel      > m_SettingsPanel;
+		
 		bool m_ShowLightsMenu	= true;
 		bool m_ShowAssetMenu	= false;
 		bool m_ShowCameraMenu	= true;
@@ -42,7 +47,7 @@ namespace en
 		bool m_ShowSceneMenu	= true;
 		bool m_ShowInspector	= true;
 		bool m_ShowSettingsMenu = false;
-
+		
 		void BeginRender();
 		void DrawDockspace();
 		void DrawCameraMenu();

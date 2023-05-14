@@ -1,4 +1,3 @@
-#include "Core/EnPch.hpp"
 #include "InspectorPanel.hpp"
 
 namespace en
@@ -54,12 +53,13 @@ namespace en
 
 		if (ImGui::CollapsingHeader("Properties", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::InputText("Name: ", name, 86);
+			ImGui::Text("Name: %s", name);
+			//ImGui::InputText("Name: ", name, 86);
 
-			ImGui::SameLine();
+			//ImGui::SameLine();
 
-			if (ImGui::Button("Save Name"))
-				m_Renderer->GetScene()->RenameSceneObject(chosenSceneObject->GetName(), name);
+			//if (ImGui::Button("Save Name"))
+				//m_Renderer->GetScene()->RenameSceneObject(chosenSceneObject->GetName(), name);
 
 			SPACE();
 
@@ -76,14 +76,22 @@ namespace en
 
 			SPACE();
 
-			ImGui::DragFloat3("Position", (float*)&chosenSceneObject->m_Position, 0.1f);
-			ImGui::DragFloat3("Rotation", (float*)&chosenSceneObject->m_Rotation, 0.1f);
-			ImGui::DragFloat3("Scale", (float*)&chosenSceneObject->m_Scale, 0.1f);
+			glm::vec3 chosenPosition = chosenSceneObject->GetPosition();
+			glm::vec3 chosenRotation = chosenSceneObject->GetRotation();
+			glm::vec3 chosenScale = chosenSceneObject->GetScale();
+
+			if(ImGui::DragFloat3("Position", (float*)&chosenPosition, 0.1f));
+				chosenSceneObject->SetPosition(chosenPosition);
+			if(ImGui::DragFloat3("Rotation", (float*)&chosenRotation, 0.1f));
+				chosenSceneObject->SetRotation(chosenRotation);
+			if (ImGui::DragFloat3("Scale", (float*)&chosenScale, 0.1f))
+				chosenSceneObject->SetScale(chosenScale);
+
 			ImGui::Checkbox("Active", &chosenSceneObject->m_Active);
 
 			SPACE();
 
-			const std::vector<Mesh*>& allMeshes = m_AssetManager->GetAllMeshes();
+			const std::vector<Handle<Mesh>>& allMeshes = m_AssetManager->GetAllMeshes();
 
 			std::vector<const char*> meshNames(allMeshes.size() + 1);
 

@@ -3,6 +3,8 @@
 #ifndef EN_SCENEMEMBER_HPP
 #define EN_SCENEMEMBER_HPP
 
+#include <concepts>
+
 namespace en
 {
 	enum struct SceneMemberType

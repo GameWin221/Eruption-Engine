@@ -10,6 +10,7 @@
 #include <stb_image.h>
 
 #include <Renderer/Image.hpp>
+#include <Renderer/Sampler.hpp>
 #include <Renderer/Context.hpp>
 
 namespace en
@@ -21,14 +22,9 @@ namespace en
 	public:
 		Texture(std::string texturePath, std::string name, VkFormat format, bool flipTexture = false, bool useMipMaps = true);
 		Texture(stbi_uc* pixels, std::string name, VkFormat format, VkExtent2D size, bool useMipMaps = true);
-		~Texture();
 
-		std::unique_ptr<Image> m_Image;
-
-		VkSampler m_ImageSampler;
-
-		static Texture* GetWhiteSRGBTexture();
-		static Texture* GetWhiteNonSRGBTexture();
+		Handle<Image> m_Image;
+		Handle<Sampler> m_Sampler;
 
 		const std::string& GetFilePath() const { return m_FilePath; };
 		const std::string& GetName()     const { return m_Name;	    };

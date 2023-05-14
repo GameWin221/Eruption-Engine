@@ -10,20 +10,34 @@ namespace en
     class MemoryBuffer
     {
     public:
-        MemoryBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+        MemoryBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage vmaMemoryUsage);
         ~MemoryBuffer();
 
         void MapMemory(const void* memory, VkDeviceSize memorySize);
-        void CopyTo(MemoryBuffer* dstBuffer, VkCommandBuffer cmd = VK_NULL_HANDLE);
-        void CopyTo(Image* dstImage, VkCommandBuffer cmd = VK_NULL_HANDLE);
+
+        void CopyInto(const void* memory, VkDeviceSize memorySize, uint32_t dstOffset = 0U, VkCommandBuffer cmd = VK_NULL_HANDLE);
+
+        void CopyTo(Handle<MemoryBuffer> dstBuffer, VkDeviceSize sizeBytes, VkDeviceSize srcOffset = 0U, VkDeviceSize dstOffset = 0U, VkCommandBuffer cmd = VK_NULL_HANDLE);
+        void CopyTo(Handle<Image> dstImage, VkCommandBuffer cmd = VK_NULL_HANDLE);
+
+        void CopyTo(VkBuffer dstBuffer, VkDeviceSize sizeBytes, VkDeviceSize srcOffset = 0U, VkDeviceSize dstOffset = 0U, VkCommandBuffer cmd = VK_NULL_HANDLE);
+        void CopyTo(VkImage dstImage, VkExtent3D extent, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
         void PipelineBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmdBuffer);
 
-        const VkDeviceSize m_BufferSize;
-        VkBuffer m_Handle;
+        void Resize(VkDeviceSize newSize, VkCommandBuffer cmd = VK_NULL_HANDLE);
+
+        const VkBuffer GetHandle() const { return m_Buffer; };
+
+        const VkDeviceSize GetSize() const { return m_BufferSize; };
 
     private:
-        VkDeviceMemory m_BufferMemory;
+        VkBuffer      m_Buffer;
+        VmaAllocation m_Allocation;
+        VkDeviceSize  m_BufferSize;
+
+        const VkBufferUsageFlags m_BufferUsage;
+        const VmaMemoryUsage m_MemoryUsage;
     };
 }
 

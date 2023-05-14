@@ -10,7 +10,6 @@ layout(push_constant) uniform FXAAParameters
 	float fxaaSpanMax;
 	float fxaaReduceMin;
 	float fxaaReduceMult;
-
 	float power;
 
 	vec2 texelSize;
