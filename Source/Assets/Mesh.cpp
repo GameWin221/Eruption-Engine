@@ -7,11 +7,7 @@ namespace en
 	Handle<Mesh> Mesh::GetEmptyMesh()
 	{
 		if (!g_EmptyMesh)
-		{
-			g_EmptyMesh = MakeHandle<Mesh>();
-			g_EmptyMesh->m_FilePath = "No Mesh";
-			g_EmptyMesh->m_Name = "No Mesh";
-		}
+			g_EmptyMesh = MakeHandle<Mesh>("No Mesh", "No Mesh");
 
 		return g_EmptyMesh;
 	}

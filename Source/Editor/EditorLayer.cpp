@@ -285,16 +285,16 @@ namespace en
 
 			switch (mode)
 			{
-				case 0:  modeName = "No Debug View";		break;
-				case 1:  modeName = "Albedo";			    break;
-				case 2:  modeName = "Normals";			    break;
-				case 3:  modeName = "Position";			    break;
-				case 4:  modeName = "Roughness";			break;
-				case 5:  modeName = "Metalness";			break;
-				case 6:  modeName = "Tangent";				break;
-				case 7:  modeName = "Bitangent";			break;
-				case 8:  modeName = "UVs";					break;
-				default: modeName = "Unknown Mode";		    break;
+				case 0:  modeName = "No Debug View";		 break;
+				case 1:  modeName = "Albedo";			     break;
+				case 2:  modeName = "Normals";			     break;
+				case 3:  modeName = "Position";			     break;
+				case 4:  modeName = "Roughness";			 break;
+				case 5:  modeName = "Metalness";			 break;
+				case 6:  modeName = "Active Cluster Density";break;
+				case 7:  modeName = "Depth Split Distances"; break;
+				case 8:  modeName = "CSM Cascades";			 break;
+				default: modeName = "Unknown Mode";		     break;
 			}
 
 			ImGui::Text(("View: " + modeName).c_str());

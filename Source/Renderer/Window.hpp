@@ -52,6 +52,8 @@ namespace en
 		const bool GetIsFullscreen() const;
 		const bool GetIsResizable() const;
 
+		GLFWwindow* GetNativeHandle() const { return m_NativeHandle; };
+
 	private:
 		GLFWwindow* m_NativeHandle;
 

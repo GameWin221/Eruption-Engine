@@ -1,0 +1,76 @@
+#version 450
+
+#include "camera.glsl"
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct AABB {
+    vec4 min;
+    vec4 max;
+};
+
+layout (set = 0, std430, binding = 0) buffer AABBClustersBuffer {
+    AABB clusters[];
+};
+
+layout(set = 1, binding = 0) uniform CameraBuffer {
+	CameraBufferObject camera;
+};
+
+layout(push_constant) uniform ScreenSizeConstant 
+{
+    uvec4 screenSize;
+};
+
+vec4 ScreenToView(vec4 screenPos)
+{
+    vec2 NDC = screenPos.xy / screenSize.xy * 2.0 - 1.0;
+
+    vec4 clip = vec4(NDC, screenPos.z, screenPos.w);
+
+    // Construct an inverse projection matrix out of the original rows
+    vec4 view = camera.invProj * clip;
+
+    return view / view.w;
+}
+
+vec3 LineViewPlaneIntersection(vec3 P, float zDistance)
+{
+    // Length of the intersection between the line and the view plane
+    //float t = zDistance / dot(viewPlaneDirection, P);
+    float t = zDistance / P.z; // Short version simplifying the dot product
+
+    return t * P;
+}
+
+void main()
+{
+    uvec2 tileSizePx = screenSize.zw;
+    uint tileIndex = gl_WorkGroupID.x +
+                     gl_WorkGroupID.y * gl_NumWorkGroups.x +
+                     gl_WorkGroupID.z * gl_NumWorkGroups.x * gl_NumWorkGroups.y;
+
+    // Calculating the min and max point in screen space
+    vec4 maxPointScreen = vec4(vec2(gl_WorkGroupID.x + 1, gl_WorkGroupID.y + 1) * tileSizePx, 0.0, 1.0); // Top right
+    vec4 minPointScreen = vec4(gl_WorkGroupID.xy * tileSizePx, 0.0, 1.0); // Bottom left
+
+    // Pass min and max to view space
+    vec3 maxPointView = ScreenToView(maxPointScreen).xyz;
+    vec3 minPointView = ScreenToView(minPointScreen).xyz;
+
+    // Near and far values of the cluster in view space
+    float tileNear = -camera.zNear * pow(camera.zFar / camera.zNear, gl_WorkGroupID.z / float(gl_NumWorkGroups.z));
+    float tileFar  = -camera.zNear * pow(camera.zFar / camera.zNear, (gl_WorkGroupID.z + 1) / float(gl_NumWorkGroups.z));
+
+    // Finding the 4 intersection points made from each point to the cluster near/far plane
+    vec3 minPointNear = LineViewPlaneIntersection(minPointView, tileNear);
+    vec3 minPointFar  = LineViewPlaneIntersection(minPointView, tileFar);
+    vec3 maxPointNear = LineViewPlaneIntersection(maxPointView, tileNear);
+    vec3 maxPointFar  = LineViewPlaneIntersection(maxPointView, tileFar);
+
+    vec3 minPointAABB = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
+    vec3 maxPointAABB = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
+
+    clusters[tileIndex].min = vec4(minPointAABB, 0.0);
+    clusters[tileIndex].max = vec4(maxPointAABB, 0.0);
+}

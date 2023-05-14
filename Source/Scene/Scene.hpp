@@ -54,9 +54,8 @@ namespace en
 		void DeleteDirectionalLight(const uint32_t index);
 
 		static VkDescriptorSetLayout GetGlobalDescriptorLayout();
-
-		float m_CascadeSplitWeight = 0.87f;
-		float m_CascadeFarPlane = 140.0f;
+		static VkDescriptorSetLayout GetLightingDescriptorLayout();
+		static VkDescriptorSetLayout GetLightsBufferDescriptorLayout();
 
 		glm::vec3 m_AmbientColor = glm::vec3(0.0f);
 
@@ -65,8 +64,6 @@ namespace en
 		std::vector<DirectionalLight> m_DirectionalLights;
 
 		Handle<Camera> m_MainCamera;
-
-		Handle<DescriptorSet> m_GlobalDescriptorSet;
 
 		std::unordered_map<std::string, Handle<SceneObject>> m_SceneObjects;
 
@@ -116,16 +113,6 @@ namespace en
 			uint32_t _padding1{};
 		} m_GPULights;
 
-		struct CSM {
-			std::array<std::array<glm::mat4, SHADOW_CASCADES>, MAX_DIR_LIGHT_SHADOWS> cascadeMatrices{};
-
-			std::array<float, SHADOW_CASCADES> cascadeSplitDistances{};
-			std::array<float, SHADOW_CASCADES> cascadeFrustumSizeRatios{};
-
-			std::array<glm::vec3, SHADOW_CASCADES> cascadeCenters{};
-			std::array<float, SHADOW_CASCADES> cascadeRadiuses{};
-		} m_CSM;
-
 		std::vector<glm::mat4  > m_Matrices;
 		std::vector<GPUMaterial> m_GPUMaterials;
 
@@ -139,24 +126,6 @@ namespace en
 		std::unordered_map<std::string, uint32_t> m_RegisteredTextures;
 		std::unordered_map<std::string, uint32_t> m_RegisteredMaterials;
 
-		Handle<Sampler> m_ShadowSampler;
-
-		Handle<DescriptorSet> m_ShadowsDescriptorSet;
-
-		Handle<RenderPass> m_DirShadowsRenderPass;
-		Handle<RenderPass> m_PerspectiveShadowsRenderPass;
-
-		std::array<OmniShadowMap, MAX_POINT_LIGHT_SHADOWS> m_PointShadowMaps;
-		std::array<ShadowMap, MAX_SPOT_LIGHT_SHADOWS> m_SpotShadowMaps;
-		std::array<ShadowMap, MAX_DIR_LIGHT_SHADOWS * SHADOW_CASCADES> m_DirShadowMaps;
-
-		Handle<Image> m_PointShadowDepthBuffer;
-		Handle<Image> m_SpotShadowDepthBuffer;
-
-		Handle<GraphicsPipeline> m_DirShadowPipeline;
-		Handle<GraphicsPipeline> m_SpotShadowPipeline;
-		Handle<GraphicsPipeline> m_PointShadowPipeline;
-
 		Handle<MemoryBuffer> m_LightsBuffer;
 		Handle<MemoryBuffer> m_LightsStagingBuffer;
 
@@ -166,6 +135,10 @@ namespace en
 		Handle<MemoryBuffer> m_GlobalMatricesBuffer;
 		Handle<MemoryBuffer> m_GlobalMatricesStagingBuffer;
 
+		Handle<DescriptorSet> m_GlobalDescriptorSet;
+		Handle<DescriptorSet> m_LightingDescriptorSet;
+		Handle<DescriptorSet> m_LightsBufferDescriptorSet;
+
 		std::vector<uint32_t> m_ChangedMatrixIDs;
 		std::vector<uint32_t> m_ChangedMaterialIDs;
 
@@ -173,12 +146,11 @@ namespace en
 		std::vector<uint32_t> m_ChangedSpotLightsIDs;
 		std::vector<uint32_t> m_ChangedDirLightsIDs;
 
-		uint32_t m_PointLightShadowResolution = 512U;
-		uint32_t m_SpotLightShadowResolution  = 1024U;
-		uint32_t m_DirLightShadowResolution  = 2048U;
+		std::vector<uint32_t> m_ActivePointLightsShadowIDs;
+		std::vector<uint32_t> m_ActiveSpotLightsShadowIDs;
+		std::vector<uint32_t> m_ActiveDirLightsShadowIDs;
 
 		bool m_SceneLightingChanged = true;
-
 		bool m_GlobalDescriptorChanged = true;
 	};
 }

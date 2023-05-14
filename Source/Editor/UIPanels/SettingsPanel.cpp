@@ -4,7 +4,7 @@
 
 namespace en
 {
-	constexpr std::array<const char*, 2> g_AntialiasingModeNames = { "FXAA", "None" };
+	constexpr std::array<const char*, 2> g_AntialiasingModeNames = { "None", "FXAA"};
 	constexpr std::array<const char*, 2> g_AmbientOcclusionModeNames = { "SSAO", "None" };
 
 	void SettingsPanel::Render()
@@ -13,30 +13,37 @@ namespace en
 
 		ImGui::Begin("Settings", nullptr, EditorCommons::CommonFlags);
 
-		static bool vSync = true;
+		static bool vSync = m_Renderer->GetVSyncEnabled();
+		static bool depthPrepass = m_Renderer->GetDepthPrepassEnabled();
+		static Renderer::AntialiasingMode antialiasingMode = m_Renderer->GetAntialiasingMode();
 
 		if (ImGui::Checkbox("VSync", &vSync))
-			m_Renderer->SetVSync(vSync);
-		/*
+			m_Renderer->SetVSyncEnabled(vSync);
+
+		if (ImGui::Checkbox("Depth Prepass", &depthPrepass))
+			m_Renderer->SetDepthPrepassEnabled(depthPrepass);
+		
 		if (ImGui::CollapsingHeader("Antialiasing"))
 		{
-			if (ImGui::Combo("Antialiasing Mode", (int*)&m_Renderer->m_PostProcessParams.antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
-				m_Renderer->ReloadBackend();
+			if (ImGui::Combo("Antialiasing Mode", (int*)&antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
+				m_Renderer->SetAntialiasingMode(antialiasingMode);
 			
-			switch (m_Renderer->m_PostProcessParams.antialiasingMode)
+			auto& aa = m_Renderer->GetAntialiasingProperties();
+
+			switch (m_Renderer->GetAntialiasingMode())
 			{
 			case Renderer::AntialiasingMode::FXAA:
 				ImGui::Spacing();
 
 				if (ImGui::Button("Restore Defaults"))
-					m_Renderer->m_PostProcessParams.antialiasing = Renderer::PostProcessingParams::Antialiasing{};
+					m_Renderer->GetAntialiasingProperties() = Renderer::AntialiasingProperties{};
 
 				ImGui::Spacing();
 
-				ImGui::DragFloat("FXAA Span Max", &m_Renderer->m_PostProcessParams.antialiasing.fxaaSpanMax, 0.02f, 0.0f, 16.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("FXAA Reduce Min", &m_Renderer->m_PostProcessParams.antialiasing.fxaaReduceMin, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("FXAA Reduce Mult", &m_Renderer->m_PostProcessParams.antialiasing.fxaaReduceMult, 0.01f, 0.0f, 1.0f), "%.3f", ImGuiSliderFlags_AlwaysClamp;
-				ImGui::DragFloat("FXAA Power", &m_Renderer->m_PostProcessParams.antialiasing.fxaaPower, 0.2f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("FXAA Span Max", &aa.fxaaSpanMax, 0.02f, 0.0f, 16.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("FXAA Reduce Min", &aa.fxaaReduceMin, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("FXAA Reduce Mult", &aa.fxaaReduceMult, 0.01f, 0.0f, 1.0f), "%.3f", ImGuiSliderFlags_AlwaysClamp;
+				ImGui::DragFloat("FXAA Power", &aa.fxaaPower, 0.2f, 0.0f, 10.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				break;
 
 			case Renderer::AntialiasingMode::None:
@@ -49,7 +56,7 @@ namespace en
 			}
 	
 		}
-
+		/*
 		if (ImGui::CollapsingHeader("Ambient Occlusion"))
 		{
 			if (ImGui::Combo("Ambient Occlusion Mode", (int*)&m_Renderer->m_PostProcessParams.ambientOcclusionMode, g_AmbientOcclusionModeNames.data(), g_AmbientOcclusionModeNames.size()))
@@ -80,6 +87,7 @@ namespace en
 			}
 
 		}
+		*/
 
 		if (ImGui::CollapsingHeader("Lights and Shadows"))
 		{
@@ -88,8 +96,9 @@ namespace en
 				m_Renderer->SetShadowCascadesWeight(weight);
 
 			static float farPlane = m_Renderer->GetShadowCascadesFarPlane();
-			if (ImGui::DragFloat("Shadow cascades far plane", &farPlane, 0.5f, m_Renderer->GetMainCamera()->m_NearPlane, m_Renderer->GetMainCamera()->m_FarPlane, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-				m_Renderer->SetShadowCascadesFarPlane(farPlane);
+			if (m_Renderer->GetScene())
+				if (ImGui::DragFloat("Shadow cascades far plane", &farPlane, 0.5f, m_Renderer->GetScene()->m_MainCamera->m_NearPlane, m_Renderer->GetScene()->m_MainCamera->m_FarPlane, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+					m_Renderer->SetShadowCascadesFarPlane(farPlane);
 
 			static int pRes = m_Renderer->GetPointShadowResolution();
 			static int sRes = m_Renderer->GetSpotShadowResolution();
@@ -114,7 +123,7 @@ namespace en
 					m_Renderer->SetShadowFormat(VK_FORMAT_D16_UNORM);
 			}
 		}
-		*/
+	
 		ImGui::End();
 	}
 }

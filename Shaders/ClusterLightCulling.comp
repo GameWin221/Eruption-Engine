@@ -1,0 +1,305 @@
+#version 450
+
+#include "../EruptionEngine.ini"
+#include "lights.glsl"
+#include "camera.glsl"
+
+layout(local_size_x = CLUSTERED_TILES_X, local_size_y = CLUSTERED_TILES_Y, local_size_z = CLUSTERED_TILES_Z / CLUSTERED_BATCHES) in;
+
+#define THREAD_COUNT (CLUSTERED_TILES_X * CLUSTERED_TILES_Y * CLUSTERED_TILES_Z / CLUSTERED_BATCHES)
+
+struct AABB 
+{
+    vec4 min;
+    vec4 max;
+};
+
+layout (std430, set = 0, binding = 0) buffer AABBClustersBuffer
+{
+    AABB clusters[];
+};
+
+layout(set = 1, binding = 0) uniform CameraBuffer {
+	CameraBufferObject camera;
+};
+
+layout(std430, set = 2, binding = 0) buffer Lights
+{
+    PointLight pointLights[MAX_POINT_LIGHTS];
+    SpotLight  spotLights[MAX_SPOT_LIGHTS];
+    DirLight   dirLights[MAX_DIR_LIGHTS];
+
+    uint activePointLights;
+    uint activeSpotLights;
+    uint activeDirLights;
+    float _padding0;
+
+    vec3 ambientLight;
+    float _padding1;
+
+    vec4 cascadeSplitDistances[SHADOW_CASCADES];
+	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
+};
+
+struct LightGrid
+{
+    uint offset;
+    uint count;
+};
+
+// Pointlights
+layout (std430, set = 0, binding = 1) buffer PointLightGrids 
+{
+    LightGrid pointLightGrids[];
+};
+
+layout (std430, set = 0, binding = 2) buffer PointLightIndexSSBO
+{
+    uint globalPointLightIndexList[];
+};
+
+layout (std430, set = 0, binding = 3) buffer PointGlobalIndexCountSSBO
+{
+    uint pointGlobalIndexCount;
+};
+
+
+// Spotlights
+layout (std430, set = 0, binding = 4) buffer SpotLightGrids 
+{
+    LightGrid spotLightGrids[];
+};
+
+layout (std430, set = 0, binding = 5) buffer SpotLightIndexSSBO
+{
+    uint globalSpotLightIndexList[];
+};
+
+layout (std430, set = 0, binding = 6) buffer SpotGlobalIndexCountSSBO
+{
+    uint spotGlobalIndexCount;
+};
+
+struct SharedPointLight
+{
+    vec3 position;
+    float radius;
+};
+struct SharedSpotLight
+{
+    vec3 position;
+    float outerCutoff;
+    vec3 direction;
+    float range;
+};
+
+shared SharedPointLight sharedPointLights[THREAD_COUNT];
+shared SharedSpotLight  sharedSpotLights[THREAD_COUNT];
+
+float SqDistPointAABB(vec3 point, uint tileID);
+
+bool SphereAABBIntersection(uint light, uint tileID);
+
+// Thanks to Jonathan Hale for the implementation: https://blog.squareys.de/aabb-cone-intersection/
+bool ConePointIntersection(vec3 point, vec3 coneNormal, float coneLength, float cutoff);
+bool ConeAABBIntersection(uint light, uint tileID);
+
+void main()
+{
+    pointGlobalIndexCount = 0;
+    spotGlobalIndexCount = 0;
+
+    uint tileIndex = THREAD_COUNT * gl_WorkGroupID.z + gl_LocalInvocationIndex;
+    
+    uint pointLightCount = activePointLights;
+    uint pointLightNumBatches = (pointLightCount + THREAD_COUNT - 1) / THREAD_COUNT; // ceil
+    
+    uint visiblePointLightCount = 0;
+    uint visiblePointLightIndices[MAX_POINT_LIGHTS];
+
+    for(uint batch = 0; batch < pointLightNumBatches; ++batch)
+    {
+        uint lightIndex = batch * THREAD_COUNT + gl_LocalInvocationIndex;
+  
+        // Prevent overflow
+        lightIndex = min(lightIndex, pointLightCount);
+
+        barrier();
+
+        // Populating shared light array
+        sharedPointLights[gl_LocalInvocationIndex].position = pointLights[lightIndex].position;
+        sharedPointLights[gl_LocalInvocationIndex].radius   = pointLights[lightIndex].radius;
+
+        barrier();
+    
+        // Iterating within the current batch of lights
+        for(uint light = 0; light < THREAD_COUNT; ++light)
+        {
+            if(sharedPointLights[light].radius > 0)
+            {
+                if(SphereAABBIntersection(light, tileIndex))
+                {
+                    visiblePointLightIndices[visiblePointLightCount] = batch * THREAD_COUNT + light;
+                    visiblePointLightCount += 1;
+                }
+            }
+        }
+    }
+    
+    uint spotLightCount      = activeSpotLights;
+    uint spotLightNumBatches = (spotLightCount + THREAD_COUNT - 1) / THREAD_COUNT;
+    
+    uint visibleSpotLightCount = 0;
+    uint visibleSpotLightIndices[MAX_SPOT_LIGHTS];
+
+    for(uint batch = 0; batch < spotLightNumBatches; ++batch)
+    {
+        uint lightIndex = batch * THREAD_COUNT + gl_LocalInvocationIndex;
+
+        //Prevent overflow
+        lightIndex = min(lightIndex, spotLightCount);
+
+        barrier();
+
+        // Populating shared light array
+        sharedSpotLights[gl_LocalInvocationIndex].position    = spotLights[lightIndex].position;
+        sharedSpotLights[gl_LocalInvocationIndex].direction   = spotLights[lightIndex].direction;
+        sharedSpotLights[gl_LocalInvocationIndex].outerCutoff = spotLights[lightIndex].outerCutoff;
+        sharedSpotLights[gl_LocalInvocationIndex].range       = spotLights[lightIndex].range;
+
+        barrier();
+
+        // Iterating within the current batch of lights
+        for(uint light = 0; light < THREAD_COUNT; ++light)
+        {
+            if(sharedSpotLights[light].range > 0)
+            {
+                if(ConeAABBIntersection(light, tileIndex))
+                {
+                    visibleSpotLightIndices[visibleSpotLightCount] = batch * THREAD_COUNT + light;
+                    visibleSpotLightCount += 1;
+                }
+            }
+        }
+    }
+    
+
+    barrier();
+
+    uint pointLightOffset = atomicAdd(pointGlobalIndexCount, visiblePointLightCount);
+    uint spotLightOffset = atomicAdd(spotGlobalIndexCount, visibleSpotLightCount);
+
+    for(uint i = 0; i < visiblePointLightCount; ++i)
+        globalPointLightIndexList[pointLightOffset + i] = visiblePointLightIndices[i];
+
+    for(uint i = 0; i < visibleSpotLightCount; ++i)
+        globalSpotLightIndexList[spotLightOffset + i] = visibleSpotLightIndices[i];
+
+    pointLightGrids[tileIndex].offset = pointLightOffset;
+    pointLightGrids[tileIndex].count  = visiblePointLightCount;
+
+    spotLightGrids[tileIndex].offset = spotLightOffset;
+    spotLightGrids[tileIndex].count  = visibleSpotLightCount;
+}
+
+float SqDistPointAABB(vec3 point, uint tileID)
+{
+    float sqDist = 0.0;
+
+    AABB currentCell = clusters[tileID];
+
+    for(int i = 0; i < 3; ++i)
+    {
+        float v = point[i];
+
+        float min = currentCell.min[i];
+        float max = currentCell.max[i];
+
+        float sqDistMin = min - v;
+        float sqDistMax = v - max;
+
+        if(v < min)
+            sqDist += sqDistMin * sqDistMin;
+        
+        if(v > max)
+            sqDist += sqDistMax * sqDistMax;
+    }
+
+    return sqDist;
+}
+
+bool SphereAABBIntersection(uint light, uint tileID) 
+{
+    // I think this needs to be multiplied by camera.view too but it works as is
+    float radius = sharedPointLights[light].radius;
+
+    vec3 viewSpacePos = vec3(camera.view * vec4(sharedPointLights[light].position, 1.0));
+
+    float sqDistance = SqDistPointAABB(viewSpacePos, tileID);
+
+    return sqDistance <= radius * radius;
+}
+
+// Thanks to Jonathan Hale for the implementation: https://blog.squareys.de/aabb-cone-intersection/
+bool ConePointIntersection(vec3 point, vec3 coneNormal, float coneLength, float cutoff) 
+{
+    float len = dot(point, coneNormal);
+
+    float pointLenSq = point.x*point.x + point.y*point.y + point.z*point.z;
+    float pointLen = sqrt(pointLenSq);
+
+    return len >= 0 && pointLenSq <= len * len * cutoff && pointLen <= coneLength;
+}
+bool ConeAABBIntersection(uint light, uint tileID)
+{
+    vec3 direction = -vec3(camera.view * vec4(sharedSpotLights[light].direction, 0.0));
+    vec3 position = vec3(camera.view * vec4(sharedSpotLights[light].position, 1.0));
+
+    float range = 0.5 + sharedSpotLights[light].range + length(camera.position - sharedSpotLights[light].position) * 0.35;
+    float outerCutoff = sharedSpotLights[light].outerCutoff;
+
+    AABB cell = clusters[tileID];
+
+    float cutoff = 1.0 + pow(0.6 + outerCutoff, 7.0);
+
+    vec3 aabbCenter = vec3(cell.min.xyz + cell.max.xyz) / 2.0;
+    vec3 aabbExtents = vec3(cell.max.xyz - cell.min.xyz) / 2.0;
+    
+    vec3 c = aabbCenter - position;
+
+    for(uint i = 0; i < 3; i++) 
+    {
+        uint z = i;
+        uint x = (i + 1) % 3;
+        uint y = (i + 2) % 3;
+
+        if(direction[z] != 0.0)
+        {
+            vec2 t = vec2(
+                (c[z] - aabbExtents[z]) / direction[z],
+                (c[z] + aabbExtents[z]) / direction[z]
+            );
+
+            for(uint j = 0; j < 2; j++) 
+            {
+                vec3 point = direction * t[j];
+                vec3 closestPoint = point;
+
+                if(point[x] - c[x] > aabbExtents[x])
+                    closestPoint[x] = c[x] + aabbExtents[x];
+                else if(point[x] - c[x] < -aabbExtents[x])
+                    closestPoint[x] = c[x] - aabbExtents[x];
+
+                if(point[y] - c[y] > aabbExtents[y])
+                    closestPoint[y] = c[y] + aabbExtents[y];
+                else if(point[y] - c[y] < -aabbExtents[y])
+                    closestPoint[y] = c[y] - aabbExtents[y];
+
+                if(ConePointIntersection(closestPoint, direction, range, cutoff))
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}

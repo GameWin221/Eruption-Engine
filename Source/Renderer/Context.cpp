@@ -9,8 +9,6 @@ constexpr std::array<const char*, 1> deviceExtensions {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 constexpr VkPhysicalDeviceFeatures deviceFeatures {
-	.imageCubeArray    = VK_TRUE,
-	.multiDrawIndirect = VK_TRUE,
 	.samplerAnisotropy = VK_TRUE,
 };
 
@@ -177,6 +175,9 @@ namespace en
 
 			i++;
 		}
+
+		if (!m_QueueFamilies.transfer.has_value() && m_QueueFamilies.graphics.has_value())
+			m_QueueFamilies.transfer = m_QueueFamilies.graphics;
 	}
 	void Context::CreateLogicalDevice()
 	{

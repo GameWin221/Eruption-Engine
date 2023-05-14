@@ -9,7 +9,6 @@ namespace en
 	{
         glm::vec3 pos;
         glm::vec3 normal;
-        glm::vec3 tangent;
         glm::vec2 texcoord;
 
         static constexpr VkVertexInputBindingDescription GetBindingDescription()
@@ -21,9 +20,9 @@ namespace en
             };
         }
 
-        static constexpr std::array<VkVertexInputAttributeDescription, 4> GetAttributeDescriptions()
+        static constexpr std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions()
         {
-            return std::array<VkVertexInputAttributeDescription, 4> {
+            return std::array<VkVertexInputAttributeDescription, 3> {
                 VkVertexInputAttributeDescription{   // Position attribute in glm::vec3 (XYZ)
                     .location = 0U,
                     .binding = 0U,
@@ -36,14 +35,8 @@ namespace en
                     .format = VK_FORMAT_R32G32B32_SFLOAT,
                     .offset = offsetof(Vertex, normal),
                 },
-                VkVertexInputAttributeDescription{   // Tangent attribute in glm::vec3 (XYZ)
-                    .location = 2U,
-                    .binding = 0U,
-                    .format = VK_FORMAT_R32G32B32_SFLOAT,
-                    .offset = offsetof(Vertex, tangent),
-                },
                 VkVertexInputAttributeDescription{    // Texture coordinates attribute in glm::vec2 (UV)
-                    .location = 3U,
+                    .location = 2U,
                     .binding = 0U,
                     .format = VK_FORMAT_R32G32_SFLOAT,
                     .offset = offsetof(Vertex, texcoord),
@@ -55,14 +48,14 @@ namespace en
         {
             pos = other.pos;
             normal = other.normal;
-            tangent = other.tangent;
+ 
             texcoord = other.texcoord;
             return *this;
         }
 
         bool operator==(const Vertex& other) const
         {
-            return pos == other.pos && texcoord == other.texcoord && normal == other.normal && tangent == other.tangent;
+            return pos == other.pos && texcoord == other.texcoord && normal == other.normal;
         }
 	};
 }

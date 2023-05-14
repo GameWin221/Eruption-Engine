@@ -34,7 +34,7 @@ namespace en
 
 		~RenderPass();
 		
-		void Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent, glm::vec4 clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), float depthClearValue = 1.0f, uint32_t stencilClearValue = 0U);
+		void Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent, glm::vec4 clearColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), float depthClearValue = 1.0f, uint32_t stencilClearValue = 0U);
 		void End();
 
 		const VkRenderPass GetHandle() const { return m_RenderPass; }

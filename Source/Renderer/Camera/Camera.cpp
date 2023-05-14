@@ -29,7 +29,7 @@ namespace en
 		{
 			glm::ivec2 size = en::Window::Get().GetSize();
 
-			if (size.x <= 0 || size.y <= 0) return;
+			if (size.x * size.y <= 0) return;
 
 			m_Size = size;
 		}

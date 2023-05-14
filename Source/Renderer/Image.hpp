@@ -13,7 +13,7 @@ namespace en
 		friend class Renderer;
 
 	public:
-		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageCreateFlags createFlags, VkImageAspectFlags aspectFlags, VkImageLayout initialLayout, uint32_t layerCount = 1U, bool genMipMaps = false);
+		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageCreateFlags createFlags, VkImageLayout initialLayout, uint32_t layerCount = 1U, bool genMipMaps = false);
 		~Image();
 
 		void SetData(void* data);

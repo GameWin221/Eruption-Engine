@@ -282,7 +282,7 @@ namespace en
 
 			if (ImGui::Button("Choose textures to import...", ImVec2(200, 100)))
 			{
-				auto file = pfd::open_file("Choose textures to import...", DEFAULT_ASSET_PATH, { "Supported Texture Formats", "*.png *.jpg *.jpeg" }, pfd::opt::multiselect);
+				auto file = pfd::open_file("Choose textures to import...", DEFAULT_ASSET_PATH, { "Supported Texture Formats", "*.png *.jpg *.jpeg *.tga" }, pfd::opt::multiselect);
 
 				const std::vector<std::string> filePaths = file.result();
 
@@ -291,7 +291,7 @@ namespace en
 					std::string fileName = path.substr(path.find_last_of('/') + 1, path.length());
 					fileName = path.substr(path.find_last_of('\\') + 1, path.length());
 
-					m_AssetManager->LoadTexture(fileName, path);
+					m_AssetManager->LoadTexture(fileName, path, properties);
 				}
 			}
 

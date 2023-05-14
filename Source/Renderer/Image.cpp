@@ -1,5 +1,7 @@
 #include "Image.hpp"
 
+#include "../EruptionEngine.ini"
+
 #include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
@@ -7,7 +9,7 @@ namespace en
 	Image::Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageCreateFlags createFlags, VkImageLayout initialLayout, uint32_t layerCount, bool genMipMaps)
 		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_LayerCount(layerCount)
 	{
-		if(genMipMaps)
+		if (genMipMaps)
 			m_MipLevelCount = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
 
 		VkImageCreateInfo imageInfo{

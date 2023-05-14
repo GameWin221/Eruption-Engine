@@ -3,6 +3,10 @@
 #ifndef EN_CAMERA_HPP
 #define EN_CAMERA_HPP
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <Renderer/Window.hpp>
 #include <Common/Helpers.hpp>
 
@@ -13,7 +17,7 @@ namespace en
 	class Camera
 	{
 	public:
-		Camera(float fov = 60.0f, float nearPlane = 0.1f, float farPlane = 200.0f, glm::vec3 position = glm::vec3(0.0f));
+		Camera(float fov = 60.0f, float nearPlane = 0.01f, float farPlane = 200.0f, glm::vec3 position = glm::vec3(0.0f));
 
 		void LookAt(const glm::vec3 target);
 
@@ -28,7 +32,7 @@ namespace en
 
 		float m_Fov;
 
-		float m_Exposure = 1.0f;
+		float m_Exposure = 2.0f;
 
 		bool m_DynamicallyScaled = true;
 

@@ -144,6 +144,15 @@
     <ClCompile Include="Source\Renderer\Sampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="External\TinyGLTF\tiny_gltf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Assets\MeshImporter\GLTFImporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Assets\MeshImporter\Importer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\EnPch.hpp">
@@ -302,6 +311,12 @@
     <ClInclude Include="Source\Renderer\Sampler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Assets\MeshImporter\GLTFImporter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\MeshImporter\Importer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="EruptionEngine.ini" />
@@ -313,14 +328,5 @@
     <None Include="Shaders\AMD\AMDTonemapping.comp" />
     <None Include="Shaders\NVIDIA\NVFXAA.comp" />
     <None Include="Shaders\NVIDIA\NVTonemapping.comp" />
-    <None Include="Shaders\vert.vert" />
-    <None Include="Shaders\frag.frag" />
-    <None Include="Shaders\camera.glsl" />
-    <None Include="Shaders\PointShadowVert.vert" />
-    <None Include="Shaders\ShadowFrag.frag" />
-    <None Include="Shaders\lights.glsl" />
-    <None Include="Shaders\SpotShadowVert.vert" />
-    <None Include="Shaders\DirShadowVert.vert" />
-    <None Include="Shaders\Depth.vert" />
   </ItemGroup>
 </Project>

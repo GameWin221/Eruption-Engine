@@ -27,8 +27,28 @@ namespace en
 
 	void Renderer::Update()
 	{
-		if(m_Scene)
+		m_ClusterFrustumChanged = false;
+
+		if (m_Scene)
+		{
 			m_Scene->UpdateSceneCPU();
+			UpdateCSM();
+
+			glm::mat4 oldInvProj = m_CameraBuffer->m_CBOs[m_FrameIndex].invProj;
+
+			m_CameraBuffer->UpdateBuffer(
+				m_FrameIndex,
+				m_Scene->m_MainCamera,
+				m_CSM.cascadeSplitDistances,
+				m_CSM.cascadeFrustumSizeRatios,
+				m_CSM.cascadeMatrices,
+				m_Swapchain->GetExtent(),
+				m_DebugMode
+			);
+
+			if (oldInvProj != m_CameraBuffer->m_CBOs[m_FrameIndex].invProj)
+				m_ClusterFrustumChanged = true;
+		}
 	}
 	void Renderer::PreRender()
 	{
@@ -38,23 +58,13 @@ namespace en
 				ResetAllFrames();
 			else
 				WaitForActiveFrame();
+
+			m_Scene->UpdateSceneGPU();
+
+			m_CameraBuffer->MapBuffer(m_FrameIndex);
 		}
 		else 
 			WaitForActiveFrame();
-
-		if (m_Scene)
-			m_Scene->UpdateSceneGPU();
-		
-		m_CameraBuffer->UpdateBuffer(
-			m_FrameIndex,
-			m_Scene->m_MainCamera,
-			m_Scene->m_CSM.cascadeSplitDistances,
-			m_Scene->m_CSM.cascadeFrustumSizeRatios,
-			m_Scene->m_CSM.cascadeMatrices,
-			m_Swapchain->GetExtent(),
-			m_DebugMode
-		);
-		m_CameraBuffer->MapBuffer(m_FrameIndex);
 	}
 	void Renderer::Render()
 	{
@@ -66,9 +76,14 @@ namespace en
 		{
 			ShadowPass();
 
-			DepthPass();
+			ClusterComputePass();
+
+			if(m_Settings.depthPrePass)
+				DepthPass();
 
 			ForwardPass();
+
+			AntialiasingPass();
 		}
 
 		ImGuiPass();
@@ -153,12 +168,11 @@ namespace en
 	{
 		if (m_SkipFrame) return;
 
-		for (auto& light : m_Scene->m_PointLights)
+		for (const auto& i : m_Scene->m_ActivePointLightsShadowIDs)
 		{
-			if (light.m_ShadowmapIndex == -1)
-				continue;
+			const auto& light = m_Scene->m_PointLights[i];
 
-			m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].image->ChangeLayout(
+			m_PointShadowMaps[light.m_ShadowmapIndex].image->ChangeLayout(
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT,
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -167,19 +181,19 @@ namespace en
 
 			for (uint32_t cubeSide = 0U; cubeSide < 6U; cubeSide++)
 			{
-				m_Scene->m_PerspectiveShadowsRenderPass->Begin(
+				m_PerspectiveShadowsRenderPass->Begin(
 					m_Frames[m_FrameIndex].commandBuffer,
-					m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->GetHandle(),
-					m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->m_Extent
+					m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->GetHandle(),
+					m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->m_Extent
 				);
 
-				m_Scene->m_PointShadowPipeline->Bind(
+				m_PointShadowPipeline->Bind(
 					m_Frames[m_FrameIndex].commandBuffer,
-					m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->m_Extent,
+					m_PointShadowMaps[light.m_ShadowmapIndex].framebuffers[cubeSide]->m_Extent,
 					VK_CULL_MODE_FRONT_BIT
 				);
 
-				m_Scene->m_PointShadowPipeline->BindDescriptorSet(m_Scene->m_ShadowsDescriptorSet->GetHandle());
+				m_PointShadowPipeline->BindDescriptorSet(m_Scene->m_LightingDescriptorSet->GetHandle());
 
 				for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 				{
@@ -187,7 +201,7 @@ namespace en
 
 					uint32_t pushConstant[3]{ sceneObject->GetMatrixIndex(), light.m_ShadowmapIndex, cubeSide };
 
-					m_Scene->m_PointShadowPipeline->PushConstants(
+					m_PointShadowPipeline->PushConstants(
 						pushConstant,
 						sizeof(uint32_t) * 3,
 						0U,
@@ -198,42 +212,41 @@ namespace en
 					{
 						if (!subMesh.m_Active) continue;
 
-						m_Scene->m_PointShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
-						m_Scene->m_PointShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+						m_PointShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+						m_PointShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
 
-						m_Scene->m_PointShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
+						m_PointShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
 					}
 				}
 
-				m_Scene->m_PerspectiveShadowsRenderPass->End();
+				m_PerspectiveShadowsRenderPass->End();
 			}
-			m_Scene->m_PointShadowMaps[light.m_ShadowmapIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			m_PointShadowMaps[light.m_ShadowmapIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		}
-		for (auto& light : m_Scene->m_SpotLights)
+		for (const auto& i : m_Scene->m_ActiveSpotLightsShadowIDs)
 		{
-			if (light.m_ShadowmapIndex == -1)
-				continue;
+			const auto& light = m_Scene->m_SpotLights[i];
 
-			m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].image->ChangeLayout(
+			m_SpotShadowMaps[light.m_ShadowmapIndex].image->ChangeLayout(
 				VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
 				m_Frames[m_FrameIndex].commandBuffer
 			);
 
-			m_Scene->m_DirShadowsRenderPass->Begin(
+			m_DirShadowsRenderPass->Begin(
 				m_Frames[m_FrameIndex].commandBuffer,
-				m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->GetHandle(),
-				m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->m_Extent
+				m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->GetHandle(),
+				m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->m_Extent
 			);
 
-			m_Scene->m_SpotShadowPipeline->Bind(
+			m_SpotShadowPipeline->Bind(
 				m_Frames[m_FrameIndex].commandBuffer,
-				m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->m_Extent,
+				m_SpotShadowMaps[light.m_ShadowmapIndex].framebuffer->m_Extent,
 				VK_CULL_MODE_FRONT_BIT
 			);
 
-			m_Scene->m_SpotShadowPipeline->BindDescriptorSet(m_Scene->m_ShadowsDescriptorSet->GetHandle());
+			m_SpotShadowPipeline->BindDescriptorSet(m_Scene->m_LightingDescriptorSet->GetHandle());
 
 			for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 			{
@@ -241,7 +254,7 @@ namespace en
 
 				uint32_t pushConstant[2]{ sceneObject->GetMatrixIndex(), light.m_ShadowmapIndex };
 
-				m_Scene->m_SpotShadowPipeline->PushConstants(
+				m_SpotShadowPipeline->PushConstants(
 					pushConstant,
 					sizeof(uint32_t) * 2,
 					0U,
@@ -252,44 +265,43 @@ namespace en
 				{
 					if (!subMesh.m_Active) continue;
 
-					m_Scene->m_SpotShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
-					m_Scene->m_SpotShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+					m_SpotShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+					m_SpotShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
 
-					m_Scene->m_SpotShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
+					m_SpotShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
 				}
 			}
 
-			m_Scene->m_SpotShadowMaps[light.m_ShadowmapIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			m_Scene->m_DirShadowsRenderPass->End();
+			m_SpotShadowMaps[light.m_ShadowmapIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			m_DirShadowsRenderPass->End();
 		}
-		for (auto& light : m_Scene->m_DirectionalLights)
+		for (const auto& i : m_Scene->m_ActiveDirLightsShadowIDs)
 		{
-			if (light.m_ShadowmapIndex == -1)
-				continue;
+			const auto& light = m_Scene->m_DirectionalLights[i];
 
 			for (uint32_t cascadeIndex = 0U; cascadeIndex < SHADOW_CASCADES; cascadeIndex++)
 			{
-				m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].image->ChangeLayout(
+				m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].image->ChangeLayout(
 					VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 					VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
 					m_Frames[m_FrameIndex].commandBuffer
 				);
 
-				m_Scene->m_DirShadowsRenderPass->Begin(
+				m_DirShadowsRenderPass->Begin(
 					m_Frames[m_FrameIndex].commandBuffer,
-					m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->GetHandle(),
-					m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->m_Extent
+					m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->GetHandle(),
+					m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->m_Extent
 				);
 
-				m_Scene->m_DirShadowPipeline->Bind(
+				m_DirShadowPipeline->Bind(
 					m_Frames[m_FrameIndex].commandBuffer,
-					m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->m_Extent,
+					m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].framebuffer->m_Extent,
 					VK_CULL_MODE_FRONT_BIT
 				);
 
-				m_Scene->m_DirShadowPipeline->BindDescriptorSet(m_Scene->m_ShadowsDescriptorSet->GetHandle(), 0U);
-				m_Scene->m_DirShadowPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U);
+				m_DirShadowPipeline->BindDescriptorSet(m_Scene->m_LightingDescriptorSet->GetHandle(), 0U);
+				m_DirShadowPipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U);
 
 				for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 				{
@@ -297,7 +309,7 @@ namespace en
 
 					uint32_t pushConstant[3] { sceneObject->GetMatrixIndex(), light.m_ShadowmapIndex, cascadeIndex };
 
-					m_Scene->m_DirShadowPipeline->PushConstants(
+					m_DirShadowPipeline->PushConstants(
 						pushConstant,
 						sizeof(uint32_t)*3,
 						0U,
@@ -308,17 +320,50 @@ namespace en
 					{
 						if (!subMesh.m_Active) continue;
 
-						m_Scene->m_DirShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
-						m_Scene->m_DirShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
+						m_DirShadowPipeline->BindVertexBuffer(subMesh.m_VertexBuffer);
+						m_DirShadowPipeline->BindIndexBuffer(subMesh.m_IndexBuffer);
 
-						m_Scene->m_DirShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
+						m_DirShadowPipeline->DrawIndexed(subMesh.m_IndexCount);
 					}
 				}
 
-				m_Scene->m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				m_Scene->m_DirShadowsRenderPass->End();
+				m_DirShadowMaps[light.m_ShadowmapIndex * SHADOW_CASCADES + cascadeIndex].image->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				m_DirShadowsRenderPass->End();
 			}
 		}
+	}
+	void Renderer::ClusterComputePass()
+	{
+		if (m_SkipFrame)
+			return;
+		
+		if (m_ClusterFrustumChanged)
+		{
+			uint32_t sizeX = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().width / CLUSTERED_TILES_X);
+			uint32_t sizeY = (uint32_t)std::ceilf((float)m_Swapchain->GetExtent().height / CLUSTERED_TILES_Y);
+
+			glm::uvec4 screenSize(m_Swapchain->GetExtent().width, m_Swapchain->GetExtent().height, sizeX, sizeY);
+
+			m_ClusterAABBCreation->Bind(m_Frames[m_FrameIndex].commandBuffer);
+
+			m_ClusterAABBCreation->PushConstants(&screenSize, sizeof(glm::uvec4), 0U, VK_SHADER_STAGE_COMPUTE_BIT);
+
+			m_ClusterAABBCreation->BindDescriptorSet(m_ClusterSSBOs.aabbClustersDescriptor, 0U, VK_PIPELINE_BIND_POINT_COMPUTE);
+
+			m_ClusterAABBCreation->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U, VK_PIPELINE_BIND_POINT_COMPUTE);
+
+			m_ClusterAABBCreation->Dispatch(CLUSTERED_TILES_X, CLUSTERED_TILES_Y, CLUSTERED_TILES_Z);
+
+			m_ClusterFrustumChanged = false;
+		}
+		
+		m_ClusterLightCulling->Bind(m_Frames[m_FrameIndex].commandBuffer);
+
+		m_ClusterLightCulling->BindDescriptorSet(m_ClusterSSBOs.clusterLightCullingDescriptor, 0U, VK_PIPELINE_BIND_POINT_COMPUTE);
+		m_ClusterLightCulling->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 1U, VK_PIPELINE_BIND_POINT_COMPUTE);
+		m_ClusterLightCulling->BindDescriptorSet(m_Scene->m_LightsBufferDescriptorSet, 2U, VK_PIPELINE_BIND_POINT_COMPUTE);
+
+		m_ClusterLightCulling->Dispatch(1U, 1U, CLUSTERED_BATCHES);
 	}
 	void Renderer::DepthPass()
 	{
@@ -358,16 +403,50 @@ namespace en
 	{
 		if (m_SkipFrame) return;
 
-		m_RenderPass->Begin(
+		if(m_Settings.antialiasingMode != AntialiasingMode::None)
+			m_AliasedImage->ChangeLayout(
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				m_Frames[m_FrameIndex].commandBuffer
+			);
+
+		//m_ClusterSSBOs.pointLightGrid->PipelineBarrier(
+		//	VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		//	m_Frames[m_FrameIndex].commandBuffer
+		//);
+		//m_ClusterSSBOs.pointLightIndices->PipelineBarrier(
+		//	VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		//	m_Frames[m_FrameIndex].commandBuffer
+		//);
+		//m_ClusterSSBOs.spotLightGrid->PipelineBarrier(
+		//	VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		//	m_Frames[m_FrameIndex].commandBuffer
+		//);
+		//m_ClusterSSBOs.spotLightIndices->PipelineBarrier(
+		//	VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		//	m_Frames[m_FrameIndex].commandBuffer
+		//);
+
+		m_ForwardPass->Begin(
 			m_Frames[m_FrameIndex].commandBuffer,
-			m_RenderFramebuffers[m_Swapchain->m_ImageIndex]->GetHandle(),
-			m_RenderFramebuffers[m_Swapchain->m_ImageIndex]->m_Extent
+			m_ForwardFramebuffers[m_Swapchain->m_ImageIndex]->GetHandle(),
+			m_ForwardFramebuffers[m_Swapchain->m_ImageIndex]->m_Extent,
+			glm::vec4(m_Scene->m_AmbientColor, 1.0)
 		);
 
 			m_Pipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent());
 
 			m_Pipeline->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
 			m_Pipeline->BindDescriptorSet(m_Scene->m_GlobalDescriptorSet, 1U);
+			m_Pipeline->BindDescriptorSet(m_ShadowMapsDescriptor, 2U);
+			m_Pipeline->BindDescriptorSet(m_ClusterDescriptor, 3U);
+
+			m_Pipeline->PushConstants(&m_Scene->m_MainCamera->m_Exposure, sizeof(float), sizeof(uint32_t)*2, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 			for (const auto& [name, sceneObject] : m_Scene->m_SceneObjects)
 			{
@@ -388,7 +467,40 @@ namespace en
 				}
 			}
 
-		m_RenderPass->End();
+		m_ForwardPass->End();
+
+		// Vulkan changes the layout after RenderPass
+		if (m_Settings.antialiasingMode != AntialiasingMode::None)
+			m_AliasedImage->m_CurrentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+	void Renderer::AntialiasingPass()
+	{
+		if (m_SkipFrame || m_Settings.antialiasingMode == AntialiasingMode::None) return;
+
+		m_AliasedImage->ChangeLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			m_Frames[m_FrameIndex].commandBuffer
+		);
+
+		m_Settings.antialiasing.texelSizeX = 1.0f / m_Swapchain->GetExtent().width;
+		m_Settings.antialiasing.texelSizeY = 1.0f / m_Swapchain->GetExtent().height;
+
+		m_AntialiasingPass->Begin(
+			m_Frames[m_FrameIndex].commandBuffer,
+			m_AntialiasingFramebuffers[m_Swapchain->m_ImageIndex]->GetHandle(),
+			m_AntialiasingFramebuffers[m_Swapchain->m_ImageIndex]->m_Extent
+		);
+
+			m_AntialiasingPipeline->Bind(m_Frames[m_FrameIndex].commandBuffer, m_Swapchain->GetExtent(), VK_CULL_MODE_FRONT_BIT);
+
+			m_AntialiasingPipeline->BindDescriptorSet(m_AntialiasingDescriptor);
+			m_AntialiasingPipeline->PushConstants(&m_Settings.antialiasing, sizeof(m_Settings.antialiasing), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+			m_AntialiasingPipeline->Draw(3U);
+
+		m_AntialiasingPass->End();
 	}
 	void Renderer::ImGuiPass()
 	{
@@ -458,12 +570,149 @@ namespace en
 		m_FrameIndex = (m_FrameIndex + 1) % FRAMES_IN_FLIGHT;
 	}
 
-	void Renderer::SetVSync(bool vSync)
+	void Renderer::SetVSyncEnabled(const bool enabled)
 	{
-		m_VSync = vSync;
+		m_Settings.vSync = enabled;
 		m_FramebufferResized = true;
 	}
+	void Renderer::SetDepthPrepassEnabled(const bool enabled)
+	{
+		m_Settings.depthPrePass = enabled;
+		m_ReloadQueued = true;
+	}
 
+	void Renderer::SetShadowCascadesWeight(const float weight)
+	{
+		m_Settings.cascadeSplitWeight = weight;
+		ReloadBackend();
+	}
+	void Renderer::SetShadowCascadesFarPlane(const float farPlane)
+	{
+		m_Settings.cascadeFarPlane = farPlane;
+		ReloadBackend();
+	}
+
+	void Renderer::SetPointShadowResolution(const uint32_t resolution)
+	{
+		m_Settings.pointLightShadowResolution = resolution;
+		ReloadBackend();
+	}
+	void Renderer::SetSpotShadowResolution(const uint32_t resolution)
+	{
+		m_Settings.spotLightShadowResolution = resolution;
+		ReloadBackend();
+	}
+	void Renderer::SetDirShadowResolution(const uint32_t resolution)
+	{
+		m_Settings.dirLightShadowResolution = resolution;
+		ReloadBackend();
+	}
+	void Renderer::SetShadowFormat(const VkFormat format)
+	{
+		m_Settings.shadowsFormat = format;
+		ReloadBackend();
+	}
+
+	void Renderer::SetAntialiasingMode(const AntialiasingMode antialiasingMode)
+	{
+		m_Settings.antialiasingMode = antialiasingMode;
+		ReloadBackend();
+	}
+
+	void Renderer::UpdateCSM()
+	{
+		// CSM Implementation heavily inspired with:
+		// Blaze engine by kidrigger - https://github.com/kidrigger/Blaze
+		// Flex Engine by ajweeks - https://github.com/ajweeks/FlexEngine
+
+
+		float ratio = m_Settings.cascadeFarPlane / m_Scene->m_MainCamera->m_NearPlane;
+
+		for (int i = 1; i < SHADOW_CASCADES; i++)
+		{
+			float si = i / float(SHADOW_CASCADES);
+
+			float nearPlane = m_Settings.cascadeSplitWeight * (
+				m_Scene->m_MainCamera->m_NearPlane * powf(ratio, si)) + 
+				(1.0f - m_Settings.cascadeSplitWeight) * (m_Scene->m_MainCamera->m_NearPlane + 
+				(m_Settings.cascadeFarPlane - m_Scene->m_MainCamera->m_NearPlane) * si
+			);
+
+			float farPlane = nearPlane * 1.005f;
+			m_CSM.cascadeSplitDistances[i - 1] = farPlane;
+		}
+
+		m_CSM.cascadeSplitDistances[SHADOW_CASCADES - 1] = m_Settings.cascadeFarPlane;
+
+		glm::vec4 frustumClipSpace[8]
+		{
+			{-1.0f, -1.0f, -1.0f, 1.0f},
+			{-1.0f,  1.0f, -1.0f, 1.0f},
+			{ 1.0f, -1.0f, -1.0f, 1.0f},
+			{ 1.0f,  1.0f, -1.0f, 1.0f},
+			{-1.0f, -1.0f,  1.0f, 1.0f},
+			{-1.0f,  1.0f,  1.0f, 1.0f},
+			{ 1.0f, -1.0f,  1.0f, 1.0f},
+			{ 1.0f,  1.0f,  1.0f, 1.0f},
+		};
+
+		glm::mat4 invViewProj = glm::inverse(m_Scene->m_MainCamera->GetProjMatrix() * m_Scene->m_MainCamera->GetViewMatrix());
+
+		for (auto& vert : frustumClipSpace)
+		{
+			vert = invViewProj * vert;
+			vert /= vert.w;
+		}
+
+		float cosine = glm::dot(glm::normalize(glm::vec3(frustumClipSpace[4]) - m_Scene->m_MainCamera->m_Position), m_Scene->m_MainCamera->GetFront());
+		glm::vec3 cornerRay = glm::normalize(glm::vec3(frustumClipSpace[4] - frustumClipSpace[0]));
+
+		float prevFarPlane = m_Scene->m_MainCamera->m_NearPlane;
+
+		for (int i = 0; i < SHADOW_CASCADES; ++i)
+		{
+			float farPlane = m_CSM.cascadeSplitDistances[i];
+			float secTheta = 1.0f / cosine;
+			float cDist = 0.5f * (farPlane + prevFarPlane) * secTheta * secTheta;
+			m_CSM.cascadeCenters[i] = m_Scene->m_MainCamera->GetFront() * cDist + m_Scene->m_MainCamera->m_Position;
+
+			float nearRatio = prevFarPlane / m_Settings.cascadeFarPlane;
+			glm::vec3 corner = cornerRay * nearRatio + m_Scene->m_MainCamera->m_Position;
+
+			m_CSM.cascadeRadiuses[i] = glm::distance(m_CSM.cascadeCenters[i], corner);
+
+			prevFarPlane = farPlane;
+		}
+
+		m_CSM.cascadeFrustumSizeRatios[0] = 1.0f;
+		for (int i = 1; i < SHADOW_CASCADES; i++)
+			m_CSM.cascadeFrustumSizeRatios[i] = m_CSM.cascadeRadiuses[i] / m_CSM.cascadeRadiuses[0];
+
+		for (const auto& i : m_Scene->m_ActiveDirLightsShadowIDs)
+		{
+			const DirectionalLight& light = m_Scene->m_DirectionalLights[i];
+
+			for (uint32_t j = 0U; j < SHADOW_CASCADES; ++j)
+			{
+				float radius = m_CSM.cascadeRadiuses[j];
+				glm::vec3 center = m_CSM.cascadeCenters[j];
+
+				glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.0f, light.m_FarPlane * radius);
+				glm::mat4 lightView = glm::lookAt(center - (light.m_FarPlane - 1.0f) * -glm::normalize(light.m_Direction + glm::vec3(0.00000127f)) * radius, center, glm::vec3(0, 1, 0));
+
+				glm::mat4 shadowViewProj = lightProj * lightView;
+				glm::vec4 shadowOrigin = shadowViewProj * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) * float(m_Settings.dirLightShadowResolution) / 2.0f;
+
+				glm::vec4 shadowOffset = (glm::round(shadowOrigin) - shadowOrigin) * 2.0f / float(m_Settings.dirLightShadowResolution) * glm::vec4(1, 1, 0, 0);
+
+				glm::mat4 shadowProj = lightProj;
+				shadowProj[3] += shadowOffset;
+
+				m_CSM.cascadeMatrices[i][j] = shadowProj * lightView;
+			}
+		}
+	}
+	
 	void Renderer::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		g_CurrentBackend->m_FramebufferResized = true;
@@ -477,14 +726,12 @@ namespace en
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
 		m_Swapchain.reset(); // It is critical to reset before creating a new one
-		m_Swapchain = MakeHandle<Swapchain>(m_VSync);
+		m_Swapchain = MakeHandle<Swapchain>(m_Settings.vSync);
 
 		CreateDepthBuffer();
-
 		CreateDepthPass();
-
 		CreateForwardPass();
-
+		CreateAntialiasingPass();
 		CreateImGuiRenderPass();
 
 		ImGui_ImplVulkan_SetMinImageCount(m_Swapchain->m_ImageViews.size());
@@ -501,6 +748,8 @@ namespace en
 	}
 	void Renderer::ReloadBackendImpl()
 	{
+		ResetAllFrames();
+		
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 
 		DestroyPerFrameData();
@@ -516,7 +765,7 @@ namespace en
 		EN_SUCCESS("Init began!")
 
 			m_Swapchain.reset();
-			m_Swapchain = MakeHandle<Swapchain>(m_VSync);
+			m_Swapchain = MakeHandle<Swapchain>(m_Settings.vSync);
 
 		EN_SUCCESS("Created swapchain!")
 
@@ -527,6 +776,18 @@ namespace en
 			CreatePerFrameData();
 
 		EN_SUCCESS("Created per frame data!")
+
+			CreateShadowPasses();
+
+		EN_SUCCESS("Created shadow passes!")
+
+			CreateShadowResources();
+
+		EN_SUCCESS("Created shadow resources!")
+
+			CreateShadowPipelines();
+
+		EN_SUCCESS("Created shadow pipelines!")
 
 			CreateDepthBuffer();
 
@@ -540,23 +801,29 @@ namespace en
 
 		EN_SUCCESS("Created the depth pipeline!")
 
+			CreateClusterBuffers();
+
+		EN_SUCCESS("Created the cluster buffers!")
+
+			CreateClusterPipelines();
+
+		EN_SUCCESS("Created the cluster pipelines!")
+
 			CreateForwardPass();
 
 		EN_SUCCESS("Created the forward pass!")
+
+			CreateAntialiasingPass();
+
+		EN_SUCCESS("Created the antialiasing pass!")
 
 			CreateForwardPipeline();
 
 		EN_SUCCESS("Created the forward pipeline!")
 
-			//CreateShadowPass();
+			CreateAntialiasingPipeline();
 
-		//EN_SUCCESS("Created the shadow pass!")
-
-		//	CreatePointShadowPipeline();
-		//	CreateSpotShadowPipeline();
-		//	CreateDirShadowPipeline();
-		//
-		//EN_SUCCESS("Created the shadow pipelines (point, spot, dir)!")
+		EN_SUCCESS("Created the antialiasing pipeline!")
 
 		if (newImGui)
 			CreateImGuiContext();
@@ -570,13 +837,358 @@ namespace en
 		vkDeviceWaitIdle(g_Ctx->m_LogicalDevice);
 	}
 
+	void Renderer::CreateShadowResources()
+	{
+		m_PointShadowDepthBuffer = MakeHandle<Image>(
+			VkExtent2D{
+				m_Settings.pointLightShadowResolution,
+				m_Settings.pointLightShadowResolution
+			},
+			m_Settings.shadowsFormat,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			0U,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		);
+
+		m_SpotShadowDepthBuffer = MakeHandle<Image>(
+			VkExtent2D{
+				m_Settings.spotLightShadowResolution,
+				m_Settings.spotLightShadowResolution
+			},
+			m_Settings.shadowsFormat,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			0U,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		);
+
+		m_ShadowSampler = MakeHandle<Sampler>(VK_FILTER_LINEAR);
+
+		for (auto& shadowMap : m_PointShadowMaps)
+		{
+			Handle<Image> shadowMapImage = MakeHandle<Image>(
+				VkExtent2D{
+					m_Settings.pointLightShadowResolution,
+					m_Settings.pointLightShadowResolution
+				},
+				VK_FORMAT_R32_SFLOAT,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_IMAGE_ASPECT_COLOR_BIT,
+				VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				6U
+				);
+
+			std::array<Handle<Framebuffer>, 6> framebuffers{};
+
+			for (uint32_t i = 0U; i < 6; i++)
+			{
+				framebuffers[i] = MakeHandle<Framebuffer>(
+					m_PerspectiveShadowsRenderPass,
+					VkExtent2D{
+						m_Settings.pointLightShadowResolution,
+						m_Settings.pointLightShadowResolution
+					},
+					RenderPassAttachment{
+						.imageView = shadowMapImage->GetLayerViewHandle(i),
+
+						.format = VK_FORMAT_R32_SFLOAT,
+
+						.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					},
+					RenderPassAttachment{
+						.imageView = m_PointShadowDepthBuffer->GetViewHandle(),
+
+						.format = m_Settings.shadowsFormat,
+
+						.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						.refLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+
+						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					});
+			}
+
+			shadowMap = OmniShadowMap{
+				shadowMapImage,
+				framebuffers
+			};
+		}
+		for (auto& shadowMap : m_SpotShadowMaps)
+		{
+			Handle<Image> shadowMapImage = MakeHandle<Image>(
+				VkExtent2D{
+					m_Settings.spotLightShadowResolution,
+					m_Settings.spotLightShadowResolution
+				},
+				m_Settings.shadowsFormat,
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_IMAGE_ASPECT_DEPTH_BIT,
+				0U,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				);
+
+			shadowMap = ShadowMap{
+				.image = shadowMapImage,
+				.framebuffer = MakeHandle<Framebuffer>(
+					m_DirShadowsRenderPass,
+					VkExtent2D {
+						m_Settings.spotLightShadowResolution,
+						m_Settings.spotLightShadowResolution
+					},
+					RenderPassAttachment{},
+					RenderPassAttachment{
+						.imageView = shadowMapImage->GetViewHandle(),
+
+						.format = m_Settings.shadowsFormat,
+
+						.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						.refLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					}
+				)
+			};
+		}
+		for (auto& shadowMap : m_DirShadowMaps)
+		{
+			Handle<Image> shadowMapImage = MakeHandle<Image>(
+				VkExtent2D{
+					m_Settings.dirLightShadowResolution,
+					m_Settings.dirLightShadowResolution
+				},
+				m_Settings.shadowsFormat,
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_IMAGE_ASPECT_DEPTH_BIT,
+				0U,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			);
+
+			shadowMap = ShadowMap{
+				.image = shadowMapImage,
+				.framebuffer = MakeHandle<Framebuffer>(
+					m_DirShadowsRenderPass,
+					VkExtent2D {
+						m_Settings.dirLightShadowResolution,
+						m_Settings.dirLightShadowResolution
+					},
+					RenderPassAttachment{},
+					RenderPassAttachment{
+						.imageView = shadowMapImage->GetViewHandle(),
+
+						.format = m_Settings.shadowsFormat,
+
+						.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						.refLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					}
+				)
+			};
+		}
+
+		std::vector<DescriptorInfo::ImageInfoContent> pointShadowMaps{};
+		std::vector<DescriptorInfo::ImageInfoContent> spotShadowMaps{};
+		std::vector<DescriptorInfo::ImageInfoContent> dirShadowMaps{};
+
+		for (const auto& shadowMap : m_PointShadowMaps)
+		{
+			pointShadowMaps.emplace_back(DescriptorInfo::ImageInfoContent{
+				.imageView = shadowMap.image->GetViewHandle(),
+				.imageSampler = m_ShadowSampler->GetHandle()
+				});
+		}
+		for (const auto& shadowMap : m_SpotShadowMaps)
+		{
+			spotShadowMaps.emplace_back(DescriptorInfo::ImageInfoContent{
+				.imageView = shadowMap.image->GetViewHandle(),
+				.imageSampler = m_ShadowSampler->GetHandle()
+				});
+		}
+		for (const auto& shadowMap : m_DirShadowMaps)
+		{
+			dirShadowMaps.emplace_back(DescriptorInfo::ImageInfoContent{
+				.imageView = shadowMap.image->GetViewHandle(),
+				.imageSampler = m_ShadowSampler->GetHandle()
+				});
+		}
+
+		m_ShadowMapsDescriptor = MakeHandle<DescriptorSet>(DescriptorInfo{
+			std::vector<DescriptorInfo::ImageInfo>{
+			DescriptorInfo::ImageInfo {
+					.index = 0U,
+					.count = static_cast<uint32_t>(pointShadowMaps.size()),
+
+					.contents = pointShadowMaps,
+
+					.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				},
+				DescriptorInfo::ImageInfo {
+					.index = 1U,
+					.count = static_cast<uint32_t>(spotShadowMaps.size()),
+
+					.contents = spotShadowMaps,
+
+					.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				},
+				DescriptorInfo::ImageInfo {
+					.index = 2U,
+					.count = static_cast<uint32_t>(dirShadowMaps.size()),
+
+					.contents = dirShadowMaps,
+
+					.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				},
+			}
+			});
+
+	}
+
+	void Renderer::CreateShadowPasses()
+	{
+		RenderPassAttachment colorAttachment{
+			.format = VK_FORMAT_R32_SFLOAT,
+
+			.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		};
+
+		RenderPassAttachment depthAttachment{
+			.format = m_Settings.shadowsFormat,
+
+			.refLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		};
+
+		m_DirShadowsRenderPass = MakeHandle<RenderPass>(RenderPassAttachment{}, depthAttachment);
+
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		m_PerspectiveShadowsRenderPass = MakeHandle<RenderPass>(colorAttachment, depthAttachment);
+	}
+	void Renderer::CreateShadowPipelines()
+	{
+		constexpr VkPushConstantRange model_lightIndex_cascadeIndex{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0U,
+			.size = sizeof(uint32_t) * 3,
+		};
+
+		GraphicsPipeline::CreateInfo dirInfo{
+			.renderPass = m_DirShadowsRenderPass,
+
+			.vShader = "Shaders/DirShadowVert.spv",
+			//.fShader = "Shaders/ShadowFrag.spv",
+
+			.descriptorLayouts  {Scene::GetLightingDescriptorLayout(), CameraBuffer::GetLayout()},
+			.pushConstantRanges {model_lightIndex_cascadeIndex},
+
+			.useVertexBindings = true,
+			.enableDepthTest = true,
+			.enableDepthWrite = true,
+			.blendEnable = false,
+
+			.compareOp = VK_COMPARE_OP_LESS,
+			.polygonMode = VK_POLYGON_MODE_FILL,
+		};
+
+		m_DirShadowPipeline = MakeHandle<GraphicsPipeline>(dirInfo);
+
+		constexpr VkPushConstantRange model_lightIndex{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0U,
+			.size = sizeof(uint32_t) * 2,
+		};
+
+		GraphicsPipeline::CreateInfo spotInfo{
+			.renderPass = m_DirShadowsRenderPass,
+
+			.vShader = "Shaders/SpotShadowVert.spv",
+			//.fShader = "Shaders/ShadowFrag.spv",
+
+			.descriptorLayouts  {Scene::GetLightingDescriptorLayout()},
+			.pushConstantRanges {model_lightIndex},
+
+			.useVertexBindings = true,
+			.enableDepthTest = true,
+			.enableDepthWrite = true,
+			.blendEnable = false,
+
+			.compareOp = VK_COMPARE_OP_LESS,
+			.polygonMode = VK_POLYGON_MODE_FILL,
+		};
+
+		m_SpotShadowPipeline = MakeHandle<GraphicsPipeline>(spotInfo);
+
+		constexpr VkPushConstantRange model_lightIndex_shadowmapIndex{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0U,
+			.size = sizeof(uint32_t) * 3,
+		};
+
+		GraphicsPipeline::CreateInfo pointInfo{
+			.renderPass = m_PerspectiveShadowsRenderPass,
+
+			.vShader = "Shaders/PointShadowVert.spv",
+			.fShader = "Shaders/ShadowFrag.spv",
+
+			.descriptorLayouts  {Scene::GetLightingDescriptorLayout()},
+			.pushConstantRanges {model_lightIndex_shadowmapIndex},
+
+			.useVertexBindings = true,
+			.enableDepthTest = true,
+			.enableDepthWrite = true,
+			.blendEnable = false,
+
+			.compareOp = VK_COMPARE_OP_LESS,
+			.polygonMode = VK_POLYGON_MODE_FILL,
+		};
+
+		m_PointShadowPipeline = MakeHandle<GraphicsPipeline>(pointInfo);
+	}
+
 	void Renderer::CreateDepthPass()
 	{
+		std::vector<VkSubpassDependency> dependencies{
+			VkSubpassDependency{
+				.srcSubpass = VK_SUBPASS_EXTERNAL,
+				.dstSubpass = 0U,
+				.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.srcAccessMask = 0U,
+				.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			}
+		};
+
 		RenderPassAttachment depthAttachment{
 			.imageView = m_DepthBuffer->GetViewHandle(),
 
 			.format = m_DepthBuffer->m_Format,
 
+			.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			.refLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 
@@ -584,7 +1196,7 @@ namespace en
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 		};
 
-		m_DepthRenderPass = MakeHandle<RenderPass>(RenderPassAttachment{}, depthAttachment);
+		m_DepthRenderPass = MakeHandle<RenderPass>(RenderPassAttachment{}, depthAttachment, dependencies);
 
 		m_DepthFramebuffer = MakeHandle<Framebuffer>(m_DepthRenderPass, m_Swapchain->GetExtent(), RenderPassAttachment{}, depthAttachment);
 	}
@@ -618,16 +1230,195 @@ namespace en
 
 	void Renderer::CreateForwardPass()
 	{
-		std::vector<VkSubpassDependency> dependencies{
-			VkSubpassDependency {
+		std::vector<VkSubpassDependency> dependencies{};
+
+		if (m_Settings.depthPrePass)
+		{
+			dependencies.emplace_back(VkSubpassDependency{
 				.srcSubpass = VK_SUBPASS_EXTERNAL,
 				.dstSubpass = 0U,
-				.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.srcAccessMask = 0U,
+				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			});
+		}
+		else
+		{
+			dependencies.emplace_back(VkSubpassDependency{
+				.srcSubpass = VK_SUBPASS_EXTERNAL,
+				.dstSubpass = 0U,
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-				.srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+				.srcAccessMask = 0U,
+				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			});
+		}
+
+		m_AliasedImage = MakeHandle<Image>(
+			m_Swapchain->GetExtent(), 
+			m_Swapchain->GetFormat(),
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			0,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		);
+
+		m_FullscreenSampler = MakeHandle<Sampler>(VK_FILTER_NEAREST);
+
+		m_AntialiasingDescriptor = MakeHandle<DescriptorSet>(DescriptorInfo{
+			std::vector<DescriptorInfo::ImageInfo>{
+				DescriptorInfo::ImageInfo {
+					.contents {{
+						.imageView = m_AliasedImage->GetViewHandle(),
+						.imageSampler = m_FullscreenSampler->GetHandle()
+					}}
+				}
+			},
+			std::vector<DescriptorInfo::BufferInfo>{},
+		});
+
+		std::vector<RenderPassAttachment> attachments{};
+		if (m_Settings.antialiasingMode == AntialiasingMode::None)
+		{
+			for (int i = 0; i < m_Swapchain->m_ImageViews.size(); i++)
+			{
+				attachments.emplace_back(RenderPassAttachment{
+					.imageView = m_Swapchain->m_ImageViews[i],
+
+					.format = m_Swapchain->GetFormat(),
+
+					.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				});
 			}
+		}
+		else
+		{
+			attachments.emplace_back(RenderPassAttachment{
+				.imageView = m_AliasedImage->GetViewHandle(),
+
+				.format = m_AliasedImage->m_Format,
+
+				.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			});
+		}
+
+		RenderPassAttachment depthAttachment{
+			.imageView = m_DepthBuffer->GetViewHandle(),
+
+			.format = m_DepthBuffer->m_Format,
+
+			.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.refLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+
+			.loadOp  = m_Settings.depthPrePass ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 		};
+
+		m_ForwardPass = MakeHandle<RenderPass>(attachments[0], depthAttachment, dependencies);
+
+		m_ForwardFramebuffers.resize(m_Swapchain->m_ImageViews.size());
+		if (m_Settings.antialiasingMode == AntialiasingMode::None)
+			for (uint32_t i = 0U; i < m_Swapchain->m_ImageViews.size(); i++)
+				m_ForwardFramebuffers[i] = MakeHandle<Framebuffer>(m_ForwardPass, m_Swapchain->GetExtent(), attachments[i], depthAttachment);
+		else
+			for (uint32_t i = 0U; i < m_Swapchain->m_ImageViews.size(); i++)
+				m_ForwardFramebuffers[i] = MakeHandle<Framebuffer>(m_ForwardPass, m_Swapchain->GetExtent(), attachments[0], depthAttachment);
+	}
+	void Renderer::CreateForwardPipeline()
+	{
+		m_ClusterDescriptor = MakeHandle<DescriptorSet>(DescriptorInfo{
+			std::vector<DescriptorInfo::ImageInfo>{},
+			std::vector<DescriptorInfo::BufferInfo>{
+				DescriptorInfo::BufferInfo {
+					.index = 0U,
+					.buffer = m_ClusterSSBOs.pointLightIndices->GetHandle(),
+					.size = m_ClusterSSBOs.pointLightIndices->GetSize(),
+
+					.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				},
+				DescriptorInfo::BufferInfo {
+					.index = 1U,
+					.buffer = m_ClusterSSBOs.pointLightGrid->GetHandle(),
+					.size = m_ClusterSSBOs.pointLightGrid->GetSize(),
+
+					.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				},
+				DescriptorInfo::BufferInfo {
+					.index = 2U,
+					.buffer = m_ClusterSSBOs.spotLightIndices->GetHandle(),
+					.size = m_ClusterSSBOs.spotLightIndices->GetSize(),
+
+					.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				},
+				DescriptorInfo::BufferInfo {
+					.index = 3U,
+					.buffer = m_ClusterSSBOs.spotLightGrid->GetHandle(),
+					.size = m_ClusterSSBOs.spotLightGrid->GetSize(),
+
+					.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				},
+			},
+		});
+
+		constexpr VkPushConstantRange model {
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset		= 0U,
+			.size		= sizeof(uint32_t),
+		};
+		constexpr VkPushConstantRange material_postprocessing {
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset		= sizeof(uint32_t),
+			.size		= sizeof(uint32_t)+sizeof(float),
+		};
+
+		GraphicsPipeline::CreateInfo info{
+			.renderPass = m_ForwardPass,
+
+			.vShader = "Shaders/ForwardVert.spv",
+			.fShader = "Shaders/ForwardFrag.spv",
+
+			.descriptorLayouts {
+				CameraBuffer::GetLayout(),
+				Scene::GetGlobalDescriptorLayout(),
+				m_ShadowMapsDescriptor->GetLayout(),
+				m_ClusterDescriptor->GetLayout()
+			},
+			.pushConstantRanges {model, material_postprocessing},
+
+			.useVertexBindings = true,
+			.enableDepthTest   = true,
+			.enableDepthWrite  = !m_Settings.depthPrePass,
+			.blendEnable	   = false,
+
+			.compareOp	 = m_Settings.depthPrePass ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_LESS,
+			.polygonMode = VK_POLYGON_MODE_FILL,
+		};
+
+		m_Pipeline = MakeHandle<GraphicsPipeline>(info);
+	}
+
+	void Renderer::CreateAntialiasingPass()
+	{
+		std::vector<VkSubpassDependency> dependencies{ VkSubpassDependency{
+			.srcSubpass = VK_SUBPASS_EXTERNAL,
+			.dstSubpass = 0U,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.srcAccessMask = 0U,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		}};
 
 		std::vector<RenderPassAttachment> attachments{};
 		for (int i = 0; i < m_Swapchain->m_ImageViews.size(); i++)
@@ -641,65 +1432,186 @@ namespace en
 				.refLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 
-				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			});
 		}
 
-		RenderPassAttachment depthAttachment{
-			.imageView = m_DepthBuffer->GetViewHandle(),
+		m_AntialiasingPass = MakeHandle<RenderPass>(attachments[0], RenderPassAttachment{}, dependencies);
 
-			.format = m_DepthBuffer->m_Format,
-
-			.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			.refLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-
-			.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD,
-			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-		};
-
-		m_RenderPass = MakeHandle<RenderPass>(attachments[0], depthAttachment, dependencies);
-
-		m_RenderFramebuffers.resize(m_Swapchain->m_ImageViews.size());
+		m_AntialiasingFramebuffers.resize(m_Swapchain->m_ImageViews.size());
 		for (uint32_t i = 0U; i < m_Swapchain->m_ImageViews.size(); i++)
-			m_RenderFramebuffers[i] = MakeHandle<Framebuffer>(m_RenderPass, m_Swapchain->GetExtent(), attachments[i], depthAttachment);
+			m_AntialiasingFramebuffers[i] = MakeHandle<Framebuffer>(m_AntialiasingPass, m_Swapchain->GetExtent(), attachments[i]);
 	}
-	void Renderer::CreateForwardPipeline()
+	void Renderer::CreateAntialiasingPipeline()
 	{
-		constexpr VkPushConstantRange model {
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.offset		= 0U,
-			.size		= sizeof(uint32_t),
-		};
-		constexpr VkPushConstantRange material {
+		constexpr VkPushConstantRange antialiasing{
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.offset		= sizeof(uint32_t),
-			.size		= sizeof(uint32_t),
+			.offset = 0U,
+			.size = sizeof(AntialiasingProperties),
 		};
 
 		GraphicsPipeline::CreateInfo info{
-			.renderPass = m_RenderPass,
+			.renderPass = m_AntialiasingPass,
 
-			.vShader = "Shaders/vert.spv",
-			.fShader = "Shaders/frag.spv",
+			.vShader = "Shaders/FullscreenTri.spv",
+			.fShader = "Shaders/FXAA.spv",
 
-			.descriptorLayouts {CameraBuffer::GetLayout(), Scene::GetGlobalDescriptorLayout()},
-			.pushConstantRanges {model, material},
-
-			.useVertexBindings = true,
-			.enableDepthTest   = true,
-			.enableDepthWrite  = false,
-			.blendEnable	   = false,
-
-			.compareOp	 = VK_COMPARE_OP_LESS_OR_EQUAL,
-			.polygonMode = VK_POLYGON_MODE_FILL,
+			.descriptorLayouts {m_AntialiasingDescriptor->GetLayout()},
+			.pushConstantRanges {antialiasing},
 		};
 
-		m_Pipeline = MakeHandle<GraphicsPipeline>(info);
+		m_AntialiasingPipeline = MakeHandle<GraphicsPipeline>(info);
+	}
+
+	void Renderer::CreateClusterBuffers()
+	{
+		uint32_t clusterCount = CLUSTERED_TILES_X * CLUSTERED_TILES_Y * CLUSTERED_TILES_Z;
+
+		m_ClusterSSBOs.aabbClusters = MakeHandle<MemoryBuffer>(
+			sizeof(glm::vec4) * 2U * clusterCount,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+
+		m_ClusterSSBOs.pointLightIndices = MakeHandle<MemoryBuffer>(
+			sizeof(uint32_t) * clusterCount * MAX_POINT_LIGHTS,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+
+		m_ClusterSSBOs.pointLightGrid = MakeHandle<MemoryBuffer>(
+			sizeof(uint32_t) * 2U * clusterCount,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+
+		m_ClusterSSBOs.pointLightGlobalIndexOffset = MakeHandle<MemoryBuffer>(
+			sizeof(uint32_t),
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+
+		m_ClusterSSBOs.spotLightIndices = MakeHandle<MemoryBuffer>(
+			sizeof(uint32_t) * clusterCount * MAX_SPOT_LIGHTS,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+
+		m_ClusterSSBOs.spotLightGrid = MakeHandle<MemoryBuffer>(
+			sizeof(uint32_t) * 2U * clusterCount,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+
+		m_ClusterSSBOs.spotLightGlobalIndexOffset = MakeHandle<MemoryBuffer>(
+			sizeof(uint32_t),
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY
+		);
+	}
+	void Renderer::CreateClusterPipelines()
+	{
+		DescriptorInfo::BufferInfo aabbBufferInfo{
+			.index = 0U,
+			.buffer = m_ClusterSSBOs.aabbClusters->GetHandle(),
+			.size = m_ClusterSSBOs.aabbClusters->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		m_ClusterSSBOs.aabbClustersDescriptor = MakeHandle<DescriptorSet>(DescriptorInfo{
+			std::vector<DescriptorInfo::ImageInfo>{},
+			std::vector<DescriptorInfo::BufferInfo>{
+				aabbBufferInfo
+			}}
+		);
+
+		DescriptorInfo::BufferInfo pointLightGridBufferInfo{
+			.index = 1U,
+			.buffer = m_ClusterSSBOs.pointLightGrid->GetHandle(),
+			.size = m_ClusterSSBOs.pointLightGrid->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+
+		DescriptorInfo::BufferInfo pointLightIndicesBufferInfo{
+			.index = 2U,
+			.buffer = m_ClusterSSBOs.pointLightIndices->GetHandle(),
+			.size = m_ClusterSSBOs.pointLightIndices->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		DescriptorInfo::BufferInfo pointLightGlobalIndexOffsetBuffer{
+			.index = 3U,
+			.buffer = m_ClusterSSBOs.pointLightGlobalIndexOffset->GetHandle(),
+			.size = m_ClusterSSBOs.pointLightGlobalIndexOffset->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		DescriptorInfo::BufferInfo spotLightGridBufferInfo{
+			.index = 4U,
+			.buffer = m_ClusterSSBOs.spotLightGrid->GetHandle(),
+			.size = m_ClusterSSBOs.spotLightGrid->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+
+		DescriptorInfo::BufferInfo spotLightIndicesBufferInfo{
+			.index = 5U,
+			.buffer = m_ClusterSSBOs.spotLightIndices->GetHandle(),
+			.size = m_ClusterSSBOs.spotLightIndices->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		DescriptorInfo::BufferInfo spotLightGlobalIndexOffsetBuffer{
+			.index = 6U,
+			.buffer = m_ClusterSSBOs.spotLightGlobalIndexOffset->GetHandle(),
+			.size = m_ClusterSSBOs.spotLightGlobalIndexOffset->GetSize(),
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT
+		};
+
+		m_ClusterSSBOs.clusterLightCullingDescriptor = MakeHandle<DescriptorSet>(DescriptorInfo{
+			std::vector<DescriptorInfo::ImageInfo>{},
+			std::vector<DescriptorInfo::BufferInfo>{
+				aabbBufferInfo,
+				pointLightGridBufferInfo,
+				pointLightIndicesBufferInfo,
+				pointLightGlobalIndexOffsetBuffer,
+				spotLightGridBufferInfo,
+				spotLightIndicesBufferInfo,
+				spotLightGlobalIndexOffsetBuffer,
+			}}
+		);
+
+		constexpr VkPushConstantRange stvPushConstant{
+			.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+			.offset = 0U,
+			.size = sizeof(glm::uvec4)
+		};
+
+		ComputePipeline::CreateInfo aabbInfo{
+			.sourcePath = "Shaders/ClusterAABB.spv",
+			.descriptorLayouts = { m_ClusterSSBOs.aabbClustersDescriptor->GetLayout(), CameraBuffer::GetLayout() },
+			.pushConstantRanges = { stvPushConstant },
+		};
+
+		m_ClusterAABBCreation = MakeHandle<ComputePipeline>(aabbInfo);
+
+		ComputePipeline::CreateInfo lightCullInfo{
+			.sourcePath = "Shaders/ClusterLightCulling.spv",
+			.descriptorLayouts = {
+				m_ClusterSSBOs.clusterLightCullingDescriptor->GetLayout(),
+				CameraBuffer::GetLayout(),
+				Scene::GetLightsBufferDescriptorLayout()
+			},
+		};
+
+		m_ClusterLightCulling = MakeHandle<ComputePipeline>(lightCullInfo);
 	}
 
 	void Renderer::CreateDepthBuffer()

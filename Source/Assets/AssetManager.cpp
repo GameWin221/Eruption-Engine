@@ -1,4 +1,3 @@
-
 #include "AssetManager.hpp"
 
 namespace en
@@ -32,7 +31,32 @@ namespace en
             return false;
         }
 
-        m_Meshes[nameID] = LoadMeshFromFile(path, nameID, properties);
+        GLTFImporter importer(properties, GetDefaultMaterial(), GetWhiteSRGBTexture(), GetWhiteNonSRGBTexture());
+        MeshData data = importer.LoadMeshFromFile(path, nameID);
+
+        m_Meshes[nameID] = data.mesh;
+
+        for (const auto& texture : data.textures)
+        {
+            if (m_Textures.contains(texture->GetName()))
+            {
+                EN_WARN("AssetManager::LoadMesh() - Failed to load a texture with name \"" + texture->GetName() + "\" from \"" + texture->GetFilePath() + "\" because a texture with that name already exists!");
+                return false;
+            }
+
+            m_Textures[texture->GetName()] = texture;
+        }
+        for (const auto& material : data.materials)
+        {
+            if (m_Materials.contains(material->GetName()))
+            {
+                EN_WARN("AssetManager::LoadMesh() - Failed to create a material with name \"" + material->GetName() + "\" because a material with that name already exists!");
+                return false;
+            }
+
+            m_Materials[material->GetName()] = material;
+        }
+
         return true;
     }
     bool AssetManager::LoadTexture(const std::string& nameID, const std::string& path, const TextureImportProperties& properties)
@@ -223,173 +247,5 @@ namespace en
             m_DefaultMaterial = MakeHandle<Material>("No Material", glm::vec3(1.0f), 0.0f, 0.75f, 0.0f, GetWhiteSRGBTexture(), GetWhiteNonSRGBTexture(), GetWhiteNonSRGBTexture(), GetWhiteNonSRGBTexture());
 
         return m_DefaultMaterial;
-    }
-
-    Handle<Mesh> AssetManager::LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties)
-    {
-        Handle<Mesh> mesh = MakeHandle<Mesh>();
-        mesh->m_FilePath = filePath;
-        mesh->m_Name = name;
-        
-        Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(filePath,
-            aiProcess_CalcTangentSpace   |
-            aiProcess_GenSmoothNormals         |
-            aiProcess_JoinIdenticalVertices    |
-            aiProcess_ImproveCacheLocality     |
-            aiProcess_RemoveRedundantMaterials |
-            aiProcess_Triangulate              |
-            aiProcess_GenUVCoords              |
-            aiProcess_SplitLargeMeshes         |
-            aiProcess_FindDegenerates          |
-            aiProcess_FindInvalidData          |
-            aiProcess_FlipUVs
-        );
-
-        if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-            EN_ERROR("AssetManager::LoadMeshFromFile() - " + std::string(importer.GetErrorString()));
-
-        std::string directory = mesh->m_FilePath.substr(0, std::min(mesh->m_FilePath.find_last_of('\\'), mesh->m_FilePath.find_last_of('/'))+1);
-        std::vector<Handle<Material>> materials;
-
-        if(importProperties.importMaterials)
-        for (int i = 0; i < scene->mNumMaterials; i++)
-        {
-            aiMaterial* material = scene->mMaterials[i];
-            aiString name = material->GetName();
-            
-            if (name.length == 0)
-            {
-                m_MatIndex++;
-                name = aiString("New Material (" + std::to_string(m_MatIndex) + ")");
-            }
-
-            if (ContainsMaterial(name.C_Str()))
-            {
-                materials.emplace_back(GetMaterial(name.C_Str()));
-                continue;
-            }
-
-            aiString diffusePath;
-            material->GetTexture(aiTextureType_DIFFUSE, 0, &diffusePath);
-            bool hasDiffuseTex = (diffusePath.length > 0 && importProperties.importAlbedoTextures);
-
-            aiString roughnessPath;
-            material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &roughnessPath);
-            bool hasRoughnessTex = (roughnessPath.length > 0 && importProperties.importRoughnessTextures);
-  
-            aiString metallicPath;
-            material->GetTexture(aiTextureType_METALNESS, 0, &metallicPath);
-            bool hasMetallicTex = (metallicPath.length > 0 && importProperties.importMetalnessTextures);
-
-            aiString normalPath;
-            material->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
-            bool hasNormalTex = (normalPath.length > 0 && importProperties.importNormalTextures);
-
-            aiColor3D color;
-            material->Get(AI_MATKEY_BASE_COLOR, color);
-            bool hasColor = (color.r > 0.0f && color.g > 0.0f && color.b > 0.0f);
-            if (!hasColor || !importProperties.importColor) color = aiColor3D(1.0f);
-
-            float metalness = 0.0f;
-            material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
-
-            float roughness = 0.0f;
-            material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
-
-            if(hasDiffuseTex  ) LoadTexture(std::string(diffusePath  .C_Str()), directory + std::string(diffusePath .C_Str()) , { TextureFormat::Color    });
-            if(hasRoughnessTex) LoadTexture(std::string(roughnessPath.C_Str()), directory + std::string(roughnessPath.C_Str()), { TextureFormat::NonColor });
-            if(hasNormalTex   ) LoadTexture(std::string(normalPath   .C_Str()), directory + std::string(normalPath  .C_Str()) , { TextureFormat::NonColor });
-            if(hasMetallicTex ) LoadTexture(std::string(metallicPath .C_Str()), directory + std::string(metallicPath.C_Str()) , { TextureFormat::NonColor });
-
-            Handle<Texture> diffuseTexture   = (hasDiffuseTex  ) ? GetTexture(std::string(diffusePath.C_Str()  )) : GetWhiteSRGBTexture();
-            Handle<Texture> roughnessTexture = (hasRoughnessTex) ? GetTexture(std::string(roughnessPath.C_Str())) : GetWhiteNonSRGBTexture();
-            Handle<Texture> normalTexture    = (hasNormalTex   ) ? GetTexture(std::string(normalPath.C_Str()   )) : GetWhiteNonSRGBTexture();
-            Handle<Texture> metalnessTexture = (hasMetallicTex ) ? GetTexture(std::string(metallicPath.C_Str() )) : GetWhiteNonSRGBTexture();
-
-            CreateMaterial(name.C_Str(), glm::vec3(color.r, color.g, color.b), metalness, roughness, 1.0f, diffuseTexture, roughnessTexture, normalTexture, metalnessTexture);
-
-            materials.emplace_back(GetMaterial(name.C_Str()));
-        }
-
-        ProcessNode(scene->mRootNode, scene, materials, mesh);
-        
-        EN_SUCCESS("Succesfully loaded a mesh from \"" + filePath + "\"");
-
-        return mesh;
-    }
-    void AssetManager::ProcessNode(aiNode* node, const aiScene* scene, const std::vector<Handle<Material>>& materials, Handle<Mesh> mesh)
-    {
-        for (unsigned int i = 0; i < node->mNumMeshes; i++)
-        {
-            aiMesh* assimpMesh = scene->mMeshes[node->mMeshes[i]];
-            Handle<Material> material;
-
-            aiVector3D pos(0.0f);
-            aiQuaternion rot;
-
-            node->mTransformation.DecomposeNoScaling(rot, pos);
-
-            if (assimpMesh->mMaterialIndex < materials.size() && materials.size() > 0)
-                material = materials[assimpMesh->mMaterialIndex];
-            else
-                material = GetDefaultMaterial();
-            
-            std::vector<Vertex> vertices;
-            std::vector<uint32_t> indices;
-
-            GetVertices(assimpMesh, vertices);
-            GetIndices(assimpMesh, indices);
-
-            for (auto& vert : vertices)
-            {
-                vert.pos.x += pos.x;
-                vert.pos.y += pos.y;
-                vert.pos.z += pos.z;
-            }
-
-            if (vertices.size() > 0 && indices.size() > 0)
-                mesh->m_SubMeshes.emplace_back(vertices, indices, material);
-        }
-        for (unsigned int i = 0; i < node->mNumChildren; i++)
-            ProcessNode(node->mChildren[i], scene, materials, mesh);
-    }
-    void AssetManager::GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices)
-    {
-        if (!mesh->HasPositions() || !mesh->HasNormals())
-        {
-            std::string name{ mesh->mName.C_Str() };
-            EN_WARN("Failed to get vertices data from \"" + name + "\"!");
-            return;
-        }
-        
-        if(mesh->HasTextureCoords(0))
-            for (unsigned int i = 0; i < mesh->mNumVertices; i++)
-                vertices.emplace_back
-                (
-                    glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
-                    glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
-                    glm::vec3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z),
-                    glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
-                );
-        else
-            for (unsigned int i = 0; i < mesh->mNumVertices; i++)
-                vertices.emplace_back
-                (
-                    glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z),
-                    glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z),
-                    glm::vec3(0),
-                    glm::vec2(0)
-                );
-    }
-    void AssetManager::GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices)
-    {
-        for (unsigned int i = 0; i < mesh->mNumFaces; i++)
-        {
-            aiFace& face = mesh->mFaces[i];
-
-            for (unsigned int j = 0; j < face.mNumIndices; j++)
-                indices.push_back(face.mIndices[j]);
-        }
     }
 }

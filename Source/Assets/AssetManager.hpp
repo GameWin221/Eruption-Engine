@@ -5,8 +5,10 @@
 
 #include <Assets/Material.hpp>
 #include <Assets/Mesh.hpp>
+#include <Assets/MeshImporter/GLTFImporter.hpp>
 
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 
 namespace en
@@ -15,17 +17,6 @@ namespace en
 	{
 		Color    = VK_FORMAT_R8G8B8A8_SRGB,
 		NonColor = VK_FORMAT_R8G8B8A8_UNORM
-	};
-	struct MeshImportProperties
-	{
-		bool importMaterials = true;
-
-		bool importAlbedoTextures	  = true;
-		bool importRoughnessTextures  = true;
-		bool importMetalnessTextures  = true;
-		bool importNormalTextures     = true;
-
-		bool importColor = true;
 	};
 	struct TextureImportProperties
 	{
@@ -85,11 +76,6 @@ namespace en
 		Handle<Material> m_DefaultMaterial;
 
 		uint32_t m_MatIndex = 0U;
-
-		Handle<Mesh> LoadMeshFromFile(const std::string& filePath, const std::string& name, const MeshImportProperties& importProperties);
-		void ProcessNode(aiNode* node, const aiScene* scene, const std::vector<Handle<Material>>& materials, Handle<Mesh> mesh);
-		void GetVertices(aiMesh* mesh, std::vector<Vertex>& vertices);
-		void GetIndices(aiMesh* mesh, std::vector<uint32_t>& indices);
 	};
 }
 

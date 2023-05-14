@@ -5,7 +5,7 @@ void Eruption::Init()
 	EN_LOG("Eruption::Init() - Started");
 
 	m_Window = en::MakeScope<en::Window>(
-		"Eruption Engine v0.7.3",
+		"Eruption Engine v0.8.0",
 		glm::ivec2(1920, 1080),
 		false, 
 		true
@@ -23,9 +23,9 @@ void Eruption::Init()
 	m_Editor = en::MakeScope<en::EditorLayer>();
 	m_Editor->AttachTo(m_Renderer.get(), m_AssetManager.get());
 
-	m_Camera = en::MakeHandle<en::Camera>(60.0f, 0.1f, 200.0f, glm::vec3(3.333f, 2.762f, 0.897f));
-	m_Camera->m_Yaw = -161.6f;
-	m_Camera->m_Pitch = -30.3f;
+	m_Camera = en::MakeHandle<en::Camera>(60.0f, 0.1f, 200.0f, glm::vec3(6.570f, 2.214f, 0.809f));
+	m_Camera->m_Yaw = -165.6f;
+	m_Camera->m_Pitch = -8.3f;
 
 	EN_LOG("Eruption::Init() - Finished");
 
@@ -53,7 +53,7 @@ void Eruption::Update()
 
 	else if (m_Input->IsKey(en::Key::Y, en::InputState::Pressed))
 	{
-		m_Renderer->SetVSync(false);
+		m_Renderer->SetVSyncEnabled(false);
 		//m_Renderer->m_PostProcessParams.antialiasingMode = en::Renderer::AntialiasingMode::None;
 	}
 
@@ -113,9 +113,9 @@ void Eruption::CreateExampleScene()
 	m_AssetManager->LoadTexture("SkullNormal", "Models/Skull/SkullNormal.jpg", { en::TextureFormat::NonColor });
 	
 	m_AssetManager->CreateMaterial("SkullMaterial", glm::vec3(1.0f), 0.0f, 0.65f, 1.0f, m_AssetManager->GetTexture("SkullAlbedo"),m_AssetManager->GetTexture("SkullRoughness"),m_AssetManager->GetTexture("SkullNormal"));
-
+	
 	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].SetMaterial(m_AssetManager->GetMaterial("SkullMaterial"));
-
+	
 	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
 
 	m_ExampleScene = en::MakeHandle<en::Scene>();
@@ -123,74 +123,37 @@ void Eruption::CreateExampleScene()
 	auto m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->SetPosition(glm::vec3(0, 0.5f, -0.3));
 	m_Skull->SetRotation(glm::vec3(45.0f, 90.0f, 0.0f));
-
-
+	
+	
 	auto m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->SetScale(glm::vec3(1.2f));
-
+	
 	m_AssetManager->GetMaterial("BlueCurtains")->SetNormalStrength(0.6f);
 	m_AssetManager->GetMaterial("RedCurtains")->SetNormalStrength(0.6f);
 	m_AssetManager->GetMaterial("GreenCurtains")->SetNormalStrength(0.6f);
 
-	/*
-	for (uint32_t i = 0; i < (MAX_POINT_LIGHTS); i++)
-	{
-		glm::vec3 spawnPoint(
-			float(rand() % 2400 - 1200) / 100.0f,
-			0.2f + float(rand() % 1200) / 100.0f,
-			float(rand() % 1100 - 550 ) / 100.0f
-		);
+	//for (uint32_t i = 0; i < MAX_POINT_LIGHTS; i++)
+	//{
+	//	glm::vec3 spawnPoint(
+	//		float(rand() % 2400 - 1200) / 100.0f,
+	//		0.2f + float(rand() % 1200) / 100.0f,
+	//		float(rand() % 1100 - 550 ) / 100.0f
+	//	);
+	//
+	//	float intensity = 2.0f + float(rand() % 30) / 2.0f;
+	//
+	//	float radius = 1.0f + float(rand() % 100) / 45.0f;
+	//
+	//	glm::vec3 color(
+	//		float(rand() % 1000) / 1000.0f,
+	//		float(rand() % 1000) / 1000.0f,
+	//		float(rand() % 1000) / 1000.0f
+	//	);
+	//
+	//	m_ExampleScene->CreatePointLight(spawnPoint, color, intensity, radius);
+	//}
 
-		float intensity = 2.0f + float(rand() % 30) / 2.0f;
-
-		float radius = 1.0f + float(rand() % 100) / 33.33f;
-
-		glm::vec3 color(
-			float(rand() % 1000) / 1000.0f,
-			float(rand() % 1000) / 1000.0f,
-			float(rand() % 1000) / 1000.0f
-		);
-
-		m_ExampleScene->CreatePointLight(spawnPoint, color, intensity, radius);
-	}
-	*/
-
-	/*
-	for (uint32_t i = 0; i < MAX_SPOT_LIGHTS - 1; i++)
-	{
-		glm::vec3 spawnPoint(
-			float(rand() % 2400 - 1200) / 100.0f,
-			0.2f + float(rand() % 1200) / 100.0f,
-			float(rand() % 1100 - 550) / 100.0f
-		);
-
-		glm::vec3 direction(
-			(float)(rand() % 1000 - 500) / 500.0f,
-			(float)(rand() % 1000 - 500) / 500.0f,
-			(float)(rand() % 1000 - 500) / 500.0f
-		);
-
-		direction = glm::normalize(direction);
-
-		float intensity = 2.0f + float(rand() % 10) / 2.0f;
-
-		float radius = 2.0f + float(rand() % 100) / 20.0f;
-
-		glm::vec3 color(
-			float(rand() % 1000) / 1000.0f,
-			float(rand() % 1000) / 1000.0f,
-			float(rand() % 1000) / 1000.0f
-		);
-
-		m_ExampleScene->CreateSpotLight(spawnPoint, direction, color, 0.45f, 0.75f, 2.0f, intensity);
-	}
-	*/
-	
-	//auto light = m_ExampleScene->CreateDirectionalLight(glm::vec3(0.5, 1.0, 0.1), glm::vec3(1.0, 0.931, 0.843), 6.0);
-	//light->m_CastShadows = true;
-	//light->m_ShadowBias = 0.00030;
-
-	m_ExampleScene->m_AmbientColor = glm::vec3(0.060f, 0.067f, 0.137f);
+	m_ExampleScene->m_AmbientColor = glm::vec3(0.042f, 0.045f, 0.074f);
 
 	m_Renderer->BindScene(m_ExampleScene);
 }
