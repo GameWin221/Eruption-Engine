@@ -34,6 +34,9 @@ This is my own rendering engine using Vulkan as its graphical API. I started thi
 # How to compile the shaders?
 Enter the `Shaders` directory and run the `compile.bat` file.
 
+## Known issue:
+The app doesn't launch on Intel GPUs due to their low max per-stage image count.
+
 # In engine screenshots:
 ![](https://user-images.githubusercontent.com/72656547/182171704-8ca8ca6f-d27d-4aaa-a66c-b266cf18b7fc.jpg)
 ![](https://user-images.githubusercontent.com/72656547/182172048-73e7951d-739f-47a2-ac4a-44e7d64802fc.jpg)
