@@ -3,15 +3,13 @@
 #ifndef EN_GRAPHICS_PIPELINE_HPP
 #define EN_GRAPHICS_PIPELINE_HPP
 
-#include <Renderer/Pipelines/Pipeline.hpp>
-
+#include <Renderer/Passes/Pass.hpp>
 #include <Renderer/DescriptorSet.hpp>
-#include <Renderer/RenderPass.hpp>
 #include <Renderer/Buffers/MemoryBuffer.hpp>
 
 namespace en
 {
-	class GraphicsPipeline : public Pipeline
+	class GraphicsPass : public Pass
 	{
 	public:
 		struct Attachment
@@ -26,13 +24,14 @@ namespace en
 		};
 		struct CreateInfo
 		{
-			Handle<RenderPass> renderPass{};
-
 			std::string vShader = "";
 			std::string fShader = "";
 
 			std::vector<VkDescriptorSetLayout> descriptorLayouts{};
 			std::vector<VkPushConstantRange> pushConstantRanges{};
+
+			VkFormat colorFormat = VK_FORMAT_UNDEFINED;
+			VkFormat depthFormat = VK_FORMAT_UNDEFINED;
 
 			bool useVertexBindings = false;
 			bool enableDepthTest   = false;
@@ -42,10 +41,32 @@ namespace en
 			VkCompareOp	  compareOp	  = VK_COMPARE_OP_LESS;
 			VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 		};
+		struct RenderInfo
+		{
+			VkImageView colorAttachmentView = VK_NULL_HANDLE;
+			VkImageView depthAttachmentView = VK_NULL_HANDLE;
 
-		GraphicsPipeline(const CreateInfo& pipeline);
+			VkImageLayout colorAttachmentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkImageLayout depthAttachmentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		void Bind(VkCommandBuffer commandBuffer, VkExtent2D extent, VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT);
+			VkExtent2D extent{};
+
+			VkClearColorValue clearColor{ {0.0f, 0.0f, 0.0f, 1.0f} };
+			VkClearDepthStencilValue clearDepth{ 1.0f };
+
+			VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			VkAttachmentStoreOp colorStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+			VkAttachmentLoadOp depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			VkAttachmentStoreOp depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+		};
+
+		GraphicsPass(const CreateInfo& pipeline);
+
+		void Begin(VkCommandBuffer commandBuffer, const RenderInfo& info);
+		void End();
 
 		void BindVertexBuffer(Handle<MemoryBuffer> buffer, VkDeviceSize offset = 0U);
 		void BindIndexBuffer(Handle<MemoryBuffer> buffer);

@@ -80,10 +80,10 @@ namespace en
         std::vector<DescriptorInfo::ImageInfoContent> imageViews(MAX_TEXTURES);
         for (auto& view : imageViews)
         {
-            view.imageView = AssetManager::Get().GetTexture("SkullAlbedo")->m_Image->GetViewHandle();//AssetManager::Get().GetWhiteSRGBTexture()->m_Image->GetViewHandle();
-            view.imageSampler = AssetManager::Get().GetTexture("SkullAlbedo")->m_Sampler->GetHandle();//AssetManager::Get().GetWhiteSRGBTexture()->m_ImageSampler;
+            view.imageView = AssetManager::Get().GetWhiteSRGBTexture()->m_Image->GetViewHandle();
+            view.imageSampler = AssetManager::Get().GetWhiteSRGBTexture()->m_Sampler->GetHandle();
         }
-
+        
         m_LightsBufferDescriptorSet = MakeHandle<DescriptorSet>(DescriptorInfo{
             std::vector<DescriptorInfo::ImageInfo>{},
             std::vector<DescriptorInfo::BufferInfo>{
@@ -777,11 +777,15 @@ namespace en
         uint32_t totalPointLights = MAX_POINT_LIGHTS;
         uint32_t changedPointLights = changedPointLightsIDs.size();
 
+        bool updated = false;
+
         if ((float)changedPointLights / totalPointLights > POINT_LIGHTS_UPDATE_THRESHOLD)
         {
             EN_LOG("TOTAL POINT LIGHTS UPDATE");
             m_LightsStagingBuffer->MapMemory(m_GPULights.pointLights.data(), sizeof(m_GPULights.pointLights));
             m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.pointLights), 0U,  (size_t)&m_GPULights.pointLights - (size_t)&m_GPULights);
+        
+            updated = true;
         }
         else
         {
@@ -790,6 +794,8 @@ namespace en
             {
                 m_LightsStagingBuffer->MapMemory(&m_GPULights.pointLights[changedId], sizeof(PointLight::Buffer));
                 m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(PointLight::Buffer), 0U, (size_t)&m_GPULights.pointLights[changedId] - (size_t)&m_GPULights);
+                
+                updated = true;
             }
         }
 
@@ -801,6 +807,8 @@ namespace en
             EN_LOG("TOTAL SPOT LIGHTS UPDATE");
             m_LightsStagingBuffer->MapMemory(m_GPULights.spotLights.data(), sizeof(m_GPULights.spotLights));
             m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.spotLights), 0U, (size_t)&m_GPULights.spotLights - (size_t)&m_GPULights);
+            
+            updated = true;
         }
         else
         {
@@ -808,6 +816,8 @@ namespace en
             {
                 m_LightsStagingBuffer->MapMemory(&m_GPULights.spotLights[changedId], sizeof(SpotLight::Buffer));
                 m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(SpotLight::Buffer), 0U, (size_t)&m_GPULights.spotLights[changedId] - (size_t)&m_GPULights);
+            
+                updated = true;
             }
         }
 
@@ -819,6 +829,8 @@ namespace en
             EN_LOG("TOTAL DIR LIGHTS UPDATE");
             m_LightsStagingBuffer->MapMemory(m_GPULights.dirLights.data(), sizeof(m_GPULights.dirLights));
             m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.dirLights), 0U, (size_t)&m_GPULights.dirLights - (size_t)&m_GPULights);
+        
+            updated = true;
         }
         else
         {
@@ -826,6 +838,8 @@ namespace en
             {
                 m_LightsStagingBuffer->MapMemory(&m_GPULights.dirLights[changedId], sizeof(DirectionalLight::Buffer));
                 m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(DirectionalLight::Buffer), 0U, (size_t)&m_GPULights.dirLights[changedId] - (size_t)&m_GPULights);
+            
+                updated = true;
             }
         }
 
@@ -842,11 +856,22 @@ namespace en
            
             m_LightsStagingBuffer->MapMemory(&m_GPULights.activePointLights, sceneLightingSize);
             m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sceneLightingSize, 0U, allLightsSize);
+        
+            updated = true;
         }
 
-        //EN_LOG("TOTAL LIGHTS UPDATE");
-        //m_LightsStagingBuffer->MapMemory(&m_GPULights, sizeof(GPULights));
-        //m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(GPULights));
+        if (updated)
+        {
+            //VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands()
+            //    // FIX
+            //m_LightsBuffer->PipelineBarrier(
+            //    VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+            //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            //    cmd
+            //)
+            //
+            //Helpers::BeginSingleTimeGraphicsCommands(cmd)
+        }
     }
     void Scene::UpdateGlobalDescriptor()
     {

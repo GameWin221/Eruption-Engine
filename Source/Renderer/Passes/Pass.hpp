@@ -13,10 +13,10 @@
 
 namespace en
 {
-	class Pipeline
+	class Pass
 	{
 	public:
-		~Pipeline();
+		~Pass();
 
 		void PushConstants(const void* data, uint32_t size, uint32_t offset, VkShaderStageFlags shaderStage);
 

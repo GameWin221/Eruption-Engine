@@ -7,6 +7,7 @@
 
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\FullscreenTri.vert -o %~dp0\FullscreenTri.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\FXAA.frag -o %~dp0\FXAA.spv
+%VULKAN_SDK%/Bin/glslc.exe %~dp0\SSAO.frag -o %~dp0\SSAO.spv
 
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\PointShadowVert.vert -o %~dp0\PointShadowVert.spv
 %VULKAN_SDK%/Bin/glslc.exe %~dp0\SpotShadowVert.vert -o %~dp0\SpotShadowVert.spv

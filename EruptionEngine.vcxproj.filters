@@ -66,13 +66,13 @@
     <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Pipelines\ComputePipeline.cpp">
+    <ClCompile Include="Source\Renderer\Passes\ComputePass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Pipelines\GraphicsPipeline.cpp">
+    <ClCompile Include="Source\Renderer\Passes\GraphicsPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Pipelines\Pipeline.cpp">
+    <ClCompile Include="Source\Renderer\Passes\Pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\DescriptorSet.cpp">
@@ -111,9 +111,6 @@
     <ClCompile Include="Source\Renderer\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\RenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\EditorLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -138,19 +135,16 @@
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Framebuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Renderer\Sampler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="External\TinyGLTF\tiny_gltf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Assets\MeshImporter\GLTFImporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Assets\MeshImporter\Importer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\ImGuiContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -227,13 +221,13 @@
     <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp">
+    <ClInclude Include="Source\Renderer\Passes\ComputePass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Pipelines\GraphicsPipeline.hpp">
+    <ClInclude Include="Source\Renderer\Passes\GraphicsPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Pipelines\Pipeline.hpp">
+    <ClInclude Include="Source\Renderer\Passes\Pass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\DescriptorSet.hpp">
@@ -275,9 +269,6 @@
     <ClInclude Include="Source\Renderer\Renderer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\RenderPass.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\EditorLayer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -305,9 +296,6 @@
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Framebuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\Sampler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -315,6 +303,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Assets\MeshImporter\Importer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\ImGuiContext.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

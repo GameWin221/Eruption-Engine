@@ -6,8 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <Renderer/Framebuffer.hpp>
-#include <Renderer/Pipelines/GraphicsPipeline.hpp>
+#include <Renderer/Passes/GraphicsPass.hpp>
 
 #include <Scene/SceneObject.hpp>
 #include <Renderer/Lights/PointLight.hpp>
@@ -19,17 +18,6 @@
 
 namespace en
 {
-	struct OmniShadowMap
-	{
-		Handle<Image> image;
-		std::array<Handle<Framebuffer>, 6> framebuffers;
-	};
-	struct ShadowMap 
-	{
-		Handle<Image> image;
-		Handle<Framebuffer> framebuffer;
-	};
-
 	class Scene
 	{
 		friend class Renderer;

@@ -5,22 +5,16 @@
 
 #include "../../EruptionEngine.ini"
 
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
-
 #include <Common/Helpers.hpp>
 
 #include <Scene/Scene.hpp>
 
 #include <Renderer/Window.hpp>
 #include <Renderer/Context.hpp>
-#include <Renderer/Pipelines/Pipeline.hpp>
-#include <Renderer/Pipelines/GraphicsPipeline.hpp>
-#include <Renderer/Pipelines/ComputePipeline.hpp>
+#include <Renderer/Passes/Pass.hpp>
+#include <Renderer/Passes/GraphicsPass.hpp>
+#include <Renderer/Passes/ComputePass.hpp>
 
-#include <Renderer/RenderPass.hpp>
-#include <Renderer/Framebuffer.hpp>
 #include <Renderer/Sampler.hpp>
 
 #include <Renderer/Lights/PointLight.hpp>
@@ -31,6 +25,8 @@
 #include <Renderer/Camera/CameraBuffer.hpp>
 
 #include <Renderer/DescriptorSet.hpp>
+
+#include <Renderer/ImGuiContext.hpp>
 
 #include <functional>
 #include <random>
@@ -65,6 +61,22 @@ namespace en
 			float texelSizeY = 1.0f / 1080.0f;
 		};
 
+		enum struct SSAOMode
+		{
+			None = 0,
+			SSAO = 1
+		};
+
+		struct SSAOProperties
+		{
+			float screenWidth = 1920.0f;
+			float screenHeight = 1080.0f;
+			
+			float radius = 0.5f;
+			float bias = 0.025f;
+			float multiplier = 1.0f;
+		};
+
 		void SetVSyncEnabled(const bool enabled);
 		const bool GetVSyncEnabled() const { return m_Settings.vSync; };
 
@@ -92,7 +104,11 @@ namespace en
 		void SetAntialiasingMode(const AntialiasingMode antialiasingMode);
 		const AntialiasingMode GetAntialiasingMode() const { return m_Settings.antialiasingMode; };
 
+		void SetSSAOMode(const SSAOMode ssaoMode);
+		const SSAOMode GetSSAOMode() const { return m_Settings.ssaoMode; };
+
 		AntialiasingProperties& GetAntialiasingProperties() { return m_Settings.antialiasing; };
+		SSAOProperties& GetSSAOProperties() { return m_Settings.ssao; };
 
 		void ReloadBackend();
 
@@ -114,15 +130,17 @@ namespace en
 		Handle<Swapchain> m_Swapchain;
 		Handle<CameraBuffer> m_CameraBuffer;
 
-		Handle<RenderPass> m_ImGuiRenderPass;
-		Handle<RenderPass> m_ForwardPass;
-		Handle<RenderPass> m_AntialiasingPass;
-		Handle<RenderPass> m_DepthRenderPass;
+		Handle<GraphicsPass> m_SSAOPass;
+		Handle<GraphicsPass> m_ForwardPass;
+		Handle<GraphicsPass> m_AntialiasingPass;
+		Handle<GraphicsPass> m_DepthPass;
 
-		Handle<RenderPass> m_DirShadowsRenderPass;
-		Handle<RenderPass> m_PerspectiveShadowsRenderPass;
+		Handle<GraphicsPass> m_PointShadowPass;
+		Handle<GraphicsPass> m_SpotShadowPass;
+		Handle<GraphicsPass> m_DirShadowPass;
 
-		Handle<Framebuffer> m_DepthFramebuffer;
+		Handle<ComputePass> m_ClusterAABBCreationPass;
+		Handle<ComputePass> m_ClusterLightCullingPass;
 
 		Handle<Sampler> m_ShadowSampler;
 		Handle<Sampler> m_FullscreenSampler;
@@ -130,30 +148,20 @@ namespace en
 		Handle<DescriptorSet> m_ShadowMapsDescriptor;
 		Handle<DescriptorSet> m_ClusterDescriptor;
 		Handle<DescriptorSet> m_AntialiasingDescriptor;
+		Handle<DescriptorSet> m_SSAODescriptor;
+		Handle<DescriptorSet> m_DepthBufferDescriptor;
 
-		std::vector<Handle<Framebuffer>> m_ImGuiFramebuffers;
-		std::vector<Handle<Framebuffer>> m_ForwardFramebuffers;
-		std::vector<Handle<Framebuffer>> m_AntialiasingFramebuffers;
-
-		std::array<OmniShadowMap, MAX_POINT_LIGHT_SHADOWS> m_PointShadowMaps;
-		std::array<ShadowMap, MAX_SPOT_LIGHT_SHADOWS> m_SpotShadowMaps;
-		std::array<ShadowMap, MAX_DIR_LIGHT_SHADOWS* SHADOW_CASCADES> m_DirShadowMaps;
-
-		Handle<GraphicsPipeline> m_Pipeline;
-		Handle<GraphicsPipeline> m_AntialiasingPipeline;
-		Handle<GraphicsPipeline> m_DepthPipeline;
-
-		Handle<GraphicsPipeline> m_DirShadowPipeline;
-		Handle<GraphicsPipeline> m_SpotShadowPipeline;
-		Handle<GraphicsPipeline> m_PointShadowPipeline;
-
-		Handle<ComputePipeline> m_ClusterAABBCreation;
-		Handle<ComputePipeline> m_ClusterLightCulling;
+		std::array<Handle<Image>, MAX_POINT_LIGHT_SHADOWS> m_PointShadowMaps;
+		std::array<Handle<Image>, MAX_SPOT_LIGHT_SHADOWS> m_SpotShadowMaps;
+		std::array<Handle<Image>, MAX_DIR_LIGHT_SHADOWS* SHADOW_CASCADES> m_DirShadowMaps;
 
 		Handle<Image> m_DepthBuffer;
+		Handle<Image> m_SSAOTarget;
 		Handle<Image> m_PointShadowDepthBuffer;
 		Handle<Image> m_SpotShadowDepthBuffer;
 		Handle<Image> m_AliasedImage;
+
+		Handle<ImGuiContext> m_ImGuiContext;
 
 		struct Settings {
 			bool vSync = true;
@@ -170,7 +178,10 @@ namespace en
 			VkFormat shadowsFormat = VK_FORMAT_D32_SFLOAT;
 
 			AntialiasingMode antialiasingMode = AntialiasingMode::FXAA;
-			AntialiasingProperties antialiasing;
+			AntialiasingProperties antialiasing{};
+
+			SSAOMode ssaoMode = SSAOMode::SSAO;
+			SSAOProperties ssao{};
 		} m_Settings;
 
 		struct CSM {
@@ -225,6 +236,7 @@ namespace en
 		void ShadowPass();
 		void ClusterComputePass();
 		void DepthPass();
+		void SSAOPass();
 		void ForwardPass();
 		void AntialiasingPass();
 		void ImGuiPass();
@@ -235,19 +247,13 @@ namespace en
 		void CreateShadowResources();
 
 		void CreateShadowPasses();
-		void CreateShadowPipelines();
-
+		void CreateSSAOPass();
 		void CreateDepthPass();
-		void CreateDepthPipeline();
-
 		void CreateForwardPass();
-		void CreateForwardPipeline();
-
 		void CreateAntialiasingPass();
-		void CreateAntialiasingPipeline();
 
 		void CreateClusterBuffers();
-		void CreateClusterPipelines();
+		void CreateClusterPasses();
 
 		static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 		void RecreateFramebuffer();
@@ -255,14 +261,12 @@ namespace en
 
 		void CreateBackend(bool newImGui = true);
 
+		void CreateAATarget();
+		void CreateSSAOTarget();
 		void CreateDepthBuffer();
 
 		void CreatePerFrameData();
 		void DestroyPerFrameData();
-
-		void CreateImGuiRenderPass();
-		void CreateImGuiContext();
-		void DestroyImGuiContext();
 	};
 }
 

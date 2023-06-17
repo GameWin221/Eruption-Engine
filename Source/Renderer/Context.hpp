@@ -87,6 +87,7 @@ namespace en
 
 		bool IsDeviceSuitable(VkPhysicalDevice& device);
 		bool CheckDeviceExtensionSupport(VkPhysicalDevice& device);
+		bool CheckDeviceFeaturesSupport(VkPhysicalDevice& device);
 	};
 }
 

@@ -167,16 +167,16 @@ namespace en
             finalOffset /= sizeof(unsigned short);
 
             const unsigned short* binaryDataShort = (const unsigned short*)m_BinaryData.data();
-            for (size_t i = finalOffset; i < finalOffset + count; i++)
-                indices.push_back((uint32_t)binaryDataShort[i]);
+            for (size_t i = finalOffset, j = 0; i < finalOffset + count; ++i, ++j)
+                indices[j] = (uint32_t)binaryDataShort[i];
         }
         else if (componentType == 5122)
         {
             finalOffset /= sizeof(short);
 
             const short* binaryDataShort = (const short*)m_BinaryData.data();
-            for (size_t i = finalOffset; i < finalOffset + count; i++)
-                indices.push_back((uint32_t)binaryDataShort[i]);
+            for (size_t i = finalOffset, j = 0; i < finalOffset + count; i++, ++j)
+                indices[j] = (uint32_t)binaryDataShort[i];
         }
 
         return indices;

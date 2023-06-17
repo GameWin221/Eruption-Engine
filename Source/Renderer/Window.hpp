@@ -16,10 +16,6 @@ namespace en
 {
 	class Window
 	{
-		friend class Context;
-		friend class Renderer;
-		friend class InputManager;
-
 	public:
 		Window(
 			const std::string& title = "Unnamed Default Window",

@@ -14,6 +14,7 @@ namespace en
 
 	public:
 		Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageCreateFlags createFlags, VkImageLayout initialLayout, uint32_t layerCount = 1U, bool genMipMaps = false);
+		Image(VkImage image, VkImageView view, VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageLayout layout, uint32_t layerCount = 1U);
 		~Image();
 
 		void SetData(void* data);
@@ -28,6 +29,8 @@ namespace en
 		const VkFormat m_Format{};
 
 		const uint32_t m_LayerCount{};
+
+		const bool m_IsBorrowed;
 
 		const VkImage	  GetHandle() const { return m_Image; };
 		const VkImageView GetViewHandle() const { return m_ImageView; };

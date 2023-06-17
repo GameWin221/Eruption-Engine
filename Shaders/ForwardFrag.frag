@@ -4,6 +4,8 @@
 #include "camera.glsl"
 #include "lights.glsl"
 
+#define PI 3.14159265359
+
 layout(location = 0) in vec4 fPosition;
 layout(location = 1) in vec3 fNormal;
 layout(location = 2) in vec2 fTexcoord;
@@ -12,13 +14,12 @@ layout(location = 3) noperspective in vec2 fUV;
 layout(location = 0) out vec4 FragColor;
 
 layout(set = 1, binding = 1) uniform sampler2D textures[MAX_TEXTURES];
-//layout(set = 1, binding = 2) uniform sampler2D roughnessTextures[MAX_TEXTURES];
-//layout(set = 1, binding = 3) uniform sampler2D metalnessTextures[MAX_TEXTURES];
-//layout(set = 1, binding = 4) uniform sampler2D normalTextures[MAX_TEXTURES];
 
 layout(set = 2, binding = 0) uniform samplerCube pointShadowMaps[MAX_POINT_LIGHT_SHADOWS];
 layout(set = 2, binding = 1) uniform sampler2D spotShadowMaps[MAX_SPOT_LIGHT_SHADOWS];
 layout(set = 2, binding = 2) uniform sampler2D dirShadowMaps[MAX_DIR_LIGHT_SHADOWS*SHADOW_CASCADES];
+
+layout(set = 4, binding = 0) uniform sampler2D SSAO;
 
 struct LightGrid
 {
@@ -47,7 +48,7 @@ const mat4 biasMat = mat4(
 	0.5, 0.5, 0.0, 1.0
 );
 
-vec3 pcfSampleOffsets[20] = vec3[](
+const vec3 pcfSampleOffsets[20] = vec3[](
    vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
    vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
    vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
@@ -101,8 +102,6 @@ layout(std430, set = 1, binding = 3) buffer Lights
     vec4 cascadeSplitDistances[SHADOW_CASCADES];
 	vec4 cascadeFrustumSizeRatios[SHADOW_CASCADES];
 };
-
-#define PI 3.14159265359
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -247,6 +246,27 @@ vec3 NormalMapping(uint textureId, float multiplier)
     return result;
 }
 
+float GetSSAO()
+{
+#if SOFT_SSAO
+    vec2 texelSize = 1.0 / vec2(textureSize(SSAO, 0));
+
+    float ssao = 0.0;
+    for (int x = -2; x < 2; ++x) 
+    {
+        for (int y = -2; y < 2; ++y) 
+        {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            ssao += texture(SSAO, fUV + offset).r;
+        }
+    }
+
+    return ssao / 16.0;
+#else   
+    return texture(SSAO, fUV).r;
+#endif
+}
+
 void main()
 {
 	Material material = materials[materialId];
@@ -257,7 +277,9 @@ void main()
     float roughness = texture(textures[material.roughnessId], fTexcoord).g * material.roughnessVal;
     float metalness = texture(textures[material.metalnessId], fTexcoord).b * material.metalnessVal;
 
-    vec3 ambient = albedo * ambientLight;
+    float ssao = GetSSAO();
+
+    vec3 ambient = albedo * ambientLight * ssao;
     vec3 lighting = vec3(0.0);
 
     float linearDepth = fPosition.w;
@@ -396,6 +418,10 @@ void main()
                 vec3(1, 0, 0), vec3( 0, 1, 0), vec3(0, 0, 1), vec3(0, 1, 1)
             );
             result = lighting + ambient + cascadeColors[uint(cascade - (4.0 * floor(cascade/4.0)))] * 0.18;
+            break;
+
+        case 9:
+            result = vec3(ssao);
             break;
     }
 
