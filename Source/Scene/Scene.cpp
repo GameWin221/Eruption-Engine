@@ -535,14 +535,92 @@ namespace en
         m_GPULights.spotLights[m_GPULights.activeSpotLights].range      = 0.0f;
         m_GPULights.spotLights[m_GPULights.activeSpotLights].direction  = glm::vec3(0.0f);
         m_GPULights.spotLights[m_GPULights.activeSpotLights].outerCutoff = 0.0f; 
+
+
+        if ((float)m_ChangedPointLightsIDs.size() / MAX_POINT_LIGHTS > POINT_LIGHTS_UPDATE_THRESHOLD)
+        {
+            VkDeviceSize offset = (size_t)&m_GPULights.pointLights - (size_t)&m_GPULights;
+            m_LightsStagingBuffer->MapMemory(m_GPULights.pointLights.data(), sizeof(m_GPULights.pointLights), 0U, offset);
+        }
+        else
+        {
+            for (const auto& changedId : m_ChangedPointLightsIDs)
+            {
+                VkDeviceSize offset = (size_t)&m_GPULights.pointLights[changedId] - (size_t)&m_GPULights;
+                m_LightsStagingBuffer->MapMemory(&m_GPULights.pointLights[changedId], sizeof(PointLight::Buffer), 0U, offset);
+            }
+        }
+
+        if ((float)m_ChangedSpotLightsIDs.size() / MAX_SPOT_LIGHTS > SPOT_LIGHTS_UPDATE_THRESHOLD)
+        {
+            VkDeviceSize offset = (size_t)&m_GPULights.spotLights - (size_t)&m_GPULights;
+            m_LightsStagingBuffer->MapMemory(m_GPULights.spotLights.data(), sizeof(m_GPULights.spotLights), 0U, offset);
+        }
+        else
+        {
+            for (const auto& changedId : m_ChangedSpotLightsIDs)
+            {
+                VkDeviceSize offset = (size_t)&m_GPULights.spotLights[changedId] - (size_t)&m_GPULights;
+                m_LightsStagingBuffer->MapMemory(&m_GPULights.spotLights[changedId], sizeof(SpotLight::Buffer), 0U, offset);
+            }
+        }
+
+        if ((float)m_ChangedDirLightsIDs.size() / MAX_DIR_LIGHTS > DIR_LIGHTS_UPDATE_THRESHOLD)
+        {
+            VkDeviceSize offset = (size_t)&m_GPULights.dirLights - (size_t)&m_GPULights;
+            m_LightsStagingBuffer->MapMemory(m_GPULights.dirLights.data(), sizeof(m_GPULights.dirLights), 0U, offset);
+        }
+        else
+        {
+            for (const auto& changedId : m_ChangedDirLightsIDs)
+            {
+                VkDeviceSize offset = (size_t)&m_GPULights.dirLights[changedId] - (size_t)&m_GPULights;
+                m_LightsStagingBuffer->MapMemory(&m_GPULights.dirLights[changedId], sizeof(DirectionalLight::Buffer), 0U, offset);
+            }
+        }
+
+        constexpr VkDeviceSize pointLightsSize = sizeof(m_GPULights.pointLights);
+        constexpr VkDeviceSize spotLightsSize = sizeof(m_GPULights.spotLights);
+        constexpr VkDeviceSize dirLightsSize = sizeof(m_GPULights.dirLights);
+        constexpr VkDeviceSize allLightsSize = pointLightsSize + spotLightsSize + dirLightsSize;
+
+        if (m_SceneLightingChanged)
+            m_LightsStagingBuffer->MapMemory(&m_GPULights.activePointLights, sizeof(GPULights) - allLightsSize, 0U, allLightsSize);
+    
+        // If more than MATRICES_UPDATE_THRESHOLD percent of matrices have changed, do a whole copy
+        if ((float)(m_ChangedMaterialIDs.size() / m_Materials.size()) > MATERIALS_UPDATE_THRESHOLD)
+        {
+            m_GlobalMaterialsStagingBuffer->MapMemory(m_GPUMaterials.data(), sizeof(GPUMaterial) * m_Materials.size());
+        }
+        else
+        {
+            for (const auto& changedMaterialId : m_ChangedMaterialIDs)
+            {
+                VkDeviceSize offset = changedMaterialId * sizeof(GPUMaterial);
+                m_GlobalMaterialsStagingBuffer->MapMemory(&m_GPUMaterials[changedMaterialId], sizeof(GPUMaterial), 0U, offset);
+            }
+        }
+
+        if ((float)m_ChangedMatrixIDs.size() / m_Matrices.size() > MATRICES_UPDATE_THRESHOLD)
+        {
+            m_GlobalMatricesStagingBuffer->MapMemory(m_Matrices.data(), sizeof(glm::mat4) * m_Matrices.size());
+        }
+        else
+        {
+            for (const auto& changedMatrixId : m_ChangedMatrixIDs)
+            {
+                VkDeviceSize offset = changedMatrixId * sizeof(glm::mat4);
+                m_GlobalMatricesStagingBuffer->MapMemory(&m_Matrices[changedMatrixId], sizeof(glm::mat4), 0U, offset);
+            }
+        }
     }
-    void Scene::UpdateSceneGPU()
+    void Scene::UpdateSceneGPU(const VkCommandBuffer cmd)
     {
-        UpdateMatrixBuffer(m_ChangedMatrixIDs);
+        UpdateMatrixBuffer(cmd, m_ChangedMatrixIDs);
 
-        UpdateLightsBuffer(m_ChangedPointLightsIDs, m_ChangedSpotLightsIDs, m_ChangedDirLightsIDs);
+        UpdateLightsBuffer(cmd, m_ChangedPointLightsIDs, m_ChangedSpotLightsIDs, m_ChangedDirLightsIDs);
 
-        UpdateMaterialBuffer(m_ChangedMaterialIDs);
+        UpdateMaterialBuffer(cmd, m_ChangedMaterialIDs);
 
         if (m_GlobalDescriptorChanged)
         {
@@ -632,7 +710,7 @@ namespace en
 
         m_OccupiedMatrices.insert(index);
         m_Matrices[index] = matrix;
-        
+
         return index;
     }
     uint32_t Scene::RegisterMaterial(Handle<Material> material)
@@ -702,10 +780,18 @@ namespace en
         m_Textures[index] = nullptr;
     }
 
-    void Scene::UpdateMatrixBuffer(const std::vector<uint32_t>& changedMatrixIds)
+    void Scene::UpdateMatrixBuffer(const VkCommandBuffer cmd, const std::vector<uint32_t>& changedMatrixIds)
     {
         if (m_Matrices.size() == 0)
             return;
+
+        bool updated = false;
+
+        m_GlobalMatricesBuffer->PipelineBarrier(
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            cmd
+        );
 
         if (sizeof(glm::mat4) * m_Matrices.size() > m_GlobalMatricesBuffer->GetSize())
         {
@@ -713,44 +799,68 @@ namespace en
 
             uint32_t overflow = sizeof(glm::mat4) * m_Matrices.size() - m_GlobalMatricesBuffer->GetSize();
 
-            m_GlobalMatricesBuffer->Resize((m_GlobalMatricesBuffer->GetSize() + overflow)*MATRICES_OVERFLOW_MULTIPLIER);
-            m_GlobalMatricesStagingBuffer->Resize(m_GlobalMatricesBuffer->GetSize());
+            m_GlobalMatricesBuffer->Resize((m_GlobalMatricesBuffer->GetSize() + overflow)*MATRICES_OVERFLOW_MULTIPLIER, cmd);
+            m_GlobalMatricesStagingBuffer->Resize(m_GlobalMatricesBuffer->GetSize(), cmd);
             m_GlobalDescriptorChanged = true;
+
+            updated = true;
         }
 
         uint32_t totalMatrices   = m_Matrices.size();
         uint32_t changedMatrices = changedMatrixIds.size();
-
+        
         // If more than MATRICES_UPDATE_THRESHOLD percent of matrices have changed, do a whole copy
         if ((float)changedMatrices / totalMatrices > MATRICES_UPDATE_THRESHOLD)
         {
             EN_LOG("TOTAL MATRIX UPDATE");
-            m_GlobalMatricesStagingBuffer->MapMemory(m_Matrices.data(), sizeof(glm::mat4) * m_Matrices.size());
-            m_GlobalMatricesStagingBuffer->CopyTo(m_GlobalMatricesBuffer, sizeof(glm::mat4) * m_Matrices.size());
+            m_GlobalMatricesStagingBuffer->CopyTo(m_GlobalMatricesBuffer, sizeof(glm::mat4) * m_Matrices.size(), 0U, 0U, cmd);
+        
+            updated = true;
         }
         else 
         {
             for (const auto& changedMatrixId : changedMatrixIds)
             {
-                m_GlobalMatricesStagingBuffer->MapMemory(&m_Matrices[changedMatrixId], sizeof(glm::mat4));
-                m_GlobalMatricesStagingBuffer->CopyTo(m_GlobalMatricesBuffer, sizeof(glm::mat4), 0U, changedMatrixId * sizeof(glm::mat4));
+                VkDeviceSize offset = changedMatrixId * sizeof(glm::mat4);
+                m_GlobalMatricesStagingBuffer->CopyTo(m_GlobalMatricesBuffer, sizeof(glm::mat4), offset, offset, cmd);
+          
+                updated = true;
             }
         }
+
+        if (updated)
+        {
+            m_GlobalMatricesBuffer->PipelineBarrier(
+                VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                cmd
+            );
+        }
     }
-    void Scene::UpdateMaterialBuffer(const std::vector<uint32_t>& changedMaterialIds)
+    void Scene::UpdateMaterialBuffer(const VkCommandBuffer cmd, const std::vector<uint32_t>& changedMaterialIds)
     {
         if (m_Materials.size() == 0)
             return;
     
+        bool updated = false;
+
+        m_GlobalMaterialsBuffer->PipelineBarrier(
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            cmd
+        );
+
         if (sizeof(GPUMaterial) * m_Materials.size() > m_GlobalMaterialsBuffer->GetSize())
         {
             EN_LOG("MATERIAL RESIZE");
 
             uint32_t overflow = sizeof(GPUMaterial) * m_Materials.size() - m_GlobalMaterialsBuffer->GetSize();
 
-            m_GlobalMaterialsBuffer->Resize((m_GlobalMaterialsBuffer->GetSize() + overflow) * MATERIALS_OVERFLOW_MULTIPLIER);
-            m_GlobalMaterialsStagingBuffer->Resize(m_GlobalMaterialsBuffer->GetSize());
+            m_GlobalMaterialsBuffer->Resize((m_GlobalMaterialsBuffer->GetSize() + overflow) * MATERIALS_OVERFLOW_MULTIPLIER, cmd);
+            m_GlobalMaterialsStagingBuffer->Resize(m_GlobalMaterialsBuffer->GetSize(), cmd);
             m_GlobalDescriptorChanged = true;
+
+            updated = true;
         }
 
         uint32_t totalMaterials   = m_Materials.size();
@@ -760,40 +870,57 @@ namespace en
         if ((float)changedMaterials / totalMaterials > MATERIALS_UPDATE_THRESHOLD)
         {
             EN_LOG("TOTAL MATERIAL UPDATE");
-            m_GlobalMaterialsStagingBuffer->MapMemory(m_GPUMaterials.data(), sizeof(GPUMaterial) * m_Materials.size());
-            m_GlobalMaterialsStagingBuffer->CopyTo(m_GlobalMaterialsBuffer, sizeof(GPUMaterial) * m_Materials.size());
+            m_GlobalMaterialsStagingBuffer->CopyTo(m_GlobalMaterialsBuffer, sizeof(GPUMaterial) * m_Materials.size(), 0U, 0U, cmd);
+       
+            updated = true;
         }
         else
         {
             for (const auto& changedMaterialId : changedMaterialIds)
             {
-                m_GlobalMaterialsStagingBuffer->MapMemory(&m_GPUMaterials[changedMaterialId], sizeof(GPUMaterial));
-                m_GlobalMaterialsStagingBuffer->CopyTo(m_GlobalMaterialsBuffer, sizeof(GPUMaterial), 0U, changedMaterialId * sizeof(GPUMaterial));
+                VkDeviceSize offset = changedMaterialId * sizeof(GPUMaterial);
+                m_GlobalMaterialsStagingBuffer->CopyTo(m_GlobalMaterialsBuffer, sizeof(GPUMaterial), offset, offset, cmd);
+            
+                updated = true;
             }
         }
+
+        if (updated)
+        {
+            m_GlobalMaterialsBuffer->PipelineBarrier(
+                VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                cmd
+            );
+        }
     }
-    void Scene::UpdateLightsBuffer(const std::vector<uint32_t>& changedPointLightsIDs, const std::vector<uint32_t>& changedSpotLightsIDs, const std::vector<uint32_t>& changedDirLightsIDs)
+    void Scene::UpdateLightsBuffer(const VkCommandBuffer cmd, const std::vector<uint32_t>& changedPointLightsIDs, const std::vector<uint32_t>& changedSpotLightsIDs, const std::vector<uint32_t>& changedDirLightsIDs)
     {
         uint32_t totalPointLights = MAX_POINT_LIGHTS;
         uint32_t changedPointLights = changedPointLightsIDs.size();
 
         bool updated = false;
 
+        m_LightsBuffer->PipelineBarrier(
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            cmd
+        );
+
         if ((float)changedPointLights / totalPointLights > POINT_LIGHTS_UPDATE_THRESHOLD)
         {
             EN_LOG("TOTAL POINT LIGHTS UPDATE");
-            m_LightsStagingBuffer->MapMemory(m_GPULights.pointLights.data(), sizeof(m_GPULights.pointLights));
-            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.pointLights), 0U,  (size_t)&m_GPULights.pointLights - (size_t)&m_GPULights);
+            VkDeviceSize offset = (size_t)&m_GPULights.pointLights - (size_t)&m_GPULights;
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.pointLights), offset, offset, cmd);
         
             updated = true;
         }
         else
         {
-            int u = 0;
             for (const auto& changedId : changedPointLightsIDs)
             {
-                m_LightsStagingBuffer->MapMemory(&m_GPULights.pointLights[changedId], sizeof(PointLight::Buffer));
-                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(PointLight::Buffer), 0U, (size_t)&m_GPULights.pointLights[changedId] - (size_t)&m_GPULights);
+                VkDeviceSize offset = (size_t)&m_GPULights.pointLights[changedId] - (size_t)&m_GPULights;
+                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(PointLight::Buffer), offset, offset, cmd);
                 
                 updated = true;
             }
@@ -805,8 +932,8 @@ namespace en
         if ((float)changedSpotLights / totalSpotLights > SPOT_LIGHTS_UPDATE_THRESHOLD)
         {
             EN_LOG("TOTAL SPOT LIGHTS UPDATE");
-            m_LightsStagingBuffer->MapMemory(m_GPULights.spotLights.data(), sizeof(m_GPULights.spotLights));
-            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.spotLights), 0U, (size_t)&m_GPULights.spotLights - (size_t)&m_GPULights);
+            VkDeviceSize offset = (size_t)&m_GPULights.spotLights - (size_t)&m_GPULights;
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.spotLights), offset, offset, cmd);
             
             updated = true;
         }
@@ -814,8 +941,8 @@ namespace en
         {
             for (const auto& changedId : changedSpotLightsIDs)
             {
-                m_LightsStagingBuffer->MapMemory(&m_GPULights.spotLights[changedId], sizeof(SpotLight::Buffer));
-                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(SpotLight::Buffer), 0U, (size_t)&m_GPULights.spotLights[changedId] - (size_t)&m_GPULights);
+                VkDeviceSize offset = (size_t)&m_GPULights.spotLights[changedId] - (size_t)&m_GPULights;
+                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(SpotLight::Buffer), offset, offset, cmd);
             
                 updated = true;
             }
@@ -827,8 +954,8 @@ namespace en
         if ((float)changedDirLights / totalDirLights > DIR_LIGHTS_UPDATE_THRESHOLD)
         {
             EN_LOG("TOTAL DIR LIGHTS UPDATE");
-            m_LightsStagingBuffer->MapMemory(m_GPULights.dirLights.data(), sizeof(m_GPULights.dirLights));
-            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.dirLights), 0U, (size_t)&m_GPULights.dirLights - (size_t)&m_GPULights);
+            VkDeviceSize offset = (size_t)&m_GPULights.dirLights - (size_t)&m_GPULights;
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(m_GPULights.dirLights), offset, offset, cmd);
         
             updated = true;
         }
@@ -836,17 +963,17 @@ namespace en
         {
             for (const auto& changedId : changedDirLightsIDs)
             {
-                m_LightsStagingBuffer->MapMemory(&m_GPULights.dirLights[changedId], sizeof(DirectionalLight::Buffer));
-                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(DirectionalLight::Buffer), 0U, (size_t)&m_GPULights.dirLights[changedId] - (size_t)&m_GPULights);
+                VkDeviceSize offset = (size_t)&m_GPULights.dirLights[changedId] - (size_t)&m_GPULights;
+                m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sizeof(DirectionalLight::Buffer), offset, offset, cmd);
             
                 updated = true;
             }
         }
 
-        auto pointLightsSize = sizeof(m_GPULights.pointLights);
-        auto spotLightsSize = sizeof(m_GPULights.spotLights);
-        auto dirLightsSize = sizeof(m_GPULights.dirLights);
-        auto allLightsSize = pointLightsSize + spotLightsSize + dirLightsSize;
+        constexpr VkDeviceSize  pointLightsSize = sizeof(m_GPULights.pointLights);
+        constexpr VkDeviceSize  spotLightsSize = sizeof(m_GPULights.spotLights);
+        constexpr VkDeviceSize  dirLightsSize = sizeof(m_GPULights.dirLights);
+        constexpr VkDeviceSize  allLightsSize = pointLightsSize + spotLightsSize + dirLightsSize;
 
         if (m_SceneLightingChanged)
         {
@@ -854,23 +981,18 @@ namespace en
             
             auto sceneLightingSize = sizeof(GPULights) - allLightsSize;
            
-            m_LightsStagingBuffer->MapMemory(&m_GPULights.activePointLights, sceneLightingSize);
-            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sceneLightingSize, 0U, allLightsSize);
+            m_LightsStagingBuffer->CopyTo(m_LightsBuffer, sceneLightingSize, allLightsSize, allLightsSize, cmd);
         
             updated = true;
         }
 
         if (updated)
         {
-            //VkCommandBuffer cmd = Helpers::BeginSingleTimeGraphicsCommands()
-            //    // FIX
-            //m_LightsBuffer->PipelineBarrier(
-            //    VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-            //    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            //    cmd
-            //)
-            //
-            //Helpers::BeginSingleTimeGraphicsCommands(cmd)
+            m_LightsBuffer->PipelineBarrier(
+                VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                cmd
+            );
         }
     }
     void Scene::UpdateGlobalDescriptor()

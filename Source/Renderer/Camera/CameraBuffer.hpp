@@ -57,6 +57,9 @@ namespace en
 
 			float zNear = 0.0f;
 			float zFar = 1.0f;
+
+			float xFov = 1.0f;
+			float yFov = 1.0f;
 		};
 
 		std::array<CameraBufferObject, FRAMES_IN_FLIGHT> m_CBOs;

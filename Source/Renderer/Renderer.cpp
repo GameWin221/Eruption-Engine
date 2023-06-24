@@ -56,8 +56,6 @@ namespace en
 			else
 				WaitForActiveFrame();
 
-			m_Scene->UpdateSceneGPU();
-
 			m_CameraBuffer->MapBuffer(m_FrameIndex);
 		}
 		else 
@@ -68,6 +66,8 @@ namespace en
 		MeasureFrameTime();
 
 		BeginRender();
+
+		m_Scene->UpdateSceneGPU(m_Frames[m_FrameIndex].commandBuffer);
 
 		if (m_Scene)
 		{
@@ -402,7 +402,7 @@ namespace en
 
 		m_DepthPass->End();
 		
-		if (m_Settings.ssaoMode == SSAOMode::None)
+		if (m_Settings.ambientOcclusionMode == AmbientOcclusionMode::None)
 			m_DepthBuffer->ChangeLayout(m_DepthBuffer->GetLayout(),
 				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
@@ -430,8 +430,28 @@ namespace en
 			m_Frames[m_FrameIndex].commandBuffer
 		);
 
-		m_Settings.ssao.screenWidth = m_SSAOTarget->m_Size.width;
-		m_Settings.ssao.screenHeight = m_SSAOTarget->m_Size.height;
+		m_Settings.ambientOcclusion.screenWidth = m_SSAOTarget->m_Size.width;
+		m_Settings.ambientOcclusion.screenHeight = m_SSAOTarget->m_Size.height;
+
+		switch (m_Settings.ambientOcclusionQuality)
+		{
+		case QualityLevel::Low:
+			m_Settings.ambientOcclusion._samples = 16U;
+			m_Settings.ambientOcclusion._noiseScale = 4.0f;
+			break;
+		case QualityLevel::Medium:
+			m_Settings.ambientOcclusion._samples = 32U;
+			m_Settings.ambientOcclusion._noiseScale = 4.0f;
+			break;
+		case QualityLevel::High:
+			m_Settings.ambientOcclusion._samples = 32U;
+			m_Settings.ambientOcclusion._noiseScale = 2.0f;
+			break;
+		case QualityLevel::Ultra:
+			m_Settings.ambientOcclusion._samples = 32U;
+			m_Settings.ambientOcclusion._noiseScale = 1.0f;
+			break;
+		}
 
 		GraphicsPass::RenderInfo renderInfo {
 			.colorAttachmentView = m_SSAOTarget->GetViewHandle(),
@@ -442,9 +462,9 @@ namespace en
 		};
 
 		m_SSAOPass->Begin(m_Frames[m_FrameIndex].commandBuffer, renderInfo);
-		if (m_Settings.ssaoMode != SSAOMode::None && m_Settings.depthPrePass)
+		if (m_Settings.ambientOcclusionMode != AmbientOcclusionMode::None && m_Settings.depthPrePass)
 		{
-			m_SSAOPass->PushConstants(&m_Settings.ssao, sizeof(m_Settings.ssao), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
+			m_SSAOPass->PushConstants(&m_Settings.ambientOcclusion, sizeof(m_Settings.ambientOcclusion), 0U, VK_SHADER_STAGE_FRAGMENT_BIT);
 			m_SSAOPass->BindDescriptorSet(m_CameraBuffer->GetDescriptorHandle(m_FrameIndex), 0U);
 			m_SSAOPass->BindDescriptorSet(m_DepthBufferDescriptor, 1U);
 			m_SSAOPass->Draw(3U);
@@ -667,9 +687,20 @@ namespace en
 		m_Settings.antialiasingMode = antialiasingMode;
 		ReloadBackend();
 	}
-	void Renderer::SetSSAOMode(const SSAOMode ssaoMode)
+	void Renderer::SetAmbientOcclusionMode(const AmbientOcclusionMode aoMode)
 	{
-		m_Settings.ssaoMode = ssaoMode;
+		m_Settings.ambientOcclusionMode = aoMode;
+		ReloadBackend();
+	}
+
+	//void Renderer::SetAntialaliasingQuality(const QualityLevel quality)
+	//{
+	//	m_Settings.antialiasingQuality = quality;
+	//	ReloadBackend();
+	//}
+	void Renderer::SetAmbientOcclusionQuality(const QualityLevel quality)
+	{
+		m_Settings.ambientOcclusionQuality = quality;
 		ReloadBackend();
 	}
 
@@ -1095,10 +1126,10 @@ namespace en
 	}
 	void Renderer::CreateSSAOPass()
 	{
-		constexpr VkPushConstantRange ssao{
+		constexpr VkPushConstantRange ao {
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.offset = 0U,
-			.size = sizeof(m_Settings.ssao),
+			.size = sizeof(m_Settings.ambientOcclusion),
 		};
 
 		GraphicsPass::CreateInfo info{
@@ -1106,7 +1137,7 @@ namespace en
 			.fShader = "Shaders/SSAO.spv",
 
 			.descriptorLayouts {CameraBuffer::GetLayout(), m_DepthBufferDescriptor->GetLayout()},
-			.pushConstantRanges {ssao},
+			.pushConstantRanges {ao},
 
 			.colorFormat = m_SSAOTarget->m_Format,
 		};
@@ -1416,10 +1447,7 @@ namespace en
 	void Renderer::CreateSSAOTarget()
 	{
 		m_SSAOTarget = MakeHandle<Image>(
-			VkExtent2D{ 
-				m_Swapchain->GetExtent().width / 2U, 
-				m_Swapchain->GetExtent().height / 2U 
-			},
+			m_Swapchain->GetExtent(),
 			VK_FORMAT_R8_UNORM,
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, 

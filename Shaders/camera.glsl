@@ -29,6 +29,9 @@ struct CameraBufferObject
 
     float zNear;
 	float zFar;
+
+	float xFov;
+	float yFov;
 };
 
 #endif

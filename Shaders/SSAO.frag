@@ -41,40 +41,53 @@ layout(push_constant) uniform SSAOParameters
     float radius;
     float bias;
     float multiplier;
+
+    uint samples;
+
+    float noiseScale;
 } params;
 
 layout(set = 0, binding = 0) uniform CameraBuffer {
 	CameraBufferObject camera;
 };
 
-vec3 GetViewPosition(vec2 ndcUV)
+float GetViewZ(vec2 uv)
 {
-    float depth = texture(fDepth, ndcUV * 0.5 + 0.5).r;
+    float depth = texture(fDepth, uv).r;
 
-    vec4 ndc = vec4(ndcUV, depth, 1.0);
+    return camera.invProj[3][2] / (camera.invProj[2][3] * depth + camera.invProj[3][3]);
+}
+vec3 GetViewPosition(vec2 uv)
+{
+    float depth = texture(fDepth, uv).r;
+
+    vec4 ndc = vec4(uv * 2.0 - 1.0, depth, 1.0);
     vec4 view = camera.invProj * ndc;
 
     return view.xyz / view.w;
 }
-
+float LinearDepth(float d)
+{
+    return camera.zNear * camera.zFar / (camera.zFar + d * (camera.zNear - camera.zFar));
+}
 void main()
 {
-    vec2 noiseScale = vec2(params.screenWidth/4.0, params.screenHeight/4.0);
+    vec2 noiseScale = vec2(params.screenWidth/params.noiseScale, params.screenHeight/params.noiseScale);
    
-    vec3 viewPos = GetViewPosition(fTexcoord * 2.0 - 1.0);
+    vec3 viewPos = GetViewPosition(fTexcoord);
     vec3 viewNormal = normalize(cross(dFdx(viewPos.xyz), dFdy(viewPos.xyz)));
 
-    int x = int(floor(fTexcoord.x * noiseScale.x)) % 4;
-    int y = int(floor(fTexcoord.y * noiseScale.y)) % 4;
+    int x = int(fTexcoord.x * noiseScale.x) % 4;
+    int y = int(fTexcoord.y * noiseScale.y) % 4;
 
-    vec3 randomVec = normalize(rotations[y * 4 + x]);  
-
+    vec3 randomVec = normalize(rotations[y * 4 + x]);   
+  
     vec3 tangent   = normalize(randomVec - viewNormal * dot(randomVec, viewNormal));
     vec3 bitangent = cross(viewNormal, tangent);
     mat3 TBN       = mat3(tangent, bitangent, viewNormal);  
 
     float occlusion = 0.0;
-    for(uint i = 0; i < SSAO_SAMPLES; ++i)
+    for(uint i = 0; i < params.samples; ++i)
     {
         vec3 samplePos = TBN * kernels[i];
         samplePos = viewPos + samplePos * params.radius; 
@@ -82,12 +95,12 @@ void main()
         vec4 offset = vec4(samplePos, 1.0);
         offset      = camera.proj * offset;
         offset.xy /= offset.w;
- 
-        float sampleDepth = GetViewPosition(offset.xy).z; 
+
+        float sampleDepth = GetViewZ(offset.xy * 0.5 + 0.5);
 
         float rangeCheck = smoothstep(0.0, 1.0, params.radius / abs(viewPos.z - sampleDepth));
         occlusion += (sampleDepth >= samplePos.z + params.bias ? 1.0 : 0.0) * rangeCheck * params.multiplier;   
     }  
 
-    Occlusion = 1.0 - (occlusion / SSAO_SAMPLES);
+    Occlusion = 1.0 - (occlusion / params.samples);
 }

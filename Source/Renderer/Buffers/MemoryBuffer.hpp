@@ -13,7 +13,7 @@ namespace en
         MemoryBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage vmaMemoryUsage);
         ~MemoryBuffer();
 
-        void MapMemory(const void* memory, VkDeviceSize memorySize);
+        void MapMemory(const void* memory, VkDeviceSize memorySize, VkDeviceSize srcOffset = 0U, VkDeviceSize dstOffset = 0U);
 
         void CopyInto(const void* memory, VkDeviceSize memorySize, uint32_t dstOffset = 0U, VkCommandBuffer cmd = VK_NULL_HANDLE);
 

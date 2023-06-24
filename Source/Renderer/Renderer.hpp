@@ -44,6 +44,14 @@ namespace en
 		void BindScene(en::Handle<Scene> scene);
 		void UnbindScene();
 
+		enum struct QualityLevel
+		{
+			Low = 0,
+			Medium = 1,
+			High = 2,
+			Ultra = 3
+		};
+
 		enum struct AntialiasingMode
 		{
 			None = 0,
@@ -61,20 +69,23 @@ namespace en
 			float texelSizeY = 1.0f / 1080.0f;
 		};
 
-		enum struct SSAOMode
+		enum struct AmbientOcclusionMode
 		{
 			None = 0,
 			SSAO = 1
 		};
 
-		struct SSAOProperties
+		struct AmbientOcclusionProperties
 		{
 			float screenWidth = 1920.0f;
 			float screenHeight = 1080.0f;
 			
-			float radius = 0.5f;
+			float radius = 0.85f;
 			float bias = 0.025f;
-			float multiplier = 1.0f;
+			float multiplier = 1.2f;
+
+			uint32_t _samples = 64U;
+			float _noiseScale = 4.0f;
 		};
 
 		void SetVSyncEnabled(const bool enabled);
@@ -104,11 +115,17 @@ namespace en
 		void SetAntialiasingMode(const AntialiasingMode antialiasingMode);
 		const AntialiasingMode GetAntialiasingMode() const { return m_Settings.antialiasingMode; };
 
-		void SetSSAOMode(const SSAOMode ssaoMode);
-		const SSAOMode GetSSAOMode() const { return m_Settings.ssaoMode; };
+		void SetAmbientOcclusionMode(const AmbientOcclusionMode aoMode);
+		const AmbientOcclusionMode GetAmbientOcclusionMode() const { return m_Settings.ambientOcclusionMode; };
 
 		AntialiasingProperties& GetAntialiasingProperties() { return m_Settings.antialiasing; };
-		SSAOProperties& GetSSAOProperties() { return m_Settings.ssao; };
+		AmbientOcclusionProperties& GetAmbientOcclusionProperties() { return m_Settings.ambientOcclusion; };
+
+		//void SetAntialaliasingQuality(const QualityLevel quality);
+		//const QualityLevel GetAntialaliasingQuality() const { return m_Settings.antialiasingQuality; };
+
+		void SetAmbientOcclusionQuality(const QualityLevel quality);
+		const QualityLevel GetAmbientOcclusionQuality() const { return m_Settings.ambientOcclusionQuality; };
 
 		void ReloadBackend();
 
@@ -153,7 +170,7 @@ namespace en
 
 		std::array<Handle<Image>, MAX_POINT_LIGHT_SHADOWS> m_PointShadowMaps;
 		std::array<Handle<Image>, MAX_SPOT_LIGHT_SHADOWS> m_SpotShadowMaps;
-		std::array<Handle<Image>, MAX_DIR_LIGHT_SHADOWS* SHADOW_CASCADES> m_DirShadowMaps;
+		std::array<Handle<Image>, MAX_DIR_LIGHT_SHADOWS * SHADOW_CASCADES> m_DirShadowMaps;
 
 		Handle<Image> m_DepthBuffer;
 		Handle<Image> m_SSAOTarget;
@@ -180,8 +197,9 @@ namespace en
 			AntialiasingMode antialiasingMode = AntialiasingMode::FXAA;
 			AntialiasingProperties antialiasing{};
 
-			SSAOMode ssaoMode = SSAOMode::SSAO;
-			SSAOProperties ssao{};
+			AmbientOcclusionMode ambientOcclusionMode = AmbientOcclusionMode::SSAO;
+			AmbientOcclusionProperties ambientOcclusion{};
+			QualityLevel ambientOcclusionQuality = QualityLevel::High;
 		} m_Settings;
 
 		struct CSM {
@@ -194,8 +212,7 @@ namespace en
 			std::array<float, SHADOW_CASCADES> cascadeRadiuses{};
 		} m_CSM;
 
-		struct ClusterSSBOs
-		{
+		struct ClusterSSBOs {
 			Handle<MemoryBuffer> aabbClusters;
 			Handle<DescriptorSet> aabbClustersDescriptor;
 

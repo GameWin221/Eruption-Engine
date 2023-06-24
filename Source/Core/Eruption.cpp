@@ -120,17 +120,19 @@ void Eruption::CreateExampleScene()
 
 	m_ExampleScene = en::MakeHandle<en::Scene>();
 
-	auto m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
-	m_Skull->SetPosition(glm::vec3(0, 0.5f, -0.3));
-	m_Skull->SetRotation(glm::vec3(45.0f, 90.0f, 0.0f));
-	
-	
 	auto m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->SetScale(glm::vec3(1.2f));
-	
+
 	m_AssetManager->GetMaterial("BlueCurtains")->SetNormalStrength(0.6f);
 	m_AssetManager->GetMaterial("RedCurtains")->SetNormalStrength(0.6f);
 	m_AssetManager->GetMaterial("GreenCurtains")->SetNormalStrength(0.6f);
+
+	auto m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
+	m_Skull->SetPosition(glm::vec3(0, 0.5f, -0.3));
+	m_Skull->SetRotation(glm::vec3(45.0f, 90.0f, 0.0f));
+
+	
+
 
 	//for (uint32_t i = 0; i < MAX_POINT_LIGHTS; i++)
 	//{

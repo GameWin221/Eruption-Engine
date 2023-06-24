@@ -57,7 +57,7 @@ namespace en
 
 	private:
 		void UpdateSceneCPU();
-		void UpdateSceneGPU();
+		void UpdateSceneGPU(const VkCommandBuffer cmd);
 
 		uint32_t RegisterMatrix(const glm::mat4& matrix = glm::mat4(1.0f));
 		uint32_t RegisterMaterial(Handle<Material> material);
@@ -67,10 +67,10 @@ namespace en
 		void DeregisterMaterial(uint32_t index);
 		void DeregisterTexture(uint32_t index);
 
-		void UpdateMatrixBuffer	   (const std::vector<uint32_t>& changedMatrixIds);
-		void UpdateMaterialBuffer  (const std::vector<uint32_t>& changedMaterialIds);
+		void UpdateMatrixBuffer	   (const VkCommandBuffer cmd, const std::vector<uint32_t>& changedMatrixIds);
+		void UpdateMaterialBuffer  (const VkCommandBuffer cmd, const std::vector<uint32_t>& changedMaterialIds);
 		void UpdateGlobalDescriptor();
-		void UpdateLightsBuffer    (const std::vector<uint32_t>& changedPointLightsIDs, const std::vector<uint32_t>& changedSpotLightsIDs, const std::vector<uint32_t>& changedDirLightsIDs);
+		void UpdateLightsBuffer    (const VkCommandBuffer cmd, const std::vector<uint32_t>& changedPointLightsIDs, const std::vector<uint32_t>& changedSpotLightsIDs, const std::vector<uint32_t>& changedDirLightsIDs);
 
 		struct GPUMaterial {
 			glm::vec3 color = glm::vec3(1.0f);
@@ -114,14 +114,21 @@ namespace en
 		std::unordered_map<std::string, uint32_t> m_RegisteredTextures;
 		std::unordered_map<std::string, uint32_t> m_RegisteredMaterials;
 
+		//std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_LightsBuffer;
 		Handle<MemoryBuffer> m_LightsBuffer;
 		Handle<MemoryBuffer> m_LightsStagingBuffer;
 
+		//std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_GlobalMaterialsBuffer;
 		Handle<MemoryBuffer> m_GlobalMaterialsBuffer;
 		Handle<MemoryBuffer> m_GlobalMaterialsStagingBuffer;
 
+		//std::array<Handle<MemoryBuffer>, FRAMES_IN_FLIGHT> m_GlobalMatricesBuffer;
 		Handle<MemoryBuffer> m_GlobalMatricesBuffer;
 		Handle<MemoryBuffer> m_GlobalMatricesStagingBuffer;
+
+		//std::array<Handle<DescriptorSet>, FRAMES_IN_FLIGHT> m_GlobalDescriptorSet;
+		//std::array<Handle<DescriptorSet>, FRAMES_IN_FLIGHT> m_LightingDescriptorSet;
+		//std::array<Handle<DescriptorSet>, FRAMES_IN_FLIGHT> m_LightsBufferDescriptorSet;
 
 		Handle<DescriptorSet> m_GlobalDescriptorSet;
 		Handle<DescriptorSet> m_LightingDescriptorSet;

@@ -269,7 +269,7 @@ namespace en
 		if (ImGui::CollapsingHeader("Stats"))
 		{
 			ImGui::Text(("FPS: " + std::to_string(1.0 / m_Renderer->GetFrameTime())).c_str());
-			ImGui::Text((std::to_string(m_Renderer->GetFrameTime()) + "ms/frame").c_str());
+			ImGui::Text((std::to_string(m_Renderer->GetFrameTime()*1000.0f) + "ms/frame").c_str());
 		}
 
 		SPACE();

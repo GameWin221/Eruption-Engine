@@ -260,7 +260,6 @@ float GetSSAO()
             ssao += texture(SSAO, fUV + offset).r;
         }
     }
-
     return ssao / 16.0;
 #else   
     return texture(SSAO, fUV).r;
