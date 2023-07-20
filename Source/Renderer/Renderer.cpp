@@ -436,16 +436,16 @@ namespace en
 		switch (m_Settings.ambientOcclusionQuality)
 		{
 		case QualityLevel::Low:
-			m_Settings.ambientOcclusion._samples = 16U;
-			m_Settings.ambientOcclusion._noiseScale = 4.0f;
+			m_Settings.ambientOcclusion._samples = 8U;
+			m_Settings.ambientOcclusion._noiseScale = 2.0f;
 			break;
 		case QualityLevel::Medium:
-			m_Settings.ambientOcclusion._samples = 32U;
-			m_Settings.ambientOcclusion._noiseScale = 4.0f;
+			m_Settings.ambientOcclusion._samples = 16U;
+			m_Settings.ambientOcclusion._noiseScale = 2.0f;
 			break;
 		case QualityLevel::High:
-			m_Settings.ambientOcclusion._samples = 32U;
-			m_Settings.ambientOcclusion._noiseScale = 2.0f;
+			m_Settings.ambientOcclusion._samples = 16U;
+			m_Settings.ambientOcclusion._noiseScale = 1.0f;
 			break;
 		case QualityLevel::Ultra:
 			m_Settings.ambientOcclusion._samples = 32U;
@@ -1239,7 +1239,7 @@ namespace en
 			.enableDepthWrite  = !m_Settings.depthPrePass,
 			.blendEnable	   = false,
 
-			.compareOp	 = m_Settings.depthPrePass ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_LESS,
+			.compareOp	 = m_Settings.depthPrePass ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS,
 			.polygonMode = VK_POLYGON_MODE_FILL,
 		};
 

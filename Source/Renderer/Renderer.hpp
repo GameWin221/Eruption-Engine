@@ -80,12 +80,12 @@ namespace en
 			float screenWidth = 1920.0f;
 			float screenHeight = 1080.0f;
 			
-			float radius = 0.85f;
+			float radius = 0.75f;
 			float bias = 0.025f;
-			float multiplier = 1.2f;
+			float multiplier = 1.0f;
 
-			uint32_t _samples = 64U;
-			float _noiseScale = 4.0f;
+			uint32_t _samples = 16U;
+			float _noiseScale = 2.0f;
 		};
 
 		void SetVSyncEnabled(const bool enabled);

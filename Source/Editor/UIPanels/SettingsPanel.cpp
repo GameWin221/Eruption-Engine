@@ -89,8 +89,6 @@ namespace en
 				ImGui::DragFloat("SSAO Bias", &ssao.bias, 0.05f, 0.0f, 1.0f), "%.2f", ImGuiSliderFlags_AlwaysClamp;
 				ImGui::DragFloat("SSAO Radius", &ssao.radius, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::DragFloat("SSAO Multiplier", &ssao.multiplier, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("ssao_noise_scale", &ssao._noiseScale, 0.1f, 1.0f, 8.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragInt("ssao_samples", &s, 1.0f, 1.0f, 64.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
 				
 				break;
 

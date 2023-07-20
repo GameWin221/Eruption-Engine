@@ -51,12 +51,6 @@ void Eruption::Update()
 	if (m_Input->IsKey(en::Key::LShift) && m_Input->IsKey(en::Key::R, en::InputState::Pressed))
 		m_Renderer->ReloadBackend();
 
-	else if (m_Input->IsKey(en::Key::Y, en::InputState::Pressed))
-	{
-		m_Renderer->SetVSyncEnabled(false);
-		//m_Renderer->m_PostProcessParams.antialiasingMode = en::Renderer::AntialiasingMode::None;
-	}
-
 	double deltaTime = m_Renderer->GetFrameTime();
 
 	static float targetYaw = m_Camera->m_Yaw;
@@ -103,9 +97,9 @@ void Eruption::Render()
 	m_Renderer->Render();
 }
 
-
 void Eruption::CreateExampleScene()
 {
+	/*
 	m_AssetManager->LoadMesh("SkullModel", "Models/Skull/Skull.gltf");
 	
 	m_AssetManager->LoadTexture("SkullAlbedo", "Models/Skull/SkullAlbedo.jpg");
@@ -117,9 +111,9 @@ void Eruption::CreateExampleScene()
 	m_AssetManager->GetMesh("SkullModel")->m_SubMeshes[0].SetMaterial(m_AssetManager->GetMaterial("SkullMaterial"));
 	
 	m_AssetManager->LoadMesh("Sponza", "Models/Sponza/Sponza.gltf");
-
+	*/
 	m_ExampleScene = en::MakeHandle<en::Scene>();
-
+	/*
 	auto m_Sponza = m_ExampleScene->CreateSceneObject("Sponza", m_AssetManager->GetMesh("Sponza"));
 	m_Sponza->SetScale(glm::vec3(1.2f));
 
@@ -130,7 +124,7 @@ void Eruption::CreateExampleScene()
 	auto m_Skull = m_ExampleScene->CreateSceneObject("SkullModel", m_AssetManager->GetMesh("SkullModel"));
 	m_Skull->SetPosition(glm::vec3(0, 0.5f, -0.3));
 	m_Skull->SetRotation(glm::vec3(45.0f, 90.0f, 0.0f));
-
+	*/
 	
 
 
@@ -159,7 +153,6 @@ void Eruption::CreateExampleScene()
 
 	m_Renderer->BindScene(m_ExampleScene);
 }
-
 
 void Eruption::Run()
 {

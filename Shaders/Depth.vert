@@ -20,5 +20,6 @@ layout(push_constant) uniform ModelMatrixID {
 
 void main() 
 {
-    gl_Position = camera.projView * modelMatrix[modelMatrixID] * vec4(vPosition, 1.0);
+	vec4 vWorldSpace = modelMatrix[modelMatrixID] * vec4(vPosition, 1.0);
+    gl_Position = camera.projView * vWorldSpace;
 }

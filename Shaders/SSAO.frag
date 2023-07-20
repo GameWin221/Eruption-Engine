@@ -72,7 +72,7 @@ float LinearDepth(float d)
 }
 void main()
 {
-    vec2 noiseScale = vec2(params.screenWidth/params.noiseScale, params.screenHeight/params.noiseScale);
+    vec2 noiseScale = vec2(params.screenWidth, params.screenHeight) / params.noiseScale;
    
     vec3 viewPos = GetViewPosition(fTexcoord);
     vec3 viewNormal = normalize(cross(dFdx(viewPos.xyz), dFdy(viewPos.xyz)));
@@ -92,12 +92,15 @@ void main()
         vec3 samplePos = TBN * kernels[i];
         samplePos = viewPos + samplePos * params.radius; 
         
-        vec4 offset = vec4(samplePos, 1.0);
-        offset      = camera.proj * offset;
-        offset.xy /= offset.w;
+        // Faster and shorter form of:
+        //vec4 offset = camera.proj * vec4(samplePos, 1.0);
+        //offset.xyz /= offset.w;
 
-        float sampleDepth = GetViewZ(offset.xy * 0.5 + 0.5);
+        vec2 offsetXY = vec2(camera.proj[0][0] * samplePos.x, camera.proj[1][1] * samplePos.y);
+        offsetXY /= camera.proj[2][3] * samplePos.z;
 
+        float sampleDepth = GetViewZ(offsetXY * 0.5 + 0.5);
+    
         float rangeCheck = smoothstep(0.0, 1.0, params.radius / abs(viewPos.z - sampleDepth));
         occlusion += (sampleDepth >= samplePos.z + params.bias ? 1.0 : 0.0) * rangeCheck * params.multiplier;   
     }  
