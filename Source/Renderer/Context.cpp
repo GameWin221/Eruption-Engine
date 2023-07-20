@@ -5,8 +5,23 @@ en::Context* g_CurrentContext = nullptr;
 constexpr std::array<const char*, 1> validationLayers {
 	"VK_LAYER_KHRONOS_validation"
 };
-constexpr std::array<const char*, 1> deviceExtensions {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+constexpr std::array<const char*, 2> deviceExtensions {
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+};
+constexpr VkPhysicalDeviceVulkan13Features deviceFeaturesVK1_3{
+	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+	.pNext = (void*)nullptr,
+	.dynamicRendering = VK_TRUE,
+};
+constexpr VkPhysicalDeviceVulkan12Features deviceFeaturesVK1_2{
+	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+	.pNext = (void*)&deviceFeaturesVK1_3,
+	.descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
+};
+constexpr VkPhysicalDeviceVulkan11Features deviceFeaturesVK1_1{
+	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+	.pNext = (void*)&deviceFeaturesVK1_2,
 };
 constexpr VkPhysicalDeviceFeatures deviceFeatures {
 	.samplerAnisotropy = VK_TRUE,
@@ -115,7 +130,7 @@ namespace en
 	}
 	void Context::CreateWindowSurface()
 	{
-		if (glfwCreateWindowSurface(m_Instance, Window::Get().m_NativeHandle, nullptr, &m_WindowSurface) != VK_SUCCESS)
+		if (glfwCreateWindowSurface(m_Instance, Window::Get().GetNativeHandle(), nullptr, &m_WindowSurface) != VK_SUCCESS)
 			EN_ERROR("Context::VKCreateWindowSurface() - Failed to create window surface!");
 	}
 	void Context::PickPhysicalDevice()
@@ -200,14 +215,9 @@ namespace en
 			queueCreateInfos.emplace_back(queueCreateInfo);
 		}
 
-		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorFeatures{
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-			.descriptorBindingUpdateUnusedWhilePending = VK_TRUE
-		};
-
 		VkDeviceCreateInfo createInfo{
 			.sType					 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-			.pNext					 = &descriptorFeatures,
+			.pNext					 = &deviceFeaturesVK1_1,
 			.queueCreateInfoCount	 = static_cast<uint32_t>(queueCreateInfos.size()),
 			.pQueueCreateInfos		 = queueCreateInfos.data(),
 			.enabledLayerCount		 = 0U,
@@ -261,7 +271,6 @@ namespace en
 		if (vkCreateCommandPool(m_LogicalDevice, &transferCommandPoolCreateInfo, nullptr, &m_TransferCommandPool) != VK_SUCCESS)
 			EN_ERROR("Context::VKCreateCommandPool() - Failed to create a transfer command pool!");
 	}
-
 	void Context::CreateDescriptorAllocator()
 	{
 		m_DescriptorAllocator = MakeScope<DescriptorAllocator>(m_LogicalDevice);
@@ -390,10 +399,9 @@ namespace en
 			swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 		}
 
-		VkPhysicalDeviceFeatures supportedFeatures;
-		vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+		bool featuresSupported = CheckDeviceFeaturesSupport(device);
 
-		return m_QueueFamilies.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+		return m_QueueFamilies.IsComplete() && extensionsSupported && swapChainAdequate && featuresSupported;
 	}
 	bool Context::CheckDeviceExtensionSupport(VkPhysicalDevice& device)
 	{
@@ -409,5 +417,29 @@ namespace en
 			requiredExtensions.erase(extension.extensionName);
 
 		return requiredExtensions.empty();
+	}
+	bool Context::CheckDeviceFeaturesSupport(VkPhysicalDevice& device)
+	{
+		VkPhysicalDeviceVulkan13Features supportedFeaturesVK1_3{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+		};
+		VkPhysicalDeviceVulkan12Features supportedFeaturesVK1_2{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+		};
+		VkPhysicalDeviceVulkan11Features supportedFeaturesVK1_1{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+		};
+		VkPhysicalDeviceFeatures2 supportedFeatures{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+		};
+
+		supportedFeatures.pNext = (void*)&supportedFeaturesVK1_1;
+		vkGetPhysicalDeviceFeatures2(device, &supportedFeatures);
+		supportedFeatures.pNext = (void*)&supportedFeaturesVK1_2;
+		vkGetPhysicalDeviceFeatures2(device, &supportedFeatures);
+		supportedFeatures.pNext = (void*)&supportedFeaturesVK1_3;
+		vkGetPhysicalDeviceFeatures2(device, &supportedFeatures);
+
+		return supportedFeatures.features.samplerAnisotropy && supportedFeaturesVK1_3.dynamicRendering && supportedFeaturesVK1_2.descriptorBindingUpdateUnusedWhilePending;
 	}
 }

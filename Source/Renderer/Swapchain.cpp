@@ -27,7 +27,7 @@ namespace en
 			.imageColorSpace = surfaceFormat.colorSpace,
 			.imageExtent = extent,
 			.imageArrayLayers = 1U,
-			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			.preTransform = swapChainSupport.capabilities.currentTransform,
 			.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 			.presentMode = presentMode,
@@ -69,8 +69,8 @@ namespace en
 			ChangeLayout(
 				i, 
 				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 
-				0U, 
 				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 
+				0U, 
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
 			);
@@ -80,7 +80,7 @@ namespace en
 	{
 		UseContext();
 
-		for (auto& imageView : m_ImageViews)
+		for (const auto& imageView : m_ImageViews)
 			vkDestroyImageView(ctx.m_LogicalDevice, imageView, nullptr);
 
 		vkDestroySwapchainKHR(ctx.m_LogicalDevice, m_Swapchain, nullptr);

@@ -22,8 +22,9 @@ namespace en
 
 		void ChangeLayout(uint32_t index, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, VkCommandBuffer cmd = VK_NULL_HANDLE);
 
-		const VkFormat   const GetFormat() { return m_ImageFormat; };
-		const VkExtent2D const GetExtent() { return m_Extent;	   };
+		const VkImageLayout const GetLayout(uint32_t i) { return m_CurrentLayouts[i]; };
+		const VkFormat		const GetFormat()			{ return m_ImageFormat;		  };
+		const VkExtent2D	const GetExtent()			{ return m_Extent;			  };
 
 	private:
 		std::vector<VkImageLayout> m_CurrentLayouts;

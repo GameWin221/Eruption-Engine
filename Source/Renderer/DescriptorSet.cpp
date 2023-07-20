@@ -52,7 +52,7 @@ namespace en
 		}
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites(info.imageInfos.size() + info.bufferInfos.size());
-		for (uint32_t i = 0; const auto & image : info.imageInfos)
+		for (uint32_t i = 0; const auto& image : info.imageInfos)
 		{
 			descriptorWrites[image.index] = VkWriteDescriptorSet {
 				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -64,7 +64,7 @@ namespace en
 				.pImageInfo		 = descriptorImageInfos[i++].data()
 			};
 		}
-		for (uint32_t i = 0; const auto & buffer : info.bufferInfos)
+		for (uint32_t i = 0; const auto& buffer : info.bufferInfos)
 		{
 			descriptorWrites[buffer.index] = VkWriteDescriptorSet {
 				.sType			 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

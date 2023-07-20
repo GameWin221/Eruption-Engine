@@ -5,7 +5,8 @@
 namespace en
 {
 	constexpr std::array<const char*, 2> g_AntialiasingModeNames = { "None", "FXAA"};
-	constexpr std::array<const char*, 2> g_AmbientOcclusionModeNames = { "SSAO", "None" };
+	constexpr std::array<const char*, 2> g_AmbientOcclusionModeNames = { "None", "SSAO" };
+	constexpr std::array<const char*, 4> g_QualityLevelNames = { "Low", "Medium", "High", "Ultra"};
 
 	void SettingsPanel::Render()
 	{
@@ -15,7 +16,12 @@ namespace en
 
 		static bool vSync = m_Renderer->GetVSyncEnabled();
 		static bool depthPrepass = m_Renderer->GetDepthPrepassEnabled();
+
 		static Renderer::AntialiasingMode antialiasingMode = m_Renderer->GetAntialiasingMode();
+		static Renderer::AmbientOcclusionMode ssaoMode = m_Renderer->GetAmbientOcclusionMode();
+
+		//static Renderer::QualityLevel antialiasingQuality = m_Renderer->GetAntialaliasingQuality();
+		static Renderer::QualityLevel aoModeQuality = m_Renderer->GetAmbientOcclusionQuality();
 
 		if (ImGui::Checkbox("VSync", &vSync))
 			m_Renderer->SetVSyncEnabled(vSync);
@@ -27,6 +33,9 @@ namespace en
 		{
 			if (ImGui::Combo("Antialiasing Mode", (int*)&antialiasingMode, g_AntialiasingModeNames.data(), g_AntialiasingModeNames.size()))
 				m_Renderer->SetAntialiasingMode(antialiasingMode);
+
+			//if (ImGui::Combo("Antialiasing Quality", (int*)&antialiasingQuality, g_QualityLevelNames.data(), g_QualityLevelNames.size()))
+			//	m_Renderer->SetAntialaliasingQuality(antialiasingQuality);
 			
 			auto& aa = m_Renderer->GetAntialiasingProperties();
 
@@ -56,25 +65,31 @@ namespace en
 			}
 	
 		}
-		/*
+		
 		if (ImGui::CollapsingHeader("Ambient Occlusion"))
 		{
-			if (ImGui::Combo("Ambient Occlusion Mode", (int*)&m_Renderer->m_PostProcessParams.ambientOcclusionMode, g_AmbientOcclusionModeNames.data(), g_AmbientOcclusionModeNames.size()))
-				m_Renderer->ReloadBackend();
+			if (ImGui::Combo("Ambient Occlusion Mode", (int*)&ssaoMode, g_AmbientOcclusionModeNames.data(), g_AmbientOcclusionModeNames.size()))
+				m_Renderer->SetAmbientOcclusionMode(ssaoMode);
 
-			switch (m_Renderer->m_PostProcessParams.ambientOcclusionMode)
+			if (ImGui::Combo("Ambient Occlusion Quality", (int*)&aoModeQuality, g_QualityLevelNames.data(), g_QualityLevelNames.size()))
+				m_Renderer->SetAmbientOcclusionQuality(aoModeQuality);
+
+			auto& ssao = m_Renderer->GetAmbientOcclusionProperties();
+			int s = ssao._samples;
+			switch (ssaoMode)
 			{
 			case Renderer::AmbientOcclusionMode::SSAO:
 				ImGui::Spacing();
 
 				if (ImGui::Button("Restore Defaults"))
-					m_Renderer->m_PostProcessParams.ambientOcclusion = Renderer::PostProcessingParams::AmbientOcclusion{};
+					ssao = Renderer::AmbientOcclusionProperties{};
 
 				ImGui::Spacing();
-
-				ImGui::DragFloat("SSAO Bias", &m_Renderer->m_PostProcessParams.ambientOcclusion.bias, 0.05f, 0.0f, 1.0f), "%.2f", ImGuiSliderFlags_AlwaysClamp;
-				ImGui::DragFloat("SSAO Radius", &m_Renderer->m_PostProcessParams.ambientOcclusion.radius, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("SSAO Multiplier", &m_Renderer->m_PostProcessParams.ambientOcclusion.multiplier, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				
+				ImGui::DragFloat("SSAO Bias", &ssao.bias, 0.05f, 0.0f, 1.0f), "%.2f", ImGuiSliderFlags_AlwaysClamp;
+				ImGui::DragFloat("SSAO Radius", &ssao.radius, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat("SSAO Multiplier", &ssao.multiplier, 0.1f, 0.0f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+				
 				break;
 
 			case Renderer::AmbientOcclusionMode::None:
@@ -85,9 +100,8 @@ namespace en
 				EN_ERROR("void SettingsPanel::Render() - postProcessing.ambientOcclusionMode was an unknown value!");
 				break;
 			}
-
+			ssao._samples = s;
 		}
-		*/
 
 		if (ImGui::CollapsingHeader("Lights and Shadows"))
 		{

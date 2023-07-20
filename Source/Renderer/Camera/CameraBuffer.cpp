@@ -76,6 +76,9 @@ namespace en
 
 		m_CBOs[frameIndex].clusterScale = (float)CLUSTERED_TILES_Z / std::log2f(camera->m_FarPlane / camera->m_NearPlane);
 		m_CBOs[frameIndex].clusterBias = -((float)CLUSTERED_TILES_Z * std::log2f(camera->m_NearPlane) / std::log2f(camera->m_FarPlane / camera->m_NearPlane));
+	
+		m_CBOs[frameIndex].xFov = camera->m_Fov;
+		m_CBOs[frameIndex].yFov = camera->m_Fov * ((float)extent.height / (float)extent.width);
 	}
 
 	VkDescriptorSetLayout CameraBuffer::GetLayout()

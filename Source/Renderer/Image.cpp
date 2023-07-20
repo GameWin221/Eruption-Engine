@@ -7,7 +7,7 @@
 namespace en
 {
 	Image::Image(VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags, VkImageCreateFlags createFlags, VkImageLayout initialLayout, uint32_t layerCount, bool genMipMaps)
-		: m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_LayerCount(layerCount)
+		: m_IsBorrowed(false), m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(initialLayout), m_LayerCount(layerCount)
 	{
 		if (genMipMaps)
 			m_MipLevelCount = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Size.width, m_Size.height)))) + 1U;
@@ -59,12 +59,20 @@ namespace en
 				m_LayerImageViews.push_back(view);
 			}
 		}
-
+		
+		
 		Helpers::SimpleTransitionImageLayout(m_Image, m_Format, m_AspectFlags, m_CurrentLayout, m_InitialLayout, m_LayerCount, m_MipLevelCount);
 		m_CurrentLayout = m_InitialLayout;
 	}
+	Image::Image(VkImage image, VkImageView view, VkExtent2D size, VkFormat format, VkImageUsageFlags usageFlags, VkImageAspectFlags aspectFlags,VkImageLayout layout, uint32_t layerCount)
+		: m_IsBorrowed(true), m_Image(image), m_ImageView(view), m_Size(size), m_Format(format), m_UsageFlags(usageFlags), m_AspectFlags(aspectFlags), m_InitialLayout(layout), m_CurrentLayout(layout), m_LayerCount(layerCount)
+	{
+	}
 	Image::~Image()
 	{
+		if (m_IsBorrowed)
+			return;
+
 		UseContext();
 
 		for(auto& layer : m_LayerImageViews)
@@ -81,7 +89,7 @@ namespace en
 	{
 		VkDeviceSize imageByteSize = m_Size.width * m_Size.height * 4U;
 
-		ChangeLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+		ChangeLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 		MemoryBuffer stagingBuffer(
 			imageByteSize, 

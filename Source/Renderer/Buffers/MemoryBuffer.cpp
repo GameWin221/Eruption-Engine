@@ -28,14 +28,14 @@ namespace en
         vmaDestroyBuffer(Context::Get().m_Allocator, m_Buffer, m_Allocation);
     }
 
-    void MemoryBuffer::MapMemory(const void* memory, VkDeviceSize memorySize)
+    void MemoryBuffer::MapMemory(const void* memory, VkDeviceSize memorySize, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
     {
         UseContext();
 
         void* data;
 
         vmaMapMemory(ctx.m_Allocator, m_Allocation, &data);
-        memcpy(data, memory, static_cast<size_t>(memorySize));
+        memcpy((void*)((VkDeviceSize)data+dstOffset), (void*)((VkDeviceSize)memory + srcOffset), static_cast<size_t>(memorySize));
         vmaUnmapMemory(ctx.m_Allocator, m_Allocation);
     }
     void MemoryBuffer::CopyInto(const void* memory, VkDeviceSize memorySize, uint32_t dstOffset, VkCommandBuffer cmd)

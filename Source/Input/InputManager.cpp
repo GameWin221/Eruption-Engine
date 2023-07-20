@@ -4,7 +4,7 @@ namespace en
 {
 	InputManager::InputManager()
 	{
-		m_Window = Window::Get().m_NativeHandle;
+		m_Window = Window::Get().GetNativeHandle();
 
 		m_LastMousePos = GetMousePosition();
 

@@ -35,25 +35,26 @@ namespace en
         MeshData data = importer.LoadMeshFromFile(path, nameID);
 
         m_Meshes[nameID] = data.mesh;
-
+        
         for (const auto& texture : data.textures)
         {
             if (m_Textures.contains(texture->GetName()))
             {
                 EN_WARN("AssetManager::LoadMesh() - Failed to load a texture with name \"" + texture->GetName() + "\" from \"" + texture->GetFilePath() + "\" because a texture with that name already exists!");
-                return false;
+                continue;
             }
 
             m_Textures[texture->GetName()] = texture;
         }
         for (const auto& material : data.materials)
         {
+            
             if (m_Materials.contains(material->GetName()))
             {
                 EN_WARN("AssetManager::LoadMesh() - Failed to create a material with name \"" + material->GetName() + "\" because a material with that name already exists!");
-                return false;
+                continue;
             }
-
+            
             m_Materials[material->GetName()] = material;
         }
 

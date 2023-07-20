@@ -3,11 +3,11 @@
 #ifndef EN_COMPUTE_PIPELINE_HPP
 #define EN_COMPUTE_PIPELINE_HPP
 
-#include <Renderer/Pipelines/Pipeline.hpp>
+#include <Renderer/Passes/Pass.hpp>
 
 namespace en
 {
-	class ComputePipeline : public Pipeline
+	class ComputePass : public Pass
 	{
 	public:
 		struct CreateInfo
@@ -17,7 +17,7 @@ namespace en
 			std::vector<VkPushConstantRange> pushConstantRanges{};
 		};
 
-		ComputePipeline(const CreateInfo& createInfo);
+		ComputePass(const CreateInfo& createInfo);
 
 		void Bind(const VkCommandBuffer cmd);
 

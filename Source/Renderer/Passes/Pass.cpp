@@ -1,10 +1,10 @@
-#include "Pipeline.hpp"
+#include "Pass.hpp"
 
 #include <Renderer/Context.hpp>
 
 namespace en
 {
-	Pipeline::~Pipeline()
+	Pass::~Pass()
 	{
 		UseContext();
 
@@ -15,21 +15,21 @@ namespace en
 			vkDestroyPipeline(ctx.m_LogicalDevice, m_Pipeline, nullptr);
 	}
 
-	void Pipeline::PushConstants(const void* data, uint32_t size, uint32_t offset, VkShaderStageFlags shaderStage)
+	void Pass::PushConstants(const void* data, uint32_t size, uint32_t offset, VkShaderStageFlags shaderStage)
 	{
 		vkCmdPushConstants(m_BoundCommandBuffer, m_Layout, shaderStage, offset, size, data);
 	}
-	void Pipeline::BindDescriptorSet(Handle<DescriptorSet> descriptor, uint32_t index, VkPipelineBindPoint bindPoint)
+	void Pass::BindDescriptorSet(Handle<DescriptorSet> descriptor, uint32_t index, VkPipelineBindPoint bindPoint)
 	{
 		const VkDescriptorSet descriptorSet = descriptor->GetHandle();
 		vkCmdBindDescriptorSets(m_BoundCommandBuffer, bindPoint, m_Layout, index, 1U, &descriptorSet, 0U, nullptr);
 	}
-	void Pipeline::BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index, VkPipelineBindPoint bindPoint)
+	void Pass::BindDescriptorSet(VkDescriptorSet descriptor, uint32_t index, VkPipelineBindPoint bindPoint)
 	{
 		vkCmdBindDescriptorSets(m_BoundCommandBuffer, bindPoint, m_Layout, index, 1U, &descriptor, 0U, nullptr);
 	}
 
-	VkPipelineShaderStageCreateInfo Pipeline::CreateShaderInfo(VkShaderModule shaderModule, VkShaderStageFlagBits stage)
+	VkPipelineShaderStageCreateInfo Pass::CreateShaderInfo(VkShaderModule shaderModule, VkShaderStageFlagBits stage)
 	{
 		return VkPipelineShaderStageCreateInfo {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -39,7 +39,7 @@ namespace en
 		};
 	}
 
-	VkShaderModule Pipeline::CreateShaderModule(const std::string& path)
+	VkShaderModule Pass::CreateShaderModule(const std::string& path)
 	{
 		VkShaderModule shaderModule{};
 
@@ -57,18 +57,18 @@ namespace en
 		return shaderModule;
 	}
 
-	void Pipeline::DestroyShaderModule(VkShaderModule shaderModule)
+	void Pass::DestroyShaderModule(VkShaderModule shaderModule)
 	{
 		if (shaderModule != VK_NULL_HANDLE)
 			vkDestroyShaderModule(Context::Get().m_LogicalDevice, shaderModule, nullptr);
 	}
 
-	std::vector<char> Pipeline::ReadShaderFile(const std::string& path)
+	std::vector<char> Pass::ReadShaderFile(const std::string& path)
 	{
 		std::ifstream file(path, std::ios::ate | std::ios::binary);
 
 		if (!file.is_open())
-			EN_ERROR("Pipeline::ReadShaderFile() - Failed to open shader source file!");
+			EN_ERROR("Pass::ReadShaderFile() - Failed to open shader source file!");
 
 		size_t fileSize = (size_t)file.tellg();
 		std::vector<char> buffer(fileSize);
@@ -78,7 +78,7 @@ namespace en
 		file.close();
 
 		if (buffer.empty())
-			EN_WARN("Pipeline::ReadShaderFile() - The read buffer is empty!");
+			EN_WARN("Pass::ReadShaderFile() - The read buffer is empty!");
 
 		return buffer;
 	}

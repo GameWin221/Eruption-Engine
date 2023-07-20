@@ -137,7 +137,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir)External\VMA;$(SolutionDir);$(SolutionDir)External\TinyGLTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir)External\VMA;$(SolutionDir);$(SolutionDir)External\JSON;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -169,7 +169,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir)External\VMA;$(SolutionDir);$(SolutionDir)External\TinyGLTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)External\GLFW\include;$(SolutionDir)External\GLM\include;$(SolutionDir)External\STB;$(SolutionDir)Source;$(SolutionDir)External\ImGui;$(SolutionDir)External\CL;$(SolutionDir)External\PFD;$(SolutionDir)External\VMA;$(SolutionDir);$(SolutionDir)External\JSON;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -194,11 +194,10 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="External\TinyGLTF\tiny_gltf.cpp" />
+    <ClCompile Include="Source\Renderer\ImGuiContext.cpp" />
     <ClCompile Include="Source\Assets\MeshImporter\Importer.cpp" />
     <ClCompile Include="Source\Assets\MeshImporter\GLTFImporter.cpp" />
     <ClCompile Include="Source\Renderer\Sampler.cpp" />
-    <ClCompile Include="Source\Renderer\Framebuffer.cpp" />
     <ClCompile Include="Source\Editor\EditorImageAtlas.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\AssetManagerPanel.cpp" />
     <ClCompile Include="Source\Editor\UIPanels\InspectorPanel.cpp" />
@@ -244,7 +243,6 @@
     <ClCompile Include="External\VMA\VMA.cpp" />
     <ClCompile Include="Source\Editor\EditorLayer.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
-    <ClCompile Include="Source\Renderer\RenderPass.cpp" />
     <ClCompile Include="Source\Assets\AssetManager.cpp" />
     <ClCompile Include="Source\Assets\Material.cpp" />
     <ClCompile Include="Source\Assets\Mesh.cpp" />
@@ -254,14 +252,14 @@
     <ClCompile Include="Source\Renderer\Buffers\MemoryBuffer.cpp" />
     <ClCompile Include="Source\Renderer\DescriptorSet.cpp" />
     <ClCompile Include="Source\Renderer\Image.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\Pipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Passes\Pass.cpp" />
     <ClCompile Include="Source\Renderer\Camera\Camera.cpp" />
     <ClCompile Include="Source\Renderer\Camera\CameraBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\ComputePipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Passes\ComputePass.cpp" />
     <ClCompile Include="Source\Renderer\Context.cpp" />
     <ClCompile Include="Source\Core\Eruption.cpp" />
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\GraphicsPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Passes\GraphicsPass.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Swapchain.cpp" />
     <ClCompile Include="Source\Renderer\Window.cpp" />
@@ -269,10 +267,10 @@
     <ClCompile Include="Source\Scene\SceneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Renderer\ImGuiContext.hpp" />
     <ClInclude Include="Source\Assets\MeshImporter\Importer.hpp" />
     <ClInclude Include="Source\Assets\MeshImporter\GLTFImporter.hpp" />
     <ClInclude Include="Source\Renderer\Sampler.hpp" />
-    <ClInclude Include="Source\Renderer\Framebuffer.hpp" />
     <ClInclude Include="Source\Editor\EditorImageAtlas.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\AssetManagerPanel.hpp" />
     <ClInclude Include="Source\Editor\UIPanels\InspectorPanel.hpp" />
@@ -293,7 +291,6 @@
     <ClInclude Include="Source\Editor\EditorCommons.hpp" />
     <ClInclude Include="Source\Editor\EditorLayer.hpp" />
     <ClInclude Include="Source\Input\InputManager.hpp" />
-    <ClInclude Include="Source\Renderer\RenderPass.hpp" />
     <ClInclude Include="Source\Assets\Asset.hpp" />
     <ClInclude Include="Source\Assets\AssetManager.hpp" />
     <ClInclude Include="Source\Assets\Material.hpp" />
@@ -305,18 +302,18 @@
     <ClInclude Include="Source\Renderer\Buffers\Vertex.hpp" />
     <ClInclude Include="Source\Renderer\DescriptorSet.hpp" />
     <ClInclude Include="Source\Renderer\Image.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\Pipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Passes\Pass.hpp" />
     <ClInclude Include="Source\Core\Log.hpp" />
     <ClInclude Include="Source\Core\Types.hpp" />
     <ClInclude Include="Source\Renderer\Camera\Camera.hpp" />
     <ClInclude Include="Source\Renderer\Camera\CameraBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Passes\ComputePass.hpp" />
     <ClInclude Include="Source\Renderer\Context.hpp" />
     <ClInclude Include="Source\Core\Eruption.hpp" />
     <ClInclude Include="Source\Renderer\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Renderer\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Renderer\Lights\Spotlight.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\GraphicsPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Passes\GraphicsPass.hpp" />
     <ClInclude Include="Source\Renderer\Renderer.hpp" />
     <ClInclude Include="Source\Renderer\Swapchain.hpp" />
     <ClInclude Include="Source\Renderer\Window.hpp" />

@@ -269,7 +269,7 @@ namespace en
 		if (ImGui::CollapsingHeader("Stats"))
 		{
 			ImGui::Text(("FPS: " + std::to_string(1.0 / m_Renderer->GetFrameTime())).c_str());
-			ImGui::Text((std::to_string(m_Renderer->GetFrameTime()) + "ms/frame").c_str());
+			ImGui::Text((std::to_string(m_Renderer->GetFrameTime()*1000.0f) + "ms/frame").c_str());
 		}
 
 		SPACE();
@@ -278,7 +278,7 @@ namespace en
 		{
 			static int mode = 0;
 
-			if (ImGui::SliderInt("Debug View", &mode, 0, 8))
+			if (ImGui::SliderInt("Debug View", &mode, 0, 9))
 				m_Renderer->m_DebugMode = mode;
 
 			std::string modeName = "";
@@ -294,6 +294,7 @@ namespace en
 				case 6:  modeName = "Active Cluster Density";break;
 				case 7:  modeName = "Depth Split Distances"; break;
 				case 8:  modeName = "CSM Cascades";			 break;
+				case 9:  modeName = "SSAO";					 break;
 				default: modeName = "Unknown Mode";		     break;
 			}
 

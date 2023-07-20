@@ -1,10 +1,10 @@
-#include "GraphicsPipeline.hpp"
+#include "GraphicsPass.hpp"
 
 #include <Renderer/Buffers/Vertex.hpp>
 
 namespace en
 {
-	GraphicsPipeline::GraphicsPipeline(const CreateInfo& pipeline)
+	GraphicsPass::GraphicsPass(const CreateInfo& pipeline)
 	{
 		UseContext();
 
@@ -121,7 +121,7 @@ namespace en
 		};
 
 		if (vkCreatePipelineLayout(ctx.m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_Layout) != VK_SUCCESS)
-			EN_ERROR("GraphicsPipeline::CreatePipeline() - Failed to create pipeline layout!");
+			EN_ERROR("GraphicsPass::CreatePipeline() - Failed to create pipeline layout!");
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
@@ -141,10 +141,19 @@ namespace en
 		}
 			
 		if (shaderStages.empty())
-			EN_ERROR("GraphicsPipeline::CreatePipeline() - No shaders stages specified!");
+			EN_ERROR("GraphicsPass::CreatePipeline() - No shaders stages specified!");
+
+		VkPipelineRenderingCreateInfo pipelineRenderingInfo{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+			.colorAttachmentCount = static_cast<uint32_t>(pipeline.colorFormat != VK_FORMAT_UNDEFINED),
+			.pColorAttachmentFormats = &pipeline.colorFormat,
+			.depthAttachmentFormat = pipeline.depthFormat,
+		};
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{
-			.sType		= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+			.pNext = (void*)&pipelineRenderingInfo,
+
 			.stageCount = static_cast<uint32_t>(shaderStages.size()),
 			.pStages	= shaderStages.data(),
 
@@ -157,57 +166,95 @@ namespace en
 			.pColorBlendState	 = &colorBlending,
 			.pDynamicState		 = &dynamicState,
 
-			.layout		= m_Layout,
-			.renderPass = pipeline.renderPass->GetHandle(),
-			.subpass	= 0U,
+			.layout = m_Layout,
 
 			.basePipelineHandle = VK_NULL_HANDLE,
 			.basePipelineIndex  = -1
 		};
 
 		if (vkCreateGraphicsPipelines(ctx.m_LogicalDevice, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
-			EN_ERROR("GraphicsPipeline::CreatePipeline() - Failed to create pipeline!");
+			EN_ERROR("GraphicsPass::CreatePipeline() - Failed to create pipeline!");
 	
 		DestroyShaderModule(vShaderModule);
 		DestroyShaderModule(fShaderModule);
 	}
-	void GraphicsPipeline::Bind(VkCommandBuffer commandBuffer, VkExtent2D extent, VkCullModeFlags cullMode)
+	void GraphicsPass::Begin(VkCommandBuffer commandBuffer, const RenderInfo& info)
 	{
 		m_BoundCommandBuffer = commandBuffer;
 
-		vkCmdBindPipeline(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+		VkRenderingAttachmentInfo colorAttachmentInfo {
+			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+			.imageView = info.colorAttachmentView ? info.colorAttachmentView : VK_NULL_HANDLE,
+			.imageLayout = info.colorAttachmentView ? info.colorAttachmentLayout : VK_IMAGE_LAYOUT_UNDEFINED,
+			.loadOp = info.colorLoadOp,
+			.storeOp = info.colorStoreOp,
+			.clearValue = VkClearValue {
+				.color = info.clearColor
+			}
+		};
+
+		VkRenderingAttachmentInfo depthAttachmentInfo{
+			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+			.imageView   = info.depthAttachmentView ? info.depthAttachmentView : VK_NULL_HANDLE,
+			.imageLayout = info.depthAttachmentView ? info.depthAttachmentLayout : VK_IMAGE_LAYOUT_UNDEFINED,
+			.loadOp  = info.depthLoadOp,
+			.storeOp = info.depthStoreOp,
+			.clearValue = VkClearValue {
+				.depthStencil = info.clearDepth
+			},
+		};
+		VkRect2D renderArea {
+			.extent = info.extent
+		};
+
+		VkRenderingInfo renderingInfo{
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+			.renderArea = renderArea,
+			.layerCount = 1U,
+			.colorAttachmentCount = 1U,
+			.pColorAttachments = &colorAttachmentInfo,
+			.pDepthAttachment = &depthAttachmentInfo,
+		};
 
 		VkViewport viewport {
-			.width    = static_cast<float>(extent.width),
-			.height   = static_cast<float>(extent.height),
+			.width    = static_cast<float>(info.extent.width),
+			.height   = static_cast<float>(info.extent.height),
 			.maxDepth = 1.0f
 		};
 		VkRect2D scissor {
-			.extent = extent
+			.extent = info.extent
 		};
 		
-		vkCmdSetCullMode(m_BoundCommandBuffer, cullMode);
+		vkCmdBeginRendering(m_BoundCommandBuffer, &renderingInfo);
+
+		vkCmdSetCullMode(m_BoundCommandBuffer, info.cullMode);
 		vkCmdSetViewport(m_BoundCommandBuffer, 0U, 1U, &viewport);
 		vkCmdSetScissor(m_BoundCommandBuffer, 0U, 1U, &scissor);
+
+		vkCmdBindPipeline(m_BoundCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 	}
-	void GraphicsPipeline::BindVertexBuffer(Handle<MemoryBuffer> buffer, VkDeviceSize offset)
+	void GraphicsPass::End()
+	{
+		vkCmdEndRendering(m_BoundCommandBuffer);
+	}
+	void GraphicsPass::BindVertexBuffer(Handle<MemoryBuffer> buffer, VkDeviceSize offset)
 	{
 		VkBuffer vBuffer = buffer->GetHandle();
 		vkCmdBindVertexBuffers(m_BoundCommandBuffer, 0U, 1U, &vBuffer, &offset);
 	}
-	void GraphicsPipeline::BindIndexBuffer(Handle<MemoryBuffer> buffer)
+	void GraphicsPass::BindIndexBuffer(Handle<MemoryBuffer> buffer)
 	{
 		vkCmdBindIndexBuffer(m_BoundCommandBuffer, buffer->GetHandle(), 0U, VK_INDEX_TYPE_UINT32);
 	}
-	void GraphicsPipeline::DrawIndexedIndirect(Handle<MemoryBuffer> buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+	void GraphicsPass::DrawIndexedIndirect(Handle<MemoryBuffer> buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 	{
 		vkCmdDrawIndexedIndirect(m_BoundCommandBuffer, buffer->GetHandle(), offset, drawCount, stride);
 	}
-	void GraphicsPipeline::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t firstInstance)
+	void GraphicsPass::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t firstInstance)
 	{
 		vkCmdDrawIndexed(m_BoundCommandBuffer, indexCount, instanceCount, firstIndex, 0U, firstInstance);
 	}
-	void GraphicsPipeline::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+	void GraphicsPass::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 	{
 		vkCmdDraw(m_BoundCommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 	}
