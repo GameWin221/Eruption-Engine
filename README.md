@@ -1,3 +1,5 @@
+## This is the old version of Eruption Engine the new remake is in [this repository](https://github.com/GameWin221/EruptionEngineRemake)
+
 # Eruption Rendering Engine - dev branch
 
 This branch exists mainly for me (the developer) to consistently save and backup the latest version of the project. **I do not guarantee that this branch will even compile**.
