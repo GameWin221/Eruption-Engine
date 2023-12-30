@@ -1,4 +1,4 @@
-## This is the old version of Eruption Engine the new remake is in [this repository](https://github.com/GameWin221/EruptionEngineRemake)
+## This is the old version of Eruption Engine the new remake is in [this repository](https://github.com/GameWin221/Gemino)
 
 # Eruption Rendering Engine
 
